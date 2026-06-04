@@ -1,247 +1,260 @@
-// FitnessApp Theme — Retro Gothic Video Game
-// Inspired by: classic RPG dark dungeons, pixel horror games,
-// gothic castles, neon arcades, and 8-bit death screens
+// FitnessApp Theme — Retro Vintage Anime
+// Inspired by: Cowboy Bebop — jazz noir, faded neon, deep space,
+// cigarette smoke, rust and chrome, analog warmth, bounty hunter grit
+
 export const COLORS = {
-// ── BACKGROUNDS ──────────────────────────────────────────
-// Deep dungeon blacks and dark stone greys
-bgPrimary:        '#080808',   // void black — main screen bg
-bgSecondary:      '#111111',   // dark stone — card bg
-bgTertiary:       '#1a1a1a',   // shadow grey — input bg
-bgElevated:       '#222222',   // raised stone — modal bg
-bgOverlay:        'rgba(8, 8, 8, 0.85)', // dark overlay
-// ── BORDERS ──────────────────────────────────────────────
-borderDefault:    '#2a2a2a',   // dungeon wall border
-borderFocus:      '#8b00ff',   // glowing magic border
-borderAccent:     '#ff2d6b',   // danger border
-// ── PRIMARY — ARCANE PURPLE ───────────────────────────────
-// The magic of the dungeon wizard
-primary:          '#8b00ff',   // arcane purple
-primaryLight:     '#b44fff',   // soft violet glow
-primaryDark:      '#5c00aa',   // deep magic
-primaryGlow:      'rgba(139, 0, 255, 0.25)', // purple aura
-// ── ACCENT — BLOOD CRIMSON ────────────────────────────────
-// The danger, health bars, and boss warnings
-accent:           '#ff2d6b',   // blood crimson
-accentLight:      '#ff6b9d',   // faded rose
-accentDark:       '#cc0044',   // deep blood
-accentGlow:       'rgba(255, 45, 107, 0.25)', // crimson aura
-// ── NEON — PIXEL SCREEN GLOW ─────────────────────────────
-// Old CRT monitor vibes, arcade machine screens
-neonGreen:        '#39ff14',   // 1UP green — success
-neonBlue:         '#00f5ff',   // ice magic — info
-neonYellow:       '#fff01f',   // gold coin — warning
-neonOrange:       '#ff6600',   // fire spell — alert
-// ── TEXT ─────────────────────────────────────────────────
-textPrimary:      '#f0e6ff',   // pale ghost white
-textSecondary:    '#9b8fb0',   // faded tombstone grey
-textMuted:        '#5a5068',   // invisible ink
-textInverse:      '#080808',   // dark on light
-textAccent:       '#ff2d6b',   // highlighted danger
-textNeon:         '#39ff14',   // pixel score text
-// ── GAME UI ──────────────────────────────────────────────
-// Classic RPG health and energy bars
-healthFull:       '#39ff14',   // full health neon green
-healthMid:        '#fff01f',   // half health yellow
-healthLow:        '#ff2d6b',   // critical health red
-energyBar:        '#00f5ff',   // mana bar cyan
-expBar:           '#8b00ff',   // experience purple
-bossBar:          '#ff2d6b',   // boss health crimson
-// ── GRAPH / CHART ────────────────────────────────────────
-// For the calories stock chart
-graphLine:        '#8b00ff',   // arcane line
-graphFill:        'rgba(139, 0, 255, 0.12)', // transparent fill
-graphDot:         '#ff2d6b',   // blood dot
-graphDotToday:    '#39ff14',   // today neon green
-graphGrid:        '#1e1e1e',   // barely visible grid
-graphGoalLine:    '#ff2d6b',   // goal danger line
-graphAxisText:    '#5a5068',   // axis labels
-// ── CIRCLE PROGRESS ──────────────────────────────────────
-circleTrack:      '#2a2a2a',   // empty ring
-circleFill:       '#8b00ff',   // progress ring
-circleComplete:   '#39ff14',   // 100% complete
-circleOver:       '#ff2d6b',   // over goal warning
-// ── STATUS ────────────────────────────────────────────────
-success:          '#39ff14',   // neon green victory
-warning:          '#fff01f',   // yellow caution
-error:            '#ff2d6b',   // crimson failure
-info:             '#00f5ff',   // cyan hint
-// ── SPECIAL EFFECTS ──────────────────────────────────────
-// Decorative glow effects and pixel borders
-glowPurple:       'rgba(139, 0, 255, 0.4)',
-glowCrimson:      'rgba(255, 45, 107, 0.4)',
-glowGreen:        'rgba(57, 255, 20, 0.4)',
-glowCyan:         'rgba(0, 245, 255, 0.4)',
-pixelBorder:      '#8b00ff',   // retro pixel border color
-scanline:         'rgba(0, 0, 0, 0.15)', // CRT scanline overlay
+  // ── BACKGROUNDS ──────────────────────────────────────────
+  // Deep space and smoky jazz bar blacks
+  bgPrimary:        '#0d0d14',   // deep space void
+  bgSecondary:      '#13131f',   // smoke-filled bar
+  bgTertiary:       '#1c1c2e',   // dark indigo shadow
+  bgElevated:       '#242438',   // raised panel — ship console
+  bgOverlay:        'rgba(13, 13, 20, 0.88)', // noir overlay
+
+  // ── BORDERS ──────────────────────────────────────────────
+  borderDefault:    '#2e2e45',   // faded hull metal
+  borderFocus:      '#e8a030',   // warm amber glow
+  borderAccent:     '#c0392b',   // rust red danger
+
+  // ── PRIMARY — BEBOP AMBER / GOLD ─────────────────────────
+  // Warm jazz lights, analog warmth, Ein's collar
+  primary:          '#e8a030',   // bebop amber
+  primaryLight:     '#f0bc60',   // warm gold
+  primaryDark:      '#b07820',   // burnt brass
+  primaryGlow:      'rgba(232, 160, 48, 0.22)', // amber haze
+
+  // ── ACCENT — FAYE CRIMSON ────────────────────────────────
+  // Faye Valentine's red jacket, danger, heat
+  accent:           '#c0392b',   // faye crimson
+  accentLight:      '#e05a4e',   // faded rust
+  accentDark:       '#922b21',   // deep blood rust
+  accentGlow:       'rgba(192, 57, 43, 0.25)', // crimson smoke
+
+  // ── NEON — FADED SIGN GLOW ───────────────────────────────
+  // Old neon bar signs half broken, flickering
+  neonGreen:        '#4ecb8d',   // faded mint — success
+  neonBlue:         '#5b9bd5',   // hazy cerulean — info
+  neonYellow:       '#f5d76e',   // nicotine gold — warning
+  neonOrange:       '#e67e22',   // ember glow — alert
+
+  // ── TEXT ─────────────────────────────────────────────────
+  textPrimary:      '#ede8d8',   // aged paper white
+  textSecondary:    '#8c8a7a',   // smoke grey
+  textMuted:        '#4a4858',   // faded ink
+  textInverse:      '#0d0d14',   // dark on light
+  textAccent:       '#e8a030',   // amber highlight
+  textNeon:         '#4ecb8d',   // mint score text
+
+  // ── GAME UI ──────────────────────────────────────────────
+  // Bebop bounty board stats and health
+  healthFull:       '#4ecb8d',   // mint full health
+  healthMid:        '#f5d76e',   // gold mid health
+  healthLow:        '#c0392b',   // rust low health
+  energyBar:        '#5b9bd5',   // hazy blue energy
+  expBar:           '#e8a030',   // amber exp bar
+  bossBar:          '#c0392b',   // crimson boss bar
+
+  // ── GRAPH / CHART ────────────────────────────────────────
+  graphLine:        '#e8a030',   // amber line
+  graphFill:        'rgba(232, 160, 48, 0.10)', // warm fill
+  graphDot:         '#c0392b',   // rust dot
+  graphDotToday:    '#4ecb8d',   // mint today
+  graphGrid:        '#1c1c2e',   // barely visible grid
+  graphGoalLine:    '#c0392b',   // rust goal line
+  graphAxisText:    '#4a4858',   // faded axis
+
+  // ── CIRCLE PROGRESS ──────────────────────────────────────
+  circleTrack:      '#2e2e45',   // empty ring
+  circleFill:       '#e8a030',   // amber progress
+  circleComplete:   '#4ecb8d',   // mint complete
+  circleOver:       '#c0392b',   // rust over goal
+
+  // ── STATUS ───────────────────────────────────────────────
+  success:          '#4ecb8d',   // mint victory
+  warning:          '#f5d76e',   // gold caution
+  error:            '#c0392b',   // rust failure
+  info:             '#5b9bd5',   // hazy blue hint
+
+  // ── SPECIAL EFFECTS ──────────────────────────────────────
+  glowAmber:        'rgba(232, 160, 48, 0.4)',
+  glowCrimson:      'rgba(192, 57, 43, 0.4)',
+  glowMint:         'rgba(78, 203, 141, 0.4)',
+  glowBlue:         'rgba(91, 155, 213, 0.4)',
+  pixelBorder:      '#e8a030',   // amber retro border
+  scanline:         'rgba(0, 0, 0, 0.12)', // analog scanline
 }
+
 // ── TYPOGRAPHY ─────────────────────────────────────────────
-// Font sizes following retro game UI hierarchy
 export const FONT_SIZES = {
-xs:     10,   // tiny pixel labels
-sm:     12,   // small UI text
-md:     14,   // body text
-lg:     16,   // card titles
-xl:     20,   // section headers
-xxl:    28,   // screen titles
-xxxl:   36,   // big score numbers
-hero:   48,   // hero display numbers
+  xs:     10,
+  sm:     12,
+  md:     14,
+  lg:     16,
+  xl:     20,
+  xxl:    28,
+  xxxl:   36,
+  hero:   48,
 }
+
 export const FONT_WEIGHTS = {
-regular:    '400' as const,
-medium:     '500' as const,
-semibold:   '600' as const,
-bold:       '700' as const,
-black:      '900' as const,
+  regular:    '400' as const,
+  medium:     '500' as const,
+  semibold:   '600' as const,
+  bold:       '700' as const,
+  black:      '900' as const,
 }
+
 // ── SPACING ────────────────────────────────────────────────
-// Consistent spacing scale across all screens
 export const SPACING = {
-xs:   4,
-sm:   8,
-md:   12,
-lg:   16,
-xl:   24,
-xxl:  32,
-xxxl: 48,
+  xs:   4,
+  sm:   8,
+  md:   12,
+  lg:   16,
+  xl:   10,
+  xxl:  10,
+  xxxl: 48,
 }
+
 // ── BORDER RADIUS ──────────────────────────────────────────
-// Mostly sharp for retro pixel feel with some soft options
 export const RADIUS = {
-none:   0,    // hard pixel corners
-xs:     4,    // slight rounding
-sm:     8,    // small cards
-md:     12,   // standard cards
-lg:     16,   // large cards
-xl:     24,   // pills
-full:   999,  // perfect circles
+  none:   0,
+  xs:     4,
+  sm:     8,
+  md:     12,
+  lg:     16,
+  xl:     24,
+  full:   999,
 }
+
 // ── SHADOWS ────────────────────────────────────────────────
-// Neon glow shadows for the gothic arcade feel
 export const SHADOWS = {
-purple: {
-shadowColor:   '#8b00ff',
-shadowOffset:  { width: 0, height: 0 },
-shadowOpacity: 0.5,
-shadowRadius:  8,
-elevation:     6,
-},
-crimson: {
-shadowColor:   '#ff2d6b',
-shadowOffset:  { width: 0, height: 0 },
-shadowOpacity: 0.5,
-shadowRadius:  8,
-elevation:     6,
-},
-green: {
-shadowColor:   '#39ff14',
-shadowOffset:  { width: 0, height: 0 },
-shadowOpacity: 0.4,
-shadowRadius:  8,
-elevation:     6,
-},
-subtle: {
-shadowColor:   '#000000',
-shadowOffset:  { width: 0, height: 2 },
-shadowOpacity: 0.8,
-shadowRadius:  4,
-elevation:     4,
-},
+  purple: {
+    shadowColor:   '#e8a030',
+    shadowOffset:  { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius:  8,
+    elevation:     6,
+  },
+  crimson: {
+    shadowColor:   '#c0392b',
+    shadowOffset:  { width: 0, height: 0 },
+    shadowOpacity: 0.45,
+    shadowRadius:  8,
+    elevation:     6,
+  },
+  green: {
+    shadowColor:   '#4ecb8d',
+    shadowOffset:  { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius:  8,
+    elevation:     6,
+  },
+  subtle: {
+    shadowColor:   '#000000',
+    shadowOffset:  { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius:  4,
+    elevation:     4,
+  },
 }
+
 // ── CARD STYLES ────────────────────────────────────────────
-// Reusable card base styles
 export const CARD = {
-default: {
-backgroundColor:  '#111111',
-borderColor:      '#2a2a2a',
-borderWidth:      1,
-borderRadius:     12,
-padding:          16,
-},
-glowing: {
-backgroundColor:  '#111111',
-borderColor:      '#8b00ff',
-borderWidth:      1,
-borderRadius:     12,
-padding:          16,
-shadowColor:      '#8b00ff',
-shadowOffset:     { width: 0, height: 0 },
-shadowOpacity:    0.4,
-shadowRadius:     8,
-elevation:        6,
-},
-danger: {
-backgroundColor:  '#1a0808',
-borderColor:      '#ff2d6b',
-borderWidth:      1,
-borderRadius:     12,
-padding:          16,
-},
+  default: {
+    backgroundColor:  '#13131f',
+    borderColor:      '#2e2e45',
+    borderWidth:      1,
+    borderRadius:     12,
+    padding:          16,
+  },
+  glowing: {
+    backgroundColor:  '#13131f',
+    borderColor:      '#e8a030',
+    borderWidth:      1,
+    borderRadius:     12,
+    padding:          16,
+    shadowColor:      '#e8a030',
+    shadowOffset:     { width: 0, height: 0 },
+    shadowOpacity:    0.35,
+    shadowRadius:     8,
+    elevation:        6,
+  },
+  danger: {
+    backgroundColor:  '#1a1014',
+    borderColor:      '#c0392b',
+    borderWidth:      1,
+    borderRadius:     12,
+    padding:          16,
+  },
 }
+
 // ── BUTTON STYLES ──────────────────────────────────────────
 export const BUTTON = {
-primary: {
-backgroundColor:  '#8b00ff',
-borderRadius:     10,
-paddingVertical:  14,
-paddingHorizontal: 24,
-alignItems:       'center' as const,
-},
-secondary: {
-backgroundColor:  'transparent',
-borderColor:      '#8b00ff',
-borderWidth:      1,
-borderRadius:     10,
-paddingVertical:  14,
-paddingHorizontal: 24,
-alignItems:       'center' as const,
-},
-danger: {
-backgroundColor:  '#ff2d6b',
-borderRadius:     10,
-paddingVertical:  14,
-paddingHorizontal: 24,
-alignItems:       'center' as const,
-},
-ghost: {
-backgroundColor:  'transparent',
-borderRadius:     10,
-paddingVertical:  14,
-paddingHorizontal: 24,
-alignItems:       'center' as const,
-},
+  primary: {
+    backgroundColor:  '#e8a030',
+    borderRadius:     10,
+    paddingVertical:  14,
+    paddingHorizontal: 24,
+    alignItems:       'center' as const,
+  },
+  secondary: {
+    backgroundColor:  'transparent',
+    borderColor:      '#e8a030',
+    borderWidth:      1,
+    borderRadius:     10,
+    paddingVertical:  14,
+    paddingHorizontal: 24,
+    alignItems:       'center' as const,
+  },
+  danger: {
+    backgroundColor:  '#c0392b',
+    borderRadius:     10,
+    paddingVertical:  14,
+    paddingHorizontal: 24,
+    alignItems:       'center' as const,
+  },
+  ghost: {
+    backgroundColor:  'transparent',
+    borderRadius:     10,
+    paddingVertical:  14,
+    paddingHorizontal: 24,
+    alignItems:       'center' as const,
+  },
 }
+
 // ── INPUT STYLES ───────────────────────────────────────────
 export const INPUT = {
-default: {
-backgroundColor:  '#1a1a1a',
-borderColor:      '#2a2a2a',
-borderWidth:      1,
-borderRadius:     10,
-padding:          14,
-color:            '#f0e6ff',
-fontSize:         16,
-},
-focused: {
-backgroundColor:  '#1a1a1a',
-borderColor:      '#8b00ff',
-borderWidth:      1,
-borderRadius:     10,
-padding:          14,
-color:            '#f0e6ff',
-fontSize:         16,
-},
+  default: {
+    backgroundColor:  '#1c1c2e',
+    borderColor:      '#2e2e45',
+    borderWidth:      1,
+    borderRadius:     10,
+    padding:          14,
+    color:            '#ede8d8',
+    fontSize:         16,
+  },
+  focused: {
+    backgroundColor:  '#1c1c2e',
+    borderColor:      '#e8a030',
+    borderWidth:      1,
+    borderRadius:     10,
+    padding:          14,
+    color:            '#ede8d8',
+    fontSize:         16,
+  },
 }
+
 // ── THEME OBJECT ───────────────────────────────────────────
-// Single import option — import { theme } from '@/constants/theme'
 export const theme = {
-colors:   COLORS,
-fontSize: FONT_SIZES,
-fontWeight: FONT_WEIGHTS,
-spacing:  SPACING,
-radius:   RADIUS,
-shadows:  SHADOWS,
-card:     CARD,
-button:   BUTTON,
-input:    INPUT,
+  colors:     COLORS,
+  fontSize:   FONT_SIZES,
+  fontWeight: FONT_WEIGHTS,
+  spacing:    SPACING,
+  radius:     RADIUS,
+  shadows:    SHADOWS,
+  card:       CARD,
+  button:     BUTTON,
+  input:      INPUT,
 }
+
 export default theme

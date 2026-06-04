@@ -1,67 +1,70 @@
 import { supabase } from '@/lib/supabase';
 import React, { useEffect } from 'react';
-import { Slot, useNavigation, Redirect } from 'expo-router';
+import { Slot, useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { COLORS, SPACING } from '@/constants/theme';
-
-interface AuthContextType {
-  session: any | null;
-  loading: boolean;
-}
-
-export const AuthContext = React.createContext<AuthContextType>(
-  { session: null, loading: true }
-);
-
-export function useAuth() {
-  const authContext = React.useContext(AuthContext);
-  if (!authContext) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return authContext;
-}
-
+import { Session } from '@supabase/supabase-js';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ProfileProvider } from '@/context/ProfileContext';
 export default function Layout() {
-  const navigation = useNavigation();
-  const [session, setSession] = React.useState<any>(null);
+  const router = useRouter();
+  const segments = useSegments();
+  const [session, setSession] = React.useState<Session | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-      } catch (error) {
-        console.error('Error getting session:', error);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async () => {
-        const { data: { session } } = await supabase.auth.getSession();
+      (_event, session) => {
         setSession(session);
       }
     );
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: COLORS.bgPrimary, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={{ color: COLORS.textSecondary, marginTop: SPACING.lg, fontFamily: 'monospace' }}>Loading...</Text>
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (loading) return;
 
-  if (session) {
-    return <Slot href="/(tabs)/dashboard" />;
-  }
+    const inAuthGroup = segments[0] === '(auth)';
+    const inTabsGroup = segments[0] === '(tabs)';
 
-  return <Slot href="/(auth)/login" />;
+    if (!session && inTabsGroup) {
+      router.replace('/(auth)/login');
+    } else if (session && inAuthGroup) {
+      router.replace('/(tabs)/dashboard');
+    }
+  }, [session, loading, segments]);
+
+  // Always wrap everything in SafeAreaProvider
+  // including the loading screen
+  return (
+    <ProfileProvider>
+      <SafeAreaProvider>
+        {loading ? (
+          <View style={{
+            flex: 1,
+            backgroundColor: COLORS.bgPrimary,
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={{
+              color: COLORS.textSecondary,
+              marginTop: SPACING.lg,
+              fontFamily: 'monospace'
+            }}>
+              Loading...
+            </Text>
+          </View>
+        ) : (
+          <Slot />
+        )}
+      </SafeAreaProvider>
+    </ProfileProvider>
+  );
 }

@@ -1,154 +1,271 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
+import {
+  COLORS, FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, SHADOWS, CARD
+} from '@/constants/theme';
 
 export default function DashboardScreen() {
-  return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Good Morning!</Text>
-        <Text style={styles.date}>Tuesday, January 16</Text>
-      </View>
+  const router = useRouter();
 
-      <View style={[styles.statsCard, { backgroundColor: '#1a1a1a' }]}>
-        <View style={styles.statItem}>
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.replace('/(auth)/login');
+  };
+
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  return (
+    <SafeAreaView
+      style={styles.container}
+      edges={['top']}
+    >
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>GOOD MORNING</Text>
+            <Text style={styles.date}>{today}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.logoutText}>LOG OUT</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Decorative line */}
+        <View style={styles.dividerLine} />
+
+        {/* Stats Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>TODAY'S STATS</Text>
+
           <Text style={styles.statLabel}>Calories Consumed</Text>
           <Text style={styles.statValue}>1240 / 2000</Text>
-          <View style={[styles.progressBar, { width: '60%', backgroundColor: '#2a2a2a' }]}>
-            <View style={[styles.progressFill, { width: '62%', backgroundColor: '#ff4500' }]} />
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, {
+              width: '62%',
+              backgroundColor: COLORS.primary
+            }]} />
           </View>
-        </View>
 
-        <View style={styles.divider} />
+          <View style={{ height: SPACING.lg }} />
 
-        <View style={styles.statItem}>
           <Text style={styles.statLabel}>Workouts This Week</Text>
           <Text style={styles.statValue}>3 / 4</Text>
-          <View style={[styles.progressBar, { width: '75%', backgroundColor: '#2a2a2a' }]}>
-            <View style={[styles.progressFill, { width: '75%', backgroundColor: '#ff4500' }]} />
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, {
+              width: '75%',
+              backgroundColor: COLORS.neonGreen
+            }]} />
           </View>
         </View>
-      </View>
 
-      <View style={styles.streakCard} numberOfLines={1}>
-        <Text style={styles.streakNumber}>7</Text>
-        <Text style={styles.streakEmoji}>🔥 Day Streak</Text>
-      </View>
+        {/* Streak Card */}
+        <View style={[styles.card, styles.streakCard]}>
+          <Text style={styles.streakNumber}>7</Text>
+          <Text style={styles.streakLabel}>DAY STREAK 🔥</Text>
+          <View style={styles.streakBadge}>
+            <Text style={styles.streakBadgeText}>KEEP IT UP</Text>
+          </View>
+        </View>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Recent Workouts</Text>
-      </View>
+        {/* Recent Workouts */}
+        <Text style={styles.sectionTitle}>RECENT WORKOUTS</Text>
 
-      <View style={styles.recentWorkoutsList}>
         {[
           { name: 'Chest Day', category: 'Upper Body', date: 'Today' },
           { name: 'Leg Press', category: 'Lower Body', date: 'Yesterday' },
           { name: 'Back & Biceps', category: 'Pull Day', date: '2 days ago' },
         ].map((workout, index) => (
-          <View key={index} style={[styles.workoutCard, { backgroundColor: '#1a1a1a' }]}>
-            <Text style={styles.workoutName}>{workout.name}</Text>
-            <Text style={styles.workoutCategory}>{workout.category}</Text>
+          <View key={index} style={styles.workoutCard}>
+            <View style={styles.workoutLeft}>
+              <Text style={styles.workoutName}>{workout.name}</Text>
+              <Text style={styles.workoutCategory}>{workout.category}</Text>
+            </View>
             <Text style={styles.workoutDate}>{workout.date}</Text>
           </View>
         ))}
-      </View>
-    </ScrollView>
+
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    padding: 20,
-    paddingTop: 10,
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bgPrimary,
   },
-  greeting: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  date: {
-    fontSize: 16,
-    color: '#888888',
-    marginTop: 4,
-  },
-  statsCard: {
-    marginHorizontal: 20,
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 15,
-  },
-  statItem: {
+  scroll: {
     flex: 1,
   },
+  content: {
+    padding: SPACING.lg,
+    paddingBottom: SPACING.xxxl,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: SPACING.sm,
+  },
+  greeting: {
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: FONT_WEIGHTS.black,
+    color: COLORS.textPrimary,
+    fontFamily: 'monospace',
+    letterSpacing: 2,
+  },
+  date: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    fontFamily: 'monospace',
+    marginTop: SPACING.xs,
+    letterSpacing: 1,
+  },
+  logoutButton: {
+    borderColor: COLORS.accent,
+    borderWidth: 1,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+  },
+  logoutText: {
+    color: COLORS.accent,
+    fontSize: FONT_SIZES.xs,
+    fontFamily: 'monospace',
+    fontWeight: FONT_WEIGHTS.bold,
+    letterSpacing: 1,
+  },
+  dividerLine: {
+    height: 1,
+    backgroundColor: COLORS.primary,
+    width: 40,
+    marginBottom: SPACING.lg,
+  },
+  card: {
+    ...CARD.default,
+    ...SHADOWS.purple,
+    marginBottom: SPACING.lg,
+  },
+  cardTitle: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.textMuted,
+    fontFamily: 'monospace',
+    letterSpacing: 3,
+    marginBottom: SPACING.lg,
+  },
   statLabel: {
-    fontSize: 14,
-    color: '#888888',
-    marginBottom: 4,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    fontFamily: 'monospace',
+    letterSpacing: 1,
+    marginBottom: SPACING.xs,
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 8,
+    fontSize: FONT_SIZES.xl,
+    fontWeight: FONT_WEIGHTS.black,
+    color: COLORS.textPrimary,
+    fontFamily: 'monospace',
+    marginBottom: SPACING.sm,
   },
-  progressBar: {
-    height: 10,
-    borderRadius: 5,
+  progressTrack: {
+    height: 6,
+    backgroundColor: COLORS.borderDefault,
+    borderRadius: RADIUS.full,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 5,
-  },
-  divider: {
-    height: 16,
+    borderRadius: RADIUS.full,
   },
   streakCard: {
-    backgroundColor: '#1a1a1a',
-    marginHorizontal: 20,
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 15,
+    ...SHADOWS.crimson,
+    borderColor: COLORS.accent,
+    alignItems: 'center',
+    paddingVertical: SPACING.xl,
   },
   streakNumber: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#ff4500',
+    fontSize: FONT_SIZES.hero,
+    fontWeight: FONT_WEIGHTS.black,
+    color: COLORS.accent,
+    fontFamily: 'monospace',
   },
-  streakEmoji: {
-    fontSize: 16,
-    color: '#ffffff',
-    marginTop: 4,
+  streakLabel: {
+    fontSize: FONT_SIZES.lg,
+    color: COLORS.textPrimary,
+    fontFamily: 'monospace',
+    letterSpacing: 2,
+    marginTop: SPACING.xs,
   },
-  sectionHeader: {
-    marginHorizontal: 20,
-    marginBottom: 10,
+  streakBadge: {
+    marginTop: SPACING.md,
+    borderColor: COLORS.neonGreen,
+    borderWidth: 1,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+  },
+  streakBadgeText: {
+    color: COLORS.neonGreen,
+    fontSize: FONT_SIZES.xs,
+    fontFamily: 'monospace',
+    letterSpacing: 2,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  recentWorkoutsList: {
-    paddingHorizontal: 20,
+    fontSize: FONT_SIZES.xs,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.textMuted,
+    fontFamily: 'monospace',
+    letterSpacing: 3,
+    marginBottom: SPACING.md,
   },
   workoutCard: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 10,
+    ...CARD.default,
+    ...SHADOWS.subtle,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  workoutLeft: {
+    flex: 1,
   },
   workoutName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: 4,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.textPrimary,
+    fontFamily: 'monospace',
+    letterSpacing: 1,
+    marginBottom: SPACING.xs,
   },
   workoutCategory: {
-    fontSize: 13,
-    color: '#ff4500',
-    marginBottom: 4,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.primary,
+    fontFamily: 'monospace',
+    letterSpacing: 1,
   },
   workoutDate: {
-    fontSize: 12,
-    color: '#888888',
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    fontFamily: 'monospace',
+    letterSpacing: 1,
   },
 });
