@@ -15,7 +15,7 @@ import {
 
 export default function Profile() {
   const router = useRouter()
-  const { profile } = useProfile()
+  const { profile, isImperial } = useProfile()
   const [editing, setEditing] = useState(false)
 
   const handleLogout = async () => {
@@ -27,6 +27,21 @@ export default function Profile() {
   const initials = profile?.full_name
     ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : '??'
+
+  const heightDisplay = (() => {
+    if (!profile?.height_cm) return '—'
+    if (!isImperial) return `${Math.round(profile.height_cm)}`
+    const totalIn = profile.height_cm / 2.54
+    const ft = Math.floor(totalIn / 12)
+    const inches = Math.round(totalIn % 12)
+    return `${ft}'${inches}"`
+  })()
+
+  const weightDisplay = (() => {
+    if (!profile?.weight_kg) return '—'
+    if (!isImperial) return `${Math.round(profile.weight_kg)}`
+    return `${Math.round(profile.weight_kg * 2.2046)}`
+  })()
 
   if (editing) {
     return (
@@ -71,7 +86,7 @@ export default function Profile() {
             {profile?.full_name ? profile.full_name.toUpperCase() : 'NO NAME SET'}
           </Text>
           <View style={styles.levelBadge}>
-            <Text style={styles.levelText}>◈ BOUNTY HUNTER</Text>
+            <Text style={styles.levelText}>◈ NIGHT DRIVER</Text>
           </View>
         </View>
 
@@ -86,16 +101,16 @@ export default function Profile() {
           <View style={styles.statDivider} />
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>
-              {profile?.height_cm ?? '—'}
+              {heightDisplay}
             </Text>
-            <Text style={styles.statLabel}>HEIGHT CM</Text>
+            <Text style={styles.statLabel}>HEIGHT {isImperial ? '' : 'CM'}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>
-              {profile?.weight_kg ?? '—'}
+              {weightDisplay}
             </Text>
-            <Text style={styles.statLabel}>WEIGHT KG</Text>
+            <Text style={styles.statLabel}>WEIGHT {isImperial ? 'LBS' : 'KG'}</Text>
           </View>
         </View>
 

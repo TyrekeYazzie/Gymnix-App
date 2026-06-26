@@ -1,7 +1,7 @@
 import { AppState, AppStateStatus } from 'react-native';
 import { useRef, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import supabase from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 export default function useSessionTimeout(timeoutMinutes: number = 30): { resetTimer: () => void } {
   const lastActivity = useRef<Date>(new Date());

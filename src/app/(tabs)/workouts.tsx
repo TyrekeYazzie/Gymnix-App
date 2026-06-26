@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet
+  View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import WorkoutLog from '@/components/logs/WorkoutLog';
@@ -17,7 +18,7 @@ const categories = [
   { name: 'LEGS',      emoji: '🦵', color: COLORS.neonGreen },
   { name: 'SHOULDERS', emoji: '🏆', color: COLORS.neonBlue },
   { name: 'ARMS',      emoji: '💯', color: COLORS.neonYellow },
-  { name: 'CARDIO',    emoji: '🏃', color: COLORS.neonOrange },
+  { name: 'ABS',       emoji: '🔥', color: COLORS.neonOrange },
 ];
 
 interface Workout {
@@ -25,7 +26,7 @@ interface Workout {
   name: string;
   category: string;
   duration: string;
-  calories: number;
+  sets?: { reps: number; weight: number }[];
   created_at?: string;
 }
 
@@ -33,7 +34,9 @@ export default function Workouts() {
   const { user } = useAuth();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [logCategory, setLogCategory] = useState('');
+  const [activeFilter, setActiveFilter] = useState('ALL');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (!user) return;
@@ -55,13 +58,7 @@ export default function Workouts() {
     setWorkouts(prev => [workout, ...prev]);
   };
 
-  const openModal = (category = '') => {
-    setSelectedCategory(category);
-    setModalVisible(true);
-  };
-
-  const getCategoryColor = (cat: string) =>
-    categories.find(c => c.name === cat)?.color ?? COLORS.primary;
+  const getCategory = (cat: string) => categories.find(c => c.name === cat);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -79,6 +76,12 @@ export default function Workouts() {
     return diff <= 7;
   }).length;
 
+  const filteredWorkouts = workouts.filter(w => {
+    const matchesFilter = activeFilter === 'ALL' || w.category === activeFilter;
+    const matchesSearch = w.name.toLowerCase().includes(search.trim().toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -91,14 +94,12 @@ export default function Workouts() {
           </View>
           <TouchableOpacity
             style={styles.addButton}
-            onPress={() => openModal()}
+            onPress={() => { setLogCategory(''); setModalVisible(true); }}
             activeOpacity={0.8}
           >
             <Text style={styles.addButtonText}>+ LOG</Text>
           </TouchableOpacity>
         </View>
-
-        <View style={styles.dividerLine} />
 
         {/* Summary */}
         <View style={styles.summaryRow}>
@@ -114,69 +115,98 @@ export default function Workouts() {
           <View style={styles.summaryDivider} />
           <View style={styles.summaryBox}>
             <Text style={styles.summaryNumber}>
-              {workouts.reduce((s, w) => s + w.calories, 0).toLocaleString()}
+              {workouts.reduce((s, w) => s + (w.sets?.length ?? 0), 0)}
             </Text>
-            <Text style={styles.summaryLabel}>CAL BURNED</Text>
+            <Text style={styles.summaryLabel}>TOTAL SETS</Text>
           </View>
         </View>
 
-        {/* Categories */}
-        <Text style={styles.sectionTitle}>◈ CATEGORIES</Text>
-        <View style={styles.grid}>
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat.name}
-              style={[styles.categoryCard, { borderColor: cat.color }]}
-              onPress={() => openModal(cat.name)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
-              <Text style={[styles.categoryName, { color: cat.color }]}>
-                {cat.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        {/* Search */}
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={16} color={COLORS.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search workouts"
+            placeholderTextColor={COLORS.textMuted}
+            value={search}
+            onChangeText={setSearch}
+          />
         </View>
 
-        {/* Recent Workouts */}
-        <Text style={styles.sectionTitle}>◈ RECENT WORKOUTS</Text>
+        {/* Filter pills */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.lg }}>
+          <View style={styles.filterRow}>
+            <TouchableOpacity
+              style={[styles.filterPill, activeFilter === 'ALL' && styles.filterPillActive]}
+              onPress={() => setActiveFilter('ALL')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.filterPillText, activeFilter === 'ALL' && styles.filterPillTextActive]}>ALL</Text>
+            </TouchableOpacity>
+            {categories.map((cat) => (
+              <TouchableOpacity
+                key={cat.name}
+                style={[
+                  styles.filterPill,
+                  activeFilter === cat.name && { backgroundColor: cat.color, borderColor: cat.color },
+                ]}
+                onPress={() => setActiveFilter(cat.name)}
+                onLongPress={() => { setLogCategory(cat.name); setModalVisible(true); }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.filterPillEmoji}>{cat.emoji}</Text>
+                <Text style={[
+                  styles.filterPillText,
+                  activeFilter === cat.name && styles.filterPillTextActive,
+                ]}>
+                  {cat.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
 
-        {workouts.length === 0 ? (
+        {/* Workout list */}
+        <Text style={styles.sectionTitle}>
+          {activeFilter === 'ALL' ? '◈ RECENT WORKOUTS' : `◈ ${activeFilter}`}
+        </Text>
+
+        {filteredWorkouts.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>NO WORKOUTS LOGGED YET</Text>
+            <Text style={styles.emptyText}>NO WORKOUTS FOUND</Text>
             <Text style={styles.emptySubText}>Tap + LOG to start tracking</Text>
           </View>
         ) : (
-          workouts.map((workout, i) => (
-            <View key={workout.id ?? i} style={styles.workoutCard}>
-              <View style={styles.workoutLeft}>
-                <View style={styles.workoutNameRow}>
-                  <View style={[styles.categoryDot, {
-                    backgroundColor: getCategoryColor(workout.category)
-                  }]} />
-                  <Text style={styles.workoutName}>{workout.name}</Text>
+          filteredWorkouts.map((workout, i) => {
+            const cat = getCategory(workout.category);
+            return (
+              <View key={workout.id ?? i} style={styles.workoutCard}>
+                <View style={[styles.workoutIcon, { borderColor: cat?.color ?? COLORS.primary }]}>
+                  <Text style={styles.workoutIconEmoji}>{cat?.emoji ?? '🏋️'}</Text>
                 </View>
-                <Text style={styles.workoutMeta}>
-                  {workout.category} • {workout.duration}
-                </Text>
+                <View style={styles.workoutLeft}>
+                  <Text style={styles.workoutName}>{workout.name}</Text>
+                  <Text style={styles.workoutMeta}>
+                    {workout.category} • {workout.duration}
+                  </Text>
+                </View>
+                <View style={styles.workoutRight}>
+                  <Text style={styles.workoutDate}>{formatDate(workout.created_at)}</Text>
+                  {workout.sets && workout.sets.length > 0 && (
+                    <Text style={styles.workoutCalories}>{workout.sets.length} sets</Text>
+                  )}
+                </View>
               </View>
-              <View style={styles.workoutRight}>
-                <Text style={styles.workoutDate}>{formatDate(workout.created_at)}</Text>
-                <Text style={styles.workoutCalories}>
-                  {workout.calories > 0 ? `${workout.calories} kcal` : ''}
-                </Text>
-              </View>
-            </View>
-          ))
+            );
+          })
         )}
       </ScrollView>
 
-      {/* WorkoutLog modal — imported from components/logs */}
       <WorkoutLog
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSaved={handleSaved}
-        initialCategory={selectedCategory}
+        initialCategory={logCategory}
       />
     </SafeAreaView>
   );
@@ -189,7 +219,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.lg,
   },
   screenTitle: {
     fontSize: FONT_SIZES.xxl,
@@ -220,12 +250,6 @@ const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 2,
   },
-  dividerLine: {
-    height: 1,
-    backgroundColor: COLORS.primary,
-    width: 40,
-    marginBottom: SPACING.lg,
-  },
   summaryRow: {
     ...CARD.default,
     ...SHADOWS.purple,
@@ -250,6 +274,61 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   summaryDivider: { width: 1, height: 40, backgroundColor: COLORS.borderDefault },
+
+  // Search
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.bgTertiary,
+    borderColor: COLORS.borderDefault,
+    borderWidth: 1,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.md,
+    gap: SPACING.sm,
+  },
+  searchInput: {
+    flex: 1,
+    color: COLORS.textPrimary,
+    fontFamily: 'monospace',
+    fontSize: FONT_SIZES.sm,
+    paddingVertical: SPACING.md,
+  },
+
+  // Filter pills
+  filterRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  filterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.bgTertiary,
+    borderColor: COLORS.borderDefault,
+    borderWidth: 1,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  filterPillActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterPillEmoji: {
+    fontSize: FONT_SIZES.sm,
+  },
+  filterPillText: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textSecondary,
+    fontFamily: 'monospace',
+    fontWeight: FONT_WEIGHTS.bold,
+    letterSpacing: 1,
+  },
+  filterPillTextActive: {
+    color: COLORS.textInverse,
+  },
+
   sectionTitle: {
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
@@ -258,58 +337,40 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     marginBottom: SPACING.md,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginBottom: SPACING.lg,
-  },
-  categoryCard: {
-    width: '30.6%',
-    ...CARD.default,
-    alignItems: 'center',
-    paddingVertical: SPACING.lg,
-    borderWidth: 1,
-  },
-  categoryEmoji: { fontSize: FONT_SIZES.xxl, marginBottom: SPACING.sm },
-  categoryName: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: FONT_WEIGHTS.bold,
-    fontFamily: 'monospace',
-    letterSpacing: 1,
-  },
+
+  // Workout list
   workoutCard: {
     ...CARD.default,
     ...SHADOWS.subtle,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: SPACING.md,
     marginBottom: SPACING.sm,
   },
-  workoutLeft: { flex: 1 },
-  workoutNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.xs,
-  },
-  categoryDot: {
-    width: 8,
-    height: 8,
+  workoutIcon: {
+    width: 42,
+    height: 42,
     borderRadius: RADIUS.full,
-    marginRight: SPACING.sm,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  workoutIconEmoji: {
+    fontSize: FONT_SIZES.lg,
+  },
+  workoutLeft: { flex: 1 },
   workoutName: {
     color: COLORS.textPrimary,
     fontSize: FONT_SIZES.md,
     fontFamily: 'monospace',
     fontWeight: FONT_WEIGHTS.bold,
+    marginBottom: SPACING.xs,
   },
   workoutMeta: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZES.xs,
     fontFamily: 'monospace',
     letterSpacing: 1,
-    paddingLeft: SPACING.lg,
   },
   workoutRight: { alignItems: 'flex-end' },
   workoutDate: {

@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   Animated, Platform
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONT_SIZES, FONT_WEIGHTS, RADIUS, SPACING } from '@/constants/theme';
@@ -78,42 +79,59 @@ export default function TabBar({ state, descriptors, navigation, onPressCenter }
   };
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      {/* Left tabs */}
-      <View style={styles.tabGroup}>
-        {leftTabs.map((route, i) => renderTab(route, i, 0))}
-      </View>
+    <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, SPACING.md) }]}>
+      <BlurView intensity={40} tint="dark" style={styles.container}>
+        {/* Left tabs */}
+        <View style={styles.tabGroup}>
+          {leftTabs.map((route, i) => renderTab(route, i, 0))}
+        </View>
 
-      {/* Center + button */}
-      <View style={styles.centerContainer}>
-        <Animated.View style={[styles.centerButtonWrapper, { transform: [{ scale: scaleAnim }] }]}>
-          <TouchableOpacity
-            style={styles.centerButton}
-            onPress={handleCenterPress}
-            activeOpacity={0.9}
-          >
-            <Text style={styles.centerIcon}>+</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
+        {/* Center + button */}
+        <View style={styles.centerContainer}>
+          <Animated.View style={[styles.centerButtonWrapper, { transform: [{ scale: scaleAnim }] }]}>
+            <TouchableOpacity
+              style={styles.centerButton}
+              onPress={handleCenterPress}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.centerIcon}>+</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
 
-      {/* Right tabs */}
-      <View style={styles.tabGroup}>
-        {rightTabs.map((route, i) => renderTab(route, i, 2))}
-      </View>
+        {/* Right tabs */}
+        <View style={styles.tabGroup}>
+          {rightTabs.map((route, i) => renderTab(route, i, 2))}
+        </View>
+      </BlurView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    position: 'absolute',
+    left: SPACING.lg,
+    right: SPACING.lg,
+    bottom: 0,
+    alignItems: 'center',
+  },
   container: {
     flexDirection: 'row',
-    backgroundColor: COLORS.bgSecondary,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.borderDefault,
+    width: '100%',
+    backgroundColor: 'rgba(34, 29, 66, 0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 166, 35, 0.18)',
+    borderRadius: RADIUS.xl,
+    overflow: 'hidden',
     paddingTop: SPACING.sm,
     alignItems: 'center',
     height: 70,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 12,
   },
   tabGroup: {
     flex: 1,

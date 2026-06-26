@@ -1,31 +1,15 @@
-import { supabase } from '@/lib/supabase';
 import React, { useEffect } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { COLORS, SPACING } from '@/constants/theme';
-import { Session } from '@supabase/supabase-js';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ProfileProvider } from '@/context/ProfileContext';
+import { useAuth } from '@/hooks/useAuth';
+
 export default function Layout() {
   const router = useRouter();
   const segments = useSegments();
-  const [session, setSession] = React.useState<Session | null>(null);
-  const [loading, setLoading] = React.useState(true);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const { session, loading } = useAuth();
 
   useEffect(() => {
     if (loading) return;

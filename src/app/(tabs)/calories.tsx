@@ -1,35 +1,57 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, TextInput, Modal, Alert
+  View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
+import CaloriesLog from '@/components/logs/CaloriesLog';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS, CARD
 } from '@/constants/theme';
 
-const initialMeals = [
-  { name: 'Oatmeal with Banana', calories: 350, time: '8:00 AM' },
-  { name: 'Grilled Chicken Salad', calories: 480, time: '12:30 PM' },
-  { name: 'Protein Shake', calories: 220, time: '3:00 PM' },
-];
-
 const GOAL = 2000;
 
+const MEAL_TYPES = [
+  { name: 'Breakfast', emoji: '🌅', color: COLORS.neonYellow },
+  { name: 'Lunch',     emoji: '☀️', color: COLORS.primary },
+  { name: 'Dinner',    emoji: '🌙', color: COLORS.neonBlue },
+  { name: 'Snack',     emoji: '🍎', color: COLORS.neonGreen },
+];
+
+interface Meal {
+  id: string;
+  meal_name: string;
+  meal_type: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  created_at: string;
+}
+
+function localMidnight(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 export default function Calories() {
-  const [meals, setMeals] = useState(initialMeals);
+  const { user } = useAuth();
+  const [meals, setMeals] = useState<Meal[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [mealName, setMealName] = useState('');
-  const [mealCalories, setMealCalories] = useState('');
+  const [activeFilter, setActiveFilter] = useState('ALL');
+  const [search, setSearch] = useState('');
 
   const totalCalories = meals.reduce((sum, m) => sum + m.calories, 0);
+  const protein = meals.reduce((sum, m) => sum + (m.protein_g ?? 0), 0);
+  const carbs = meals.reduce((sum, m) => sum + (m.carbs_g ?? 0), 0);
+  const fat = meals.reduce((sum, m) => sum + (m.fat_g ?? 0), 0);
   const remaining = GOAL - totalCalories;
   const percentage = Math.min((totalCalories / GOAL) * 100, 100);
-
-  const protein = 80;
-  const carbs = 140;
-  const fat = 45;
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -37,32 +59,40 @@ export default function Calories() {
     day: 'numeric',
   });
 
-  const handleAddMeal = () => {
-    if (!mealName || !mealCalories) {
-      Alert.alert('Missing Info', 'Please enter a meal name and calories');
-      return;
-    }
-    const cal = parseInt(mealCalories);
-    if (isNaN(cal) || cal <= 0) {
-      Alert.alert('Invalid', 'Please enter a valid calorie amount');
-      return;
-    }
-    const now = new Date();
-    const time = now.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-    setMeals([...meals, { name: mealName, calories: cal, time }]);
-    setMealName('');
-    setMealCalories('');
-    setModalVisible(false);
-  };
+  const loadMeals = useCallback(async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('calorie_logs')
+      .select('*')
+      .eq('user_id', user.id)
+      .gte('created_at', localMidnight().toISOString())
+      .order('created_at', { ascending: true });
+    if (error) { console.error('Failed to load meals:', error.message); return; }
+    setMeals(data ?? []);
+  }, [user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadMeals();
+    }, [loadMeals])
+  );
 
   const getProgressColor = () => {
     if (percentage >= 100) return COLORS.accent;
     if (percentage >= 75) return COLORS.neonYellow;
     return COLORS.primary;
   };
+
+  const formatTime = (dateStr: string) =>
+    new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+  const getMealType = (name: string) => MEAL_TYPES.find(t => t.name === name);
+
+  const filteredMeals = meals.filter(m => {
+    const matchesFilter = activeFilter === 'ALL' || m.meal_type === activeFilter;
+    const matchesSearch = m.meal_name.toLowerCase().includes(search.trim().toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -144,110 +174,90 @@ export default function Calories() {
           ))}
         </View>
 
-        {/* Quick Add Row */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>◈ QUICK ADD</Text>
-          <View style={styles.quickRow}>
-            {[100, 250, 500, 750].map((amount) => (
+        {/* Search */}
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={16} color={COLORS.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search meals"
+            placeholderTextColor={COLORS.textMuted}
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
+
+        {/* Filter pills */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.lg }}>
+          <View style={styles.filterRow}>
+            <TouchableOpacity
+              style={[styles.filterPill, activeFilter === 'ALL' && styles.filterPillActive]}
+              onPress={() => setActiveFilter('ALL')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.filterPillText, activeFilter === 'ALL' && styles.filterPillTextActive]}>ALL</Text>
+            </TouchableOpacity>
+            {MEAL_TYPES.map((type) => (
               <TouchableOpacity
-                key={amount}
-                style={styles.quickButton}
+                key={type.name}
+                style={[
+                  styles.filterPill,
+                  activeFilter === type.name && { backgroundColor: type.color, borderColor: type.color },
+                ]}
+                onPress={() => setActiveFilter(type.name)}
                 activeOpacity={0.7}
-                onPress={() => {
-                  const now = new Date();
-                  const time = now.toLocaleTimeString('en-US', {
-                    hour: 'numeric', minute: '2-digit'
-                  });
-                  setMeals([...meals, {
-                    name: `Quick Add`,
-                    calories: amount,
-                    time,
-                  }]);
-                }}
               >
-                <Text style={styles.quickButtonText}>+{amount}</Text>
+                <Text style={styles.filterPillEmoji}>{type.emoji}</Text>
+                <Text style={[
+                  styles.filterPillText,
+                  activeFilter === type.name && styles.filterPillTextActive,
+                ]}>
+                  {type.name}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
-        </View>
+        </ScrollView>
 
         {/* Meals List */}
-        <Text style={styles.sectionTitle}>◈ TODAY'S MEALS</Text>
+        <Text style={styles.sectionTitle}>
+          {activeFilter === 'ALL' ? "◈ TODAY'S MEALS" : `◈ ${activeFilter.toUpperCase()}`}
+        </Text>
 
-        {meals.length === 0 ? (
+        {filteredMeals.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>NO MEALS LOGGED YET</Text>
+            <Text style={styles.emptyText}>NO MEALS FOUND</Text>
             <Text style={styles.emptySubText}>Tap + ADD to log your first meal</Text>
           </View>
         ) : (
-          meals.map((meal, i) => (
-            <View key={i} style={styles.mealCard}>
-              <View style={styles.mealLeft}>
-                <Text style={styles.mealName}>{meal.name}</Text>
-                <Text style={styles.mealTime}>{meal.time}</Text>
+          filteredMeals.map((meal) => {
+            const type = getMealType(meal.meal_type);
+            return (
+              <View key={meal.id} style={styles.mealCard}>
+                <View style={[styles.mealIcon, { borderColor: type?.color ?? COLORS.primary }]}>
+                  <Text style={styles.mealIconEmoji}>{type?.emoji ?? '🍽️'}</Text>
+                </View>
+                <View style={styles.mealLeft}>
+                  <Text style={styles.mealName}>{meal.meal_name}</Text>
+                  <Text style={styles.mealTime}>{formatTime(meal.created_at)}</Text>
+                </View>
+                <View style={styles.mealRight}>
+                  <Text style={styles.mealCalories}>
+                    {meal.calories.toLocaleString()}
+                  </Text>
+                  <Text style={styles.mealKcal}>kcal</Text>
+                </View>
               </View>
-              <View style={styles.mealRight}>
-                <Text style={styles.mealCalories}>
-                  {meal.calories.toLocaleString()}
-                </Text>
-                <Text style={styles.mealKcal}>kcal</Text>
-              </View>
-            </View>
-          ))
+            );
+          })
         )}
 
       </ScrollView>
 
-      {/* Add Meal Modal */}
-      <Modal
+      <CaloriesLog
         visible={modalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>◈ LOG MEAL</Text>
-
-            <Text style={styles.inputLabel}>MEAL NAME</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Grilled Chicken"
-              placeholderTextColor={COLORS.textMuted}
-              value={mealName}
-              onChangeText={setMealName}
-              autoCapitalize="words"
-            />
-
-            <Text style={styles.inputLabel}>CALORIES</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 450"
-              placeholderTextColor={COLORS.textMuted}
-              value={mealCalories}
-              onChangeText={setMealCalories}
-              keyboardType="numeric"
-            />
-
-            <TouchableOpacity
-              style={styles.modalAddButton}
-              onPress={handleAddMeal}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.modalAddText}>▸ ADD MEAL</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.modalCancelButton}
-              onPress={() => setModalVisible(false)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.modalCancelText}>CANCEL</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
+        onClose={() => setModalVisible(false)}
+        onSaved={() => { setModalVisible(false); loadMeals(); }}
+      />
     </SafeAreaView>
   );
 }
@@ -390,24 +400,58 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
 
-  // Quick Add
-  quickRow: {
+  // Search
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.bgTertiary,
+    borderColor: COLORS.borderDefault,
+    borderWidth: 1,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.md,
+    gap: SPACING.sm,
+  },
+  searchInput: {
+    flex: 1,
+    color: COLORS.textPrimary,
+    fontFamily: 'monospace',
+    fontSize: FONT_SIZES.sm,
+    paddingVertical: SPACING.md,
+  },
+
+  // Filter pills
+  filterRow: {
     flexDirection: 'row',
     gap: SPACING.sm,
   },
-  quickButton: {
-    flex: 1,
-    borderColor: COLORS.primary,
-    borderWidth: 1,
-    borderRadius: RADIUS.sm,
-    paddingVertical: SPACING.sm,
+  filterPill: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.bgTertiary,
+    borderColor: COLORS.borderDefault,
+    borderWidth: 1,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
   },
-  quickButtonText: {
-    color: COLORS.primaryLight,
+  filterPillActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterPillEmoji: {
     fontSize: FONT_SIZES.sm,
+  },
+  filterPillText: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textSecondary,
     fontFamily: 'monospace',
     fontWeight: FONT_WEIGHTS.bold,
+    letterSpacing: 1,
+  },
+  filterPillTextActive: {
+    color: COLORS.textInverse,
   },
 
   // Meals
@@ -423,9 +467,20 @@ const styles = StyleSheet.create({
     ...CARD.default,
     ...SHADOWS.subtle,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: SPACING.md,
     marginBottom: SPACING.sm,
+  },
+  mealIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: RADIUS.full,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mealIconEmoji: {
+    fontSize: FONT_SIZES.lg,
   },
   mealLeft: {
     flex: 1,
@@ -475,74 +530,5 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontSize: FONT_SIZES.xs,
     fontFamily: 'monospace',
-  },
-
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: COLORS.bgOverlay,
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    ...CARD.default,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
-    borderColor: COLORS.borderFocus,
-    padding: SPACING.xl,
-    ...SHADOWS.purple,
-  },
-  modalTitle: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
-    fontFamily: 'monospace',
-    letterSpacing: 3,
-    marginBottom: SPACING.xl,
-    textAlign: 'center',
-  },
-  inputLabel: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
-    fontFamily: 'monospace',
-    letterSpacing: 2,
-    marginBottom: SPACING.sm,
-  },
-  input: {
-    backgroundColor: COLORS.bgTertiary,
-    borderColor: COLORS.borderDefault,
-    borderWidth: 1,
-    borderRadius: RADIUS.sm,
-    padding: SPACING.md,
-    color: COLORS.textPrimary,
-    fontSize: FONT_SIZES.md,
-    fontFamily: 'monospace',
-    marginBottom: SPACING.lg,
-  },
-  modalAddButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
-    padding: SPACING.lg,
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-    ...SHADOWS.purple,
-  },
-  modalAddText: {
-    color: COLORS.textPrimary,
-    fontWeight: FONT_WEIGHTS.bold,
-    fontSize: FONT_SIZES.md,
-    fontFamily: 'monospace',
-    letterSpacing: 3,
-  },
-  modalCancelButton: {
-    padding: SPACING.lg,
-    alignItems: 'center',
-  },
-  modalCancelText: {
-    color: COLORS.textMuted,
-    fontSize: FONT_SIZES.sm,
-    fontFamily: 'monospace',
-    letterSpacing: 2,
   },
 });

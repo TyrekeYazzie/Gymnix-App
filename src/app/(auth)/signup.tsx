@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
+import { COLORS } from '@/constants/theme';
 
 export default function Signup() {
   const router = useRouter();
@@ -17,8 +18,22 @@ export default function Signup() {
   const [success, setSuccess] = useState(false);
 
   const handleSignup = async () => {
-    setLoading(true);
     setError('');
+
+    if (!fullName.trim()) {
+      setError('Please enter your full name');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -59,14 +74,14 @@ export default function Signup() {
         <TextInput
           style={styles.input}
           placeholder="Full Name"
-          placeholderTextColor="#888888"
+          placeholderTextColor={COLORS.textMuted}
           value={fullName}
           onChangeText={setFullName}
         />
         <TextInput
           style={styles.input}
           placeholder="Email Address"
-          placeholderTextColor="#888888"
+          placeholderTextColor={COLORS.textMuted}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -75,7 +90,7 @@ export default function Signup() {
         <TextInput
           style={styles.input}
           placeholder="Password"
-          placeholderTextColor="#888888"
+          placeholderTextColor={COLORS.textMuted}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -87,7 +102,7 @@ export default function Signup() {
           disabled={loading}
         >
           {loading
-            ? <ActivityIndicator color="#ffffff" />
+            ? <ActivityIndicator color={COLORS.textPrimary} />
             : <Text style={styles.buttonText}>Sign Up</Text>
           }
         </TouchableOpacity>
@@ -101,20 +116,20 @@ export default function Signup() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0a0a' },
+  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
   content: { padding: 24, paddingTop: 60 },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#ffffff', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#888888', marginBottom: 40 },
+  title: { fontSize: 32, fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: 8 },
+  subtitle: { fontSize: 16, color: COLORS.textSecondary, marginBottom: 40 },
   input: {
-    backgroundColor: '#1a1a1a', color: '#ffffff',
-    borderColor: '#2a2a2a', borderWidth: 1,
+    backgroundColor: COLORS.bgTertiary, color: COLORS.textPrimary,
+    borderColor: COLORS.borderDefault, borderWidth: 1,
     borderRadius: 12, padding: 16, marginBottom: 16
   },
   button: {
-    backgroundColor: '#ff4500', borderRadius: 12,
+    backgroundColor: COLORS.primary, borderRadius: 12,
     padding: 16, alignItems: 'center', marginTop: 8
   },
-  buttonText: { color: '#ffffff', fontWeight: 'bold', fontSize: 16 },
-  error: { color: 'red', marginBottom: 16 },
-  link: { color: '#ff4500', textAlign: 'center', marginTop: 24 }
+  buttonText: { color: COLORS.textPrimary, fontWeight: 'bold', fontSize: 16 },
+  error: { color: COLORS.error, marginBottom: 16 },
+  link: { color: COLORS.primary, textAlign: 'center', marginTop: 24 }
 });

@@ -1,86 +1,86 @@
-// FitnessApp Theme — Retro Vintage Anime
-// Inspired by: Cowboy Bebop — jazz noir, faded neon, deep space,
-// cigarette smoke, rust and chrome, analog warmth, bounty hunter grit
+// FitnessApp Theme — Dark Deco Outrun
+// Inspired by: Streamline Moderne / Gotham noir architecture, glowing
+// geometric window panes, 1940s film-noir shadow, 80s synthwave twilight,
+// and Hiroshi Nagai–style City Pop album art — a vintage sports car
+// parked outside a sleek mansion above a glittering city grid at dusk
 
 export const COLORS = {
   // ── BACKGROUNDS ──────────────────────────────────────────
-  // Deep space and smoky jazz bar blacks
-  bgPrimary:        '#0d0d14',   // deep space void
-  bgSecondary:      '#13131f',   // smoke-filled bar
-  bgTertiary:       '#1c1c2e',   // dark indigo shadow
-  bgElevated:       '#242438',   // raised panel — ship console
-  bgOverlay:        'rgba(13, 13, 20, 0.88)', // noir overlay
+  // Gotham noir navy, near-black with a cool violet undertone
+  bgPrimary:        '#07060f',   // noir void
+  bgSecondary:      '#0f0d1f',   // dusk interior
+  bgTertiary:       '#181530',   // deco shadow
+  bgElevated:       '#221d42',   // raised panel — penthouse glass
+  bgOverlay:        'rgba(7, 6, 15, 0.88)', // noir overlay
 
   // ── BORDERS ──────────────────────────────────────────────
-  borderDefault:    '#2e2e45',   // faded hull metal
-  borderFocus:      '#e8a030',   // warm amber glow
-  borderAccent:     '#c0392b',   // rust red danger
+  borderDefault:    '#2c2750',   // dark architectural line
+  borderFocus:      '#f2941c',   // glowing amber window pane
+  borderAccent:     '#38bdf8',   // city-grid cyan
 
-  // ── PRIMARY — BEBOP AMBER / GOLD ─────────────────────────
-  // Warm jazz lights, analog warmth, Ein's collar
-  primary:          '#e8a030',   // bebop amber
-  primaryLight:     '#f0bc60',   // warm gold
-  primaryDark:      '#b07820',   // burnt brass
-  primaryGlow:      'rgba(232, 160, 48, 0.22)', // amber haze
+  // ── PRIMARY — DECO AMBER ──────────────────────────────────
+  // Glowing geometric window panes, neon sign gold, chrome trim
+  primary:          '#f2941c',   // deco amber
+  primaryLight:     '#ffc66d',   // warm gold glow
+  primaryDark:      '#b9790f',   // burnished brass
+  primaryGlow:      'rgba(245, 166, 35, 0.25)', // amber haze
 
-  // ── ACCENT — FAYE CRIMSON ────────────────────────────────
-  // Faye Valentine's red jacket, danger, heat
-  accent:           '#c0392b',   // faye crimson
-  accentLight:      '#e05a4e',   // faded rust
-  accentDark:       '#922b21',   // deep blood rust
-  accentGlow:       'rgba(192, 57, 43, 0.25)', // crimson smoke
+  // ── ACCENT — TWILIGHT MAGENTA ─────────────────────────────
+  // Horizon glow, taillights, danger
+  accent:           '#e619c9',   // twilight magenta
+  accentLight:      '#ec8ef7',   // orchid glow
+  accentDark:       '#a21caf',   // deep violet
+  accentGlow:       'rgba(217, 70, 239, 0.25)', // magenta haze
 
-  // ── NEON — FADED SIGN GLOW ───────────────────────────────
-  // Old neon bar signs half broken, flickering
-  neonGreen:        '#4ecb8d',   // faded mint — success
-  neonBlue:         '#5b9bd5',   // hazy cerulean — info
-  neonYellow:       '#f5d76e',   // nicotine gold — warning
-  neonOrange:       '#e67e22',   // ember glow — alert
+  // ── NEON — CITY GRID GLOW ─────────────────────────────────
+  neonGreen:        '#2dd4bf',   // teal mint — success
+  neonBlue:         '#38bdf8',   // electric cyan — info / city grid
+  neonYellow:       '#fbbf24',   // gold — warning / window light
+  neonOrange:       '#fb7185',   // sunset rose — alert
 
   // ── TEXT ─────────────────────────────────────────────────
-  textPrimary:      '#ede8d8',   // aged paper white
-  textSecondary:    '#8c8a7a',   // smoke grey
-  textMuted:        '#4a4858',   // faded ink
-  textInverse:      '#0d0d14',   // dark on light
-  textAccent:       '#e8a030',   // amber highlight
-  textNeon:         '#4ecb8d',   // mint score text
+  textPrimary:      '#f3eee0',   // warm deco ivory
+  textSecondary:    '#a89cc8',   // muted lavender grey
+  textMuted:        '#5b5380',   // faded violet ink
+  textInverse:      '#07060f',   // dark on light
+  textAccent:       '#f2941c',   // amber highlight
+  textNeon:         '#2dd4bf',   // teal score text
 
   // ── GAME UI ──────────────────────────────────────────────
-  // Bebop bounty board stats and health
-  healthFull:       '#4ecb8d',   // mint full health
-  healthMid:        '#f5d76e',   // gold mid health
-  healthLow:        '#c0392b',   // rust low health
-  energyBar:        '#5b9bd5',   // hazy blue energy
-  expBar:           '#e8a030',   // amber exp bar
-  bossBar:          '#c0392b',   // crimson boss bar
+  healthFull:       '#2dd4bf',   // teal full health
+  healthMid:        '#fbbf24',   // gold mid health
+  healthLow:        '#e619c9',   // magenta low health
+  energyBar:        '#38bdf8',   // cyan energy
+  expBar:           '#f2941c',   // amber exp bar
+  bossBar:          '#e619c9',   // magenta boss bar
 
   // ── GRAPH / CHART ────────────────────────────────────────
-  graphLine:        '#e8a030',   // amber line
-  graphFill:        'rgba(232, 160, 48, 0.10)', // warm fill
-  graphDot:         '#c0392b',   // rust dot
-  graphDotToday:    '#4ecb8d',   // mint today
-  graphGrid:        '#1c1c2e',   // barely visible grid
-  graphGoalLine:    '#c0392b',   // rust goal line
-  graphAxisText:    '#4a4858',   // faded axis
+  graphLine:        '#f2941c',   // amber line
+  graphFill:        'rgba(245, 166, 35, 0.10)', // amber fill
+  graphDot:         '#38bdf8',   // cyan dot
+  graphDotToday:    '#2dd4bf',   // teal today
+  graphGrid:        '#181530',   // barely visible grid
+  graphGoalLine:    '#e619c9',   // magenta goal line
+  graphAxisText:    '#5b5380',   // faded axis
 
   // ── CIRCLE PROGRESS ──────────────────────────────────────
-  circleTrack:      '#2e2e45',   // empty ring
-  circleFill:       '#e8a030',   // amber progress
-  circleComplete:   '#4ecb8d',   // mint complete
-  circleOver:       '#c0392b',   // rust over goal
+  circleTrack:      '#2c2750',   // empty ring
+  circleFill:       '#f2941c',   // amber progress
+  circleComplete:   '#2dd4bf',   // teal complete
+  circleOver:       '#e619c9',   // magenta over goal
 
   // ── STATUS ───────────────────────────────────────────────
-  success:          '#4ecb8d',   // mint victory
-  warning:          '#f5d76e',   // gold caution
-  error:            '#c0392b',   // rust failure
-  info:             '#5b9bd5',   // hazy blue hint
+  success:          '#2dd4bf',   // teal victory
+  warning:          '#fbbf24',   // gold caution
+  error:            '#e619c9',   // magenta failure
+  info:             '#38bdf8',   // cyan hint
 
   // ── SPECIAL EFFECTS ──────────────────────────────────────
-  glowAmber:        'rgba(232, 160, 48, 0.4)',
-  glowCrimson:      'rgba(192, 57, 43, 0.4)',
-  glowMint:         'rgba(78, 203, 141, 0.4)',
-  glowBlue:         'rgba(91, 155, 213, 0.4)',
-  pixelBorder:      '#e8a030',   // amber retro border
+  glowAmber:        'rgba(245, 166, 35, 0.4)',
+  glowCrimson:      'rgba(217, 70, 239, 0.4)',
+  glowMint:         'rgba(45, 212, 191, 0.4)',
+  glowBlue:         'rgba(56, 189, 248, 0.4)',
+  pixelBorder:      '#f2941c',   // amber retro border
   scanline:         'rgba(0, 0, 0, 0.12)', // analog scanline
 }
 
@@ -129,21 +129,21 @@ export const RADIUS = {
 // ── SHADOWS ────────────────────────────────────────────────
 export const SHADOWS = {
   purple: {
-    shadowColor:   '#e8a030',
+    shadowColor:   '#f2941c',
     shadowOffset:  { width: 0, height: 0 },
     shadowOpacity: 0.4,
     shadowRadius:  8,
     elevation:     6,
   },
   crimson: {
-    shadowColor:   '#c0392b',
+    shadowColor:   '#e619c9',
     shadowOffset:  { width: 0, height: 0 },
     shadowOpacity: 0.45,
     shadowRadius:  8,
     elevation:     6,
   },
   green: {
-    shadowColor:   '#4ecb8d',
+    shadowColor:   '#2dd4bf',
     shadowOffset:  { width: 0, height: 0 },
     shadowOpacity: 0.35,
     shadowRadius:  8,
@@ -161,27 +161,27 @@ export const SHADOWS = {
 // ── CARD STYLES ────────────────────────────────────────────
 export const CARD = {
   default: {
-    backgroundColor:  '#13131f',
-    borderColor:      '#2e2e45',
+    backgroundColor:  '#0f0d1f',
+    borderColor:      '#2c2750',
     borderWidth:      1,
     borderRadius:     12,
     padding:          16,
   },
   glowing: {
-    backgroundColor:  '#13131f',
-    borderColor:      '#e8a030',
+    backgroundColor:  '#0f0d1f',
+    borderColor:      '#f2941c',
     borderWidth:      1,
     borderRadius:     12,
     padding:          16,
-    shadowColor:      '#e8a030',
+    shadowColor:      '#f2941c',
     shadowOffset:     { width: 0, height: 0 },
     shadowOpacity:    0.35,
     shadowRadius:     8,
     elevation:        6,
   },
   danger: {
-    backgroundColor:  '#1a1014',
-    borderColor:      '#c0392b',
+    backgroundColor:  '#160a1c',
+    borderColor:      '#e619c9',
     borderWidth:      1,
     borderRadius:     12,
     padding:          16,
@@ -191,7 +191,7 @@ export const CARD = {
 // ── BUTTON STYLES ──────────────────────────────────────────
 export const BUTTON = {
   primary: {
-    backgroundColor:  '#e8a030',
+    backgroundColor:  '#f2941c',
     borderRadius:     10,
     paddingVertical:  14,
     paddingHorizontal: 24,
@@ -199,7 +199,7 @@ export const BUTTON = {
   },
   secondary: {
     backgroundColor:  'transparent',
-    borderColor:      '#e8a030',
+    borderColor:      '#f2941c',
     borderWidth:      1,
     borderRadius:     10,
     paddingVertical:  14,
@@ -207,7 +207,7 @@ export const BUTTON = {
     alignItems:       'center' as const,
   },
   danger: {
-    backgroundColor:  '#c0392b',
+    backgroundColor:  '#e619c9',
     borderRadius:     10,
     paddingVertical:  14,
     paddingHorizontal: 24,
@@ -225,21 +225,21 @@ export const BUTTON = {
 // ── INPUT STYLES ───────────────────────────────────────────
 export const INPUT = {
   default: {
-    backgroundColor:  '#1c1c2e',
-    borderColor:      '#2e2e45',
+    backgroundColor:  '#181530',
+    borderColor:      '#2c2750',
     borderWidth:      1,
     borderRadius:     10,
     padding:          14,
-    color:            '#ede8d8',
+    color:            '#f3eee0',
     fontSize:         16,
   },
   focused: {
-    backgroundColor:  '#1c1c2e',
-    borderColor:      '#e8a030',
+    backgroundColor:  '#181530',
+    borderColor:      '#f2941c',
     borderWidth:      1,
     borderRadius:     10,
     padding:          14,
-    color:            '#ede8d8',
+    color:            '#f3eee0',
     fontSize:         16,
   },
 }

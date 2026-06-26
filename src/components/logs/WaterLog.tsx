@@ -1,0 +1,282 @@
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity,
+  StyleSheet, Modal, Alert,
+  KeyboardAvoidingView, Platform, Animated, PanResponder
+} from 'react-native';
+import Slider from '@react-native-community/slider';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/context/ProfileContext';
+import {
+  COLORS, FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS
+} from '@/constants/theme';
+
+// metric quick amounts in ml
+const QUICK_AMOUNTS_METRIC = [
+  { label: '250ml', value: 250,  emoji: '🥤' },
+  { label: '500ml', value: 500,  emoji: '💧' },
+  { label: '750ml', value: 750,  emoji: '🫗' },
+  { label: '1L',    value: 1000, emoji: '🍶' },
+];
+
+// imperial quick amounts in fl oz (stored as ml)
+const QUICK_AMOUNTS_IMPERIAL = [
+  { label: '8 fl oz',  value: 237,  emoji: '🥤' },
+  { label: '12 fl oz', value: 355,  emoji: '💧' },
+  { label: '16 fl oz', value: 473,  emoji: '🫗' },
+  { label: '32 fl oz', value: 946,  emoji: '🍶' },
+];
+
+const DAILY_GOAL_ML = 2500;
+const DAILY_GOAL_FLOZ = 84;
+
+interface WaterEntry { id: string; amount_ml: number; created_at: string; }
+
+interface Props {
+  visible: boolean;
+  onClose: () => void;
+  onSaved: (log: any) => void;
+}
+
+export default function WaterLog({ visible, onClose, onSaved }: Props) {
+  const { user } = useAuth();
+  const { isImperial } = useProfile();
+
+  // always stored as ml internally
+  const [amountMl, setAmountMl] = useState(250);
+  const [todayTotalMl, setTodayTotalMl] = useState(0);
+  const [todayEntries, setTodayEntries] = useState<WaterEntry[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const slideAnim = useRef(new Animated.Value(600)).current;
+  const overlayAnim = useRef(new Animated.Value(0)).current;
+
+  // display conversions
+  const toDisplay = (ml: number) => isImperial ? ml * 0.033814 : ml;
+  const fromDisplay = (val: number) => isImperial ? val / 0.033814 : val;
+  const displayUnit = isImperial ? 'FL OZ' : 'ML';
+  const dailyGoal = isImperial ? DAILY_GOAL_FLOZ : DAILY_GOAL_ML;
+  const displayToday = toDisplay(todayTotalMl);
+  const displayAmount = toDisplay(amountMl);
+  const quickAmounts = isImperial ? QUICK_AMOUNTS_IMPERIAL : QUICK_AMOUNTS_METRIC;
+
+  const progressPercent = Math.min((todayTotalMl / DAILY_GOAL_ML) * 100, 100);
+  const progressColor = progressPercent >= 100 ? COLORS.neonGreen : progressPercent >= 60 ? COLORS.neonBlue : COLORS.accent;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 5,
+      onPanResponderMove: (_, g) => { if (g.dy > 0) slideAnim.setValue(g.dy); },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 100 || g.vy > 0.5) {
+          Animated.spring(slideAnim, { toValue: 600, useNativeDriver: true, damping: 20, stiffness: 200 })
+            .start(() => handleClose());
+        } else {
+          Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (visible) {
+      loadTodayTotal();
+      Animated.parallel([
+        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }),
+        Animated.timing(overlayAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.spring(slideAnim, { toValue: 600, useNativeDriver: true, damping: 20, stiffness: 200 }),
+        Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible]);
+
+  const loadTodayTotal = async () => {
+    if (!user) return;
+    const localMidnight = new Date();
+    localMidnight.setHours(0, 0, 0, 0);
+    const { data, error } = await supabase
+      .from('water_logs')
+      .select('id, amount_ml, created_at')
+      .eq('user_id', user.id)
+      .gte('created_at', localMidnight.toISOString())
+      .order('created_at', { ascending: false });
+    if (error) { console.error('Failed to load today water total:', error.message); return; }
+    if (data) {
+      setTodayTotalMl(data.reduce((sum, r) => sum + r.amount_ml, 0));
+      setTodayEntries(data);
+    }
+  };
+
+  const handleClose = () => { setAmountMl(250); onClose(); };
+
+  const formatDisplay = (ml: number) => {
+    if (isImperial) return `${toDisplay(ml).toFixed(0)} fl oz`;
+    return ml >= 1000 ? `${(ml / 1000).toFixed(1)}L` : `${ml}ml`;
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+
+    const { data, error } = await supabase
+      .from('water_logs')
+      .insert({ user_id: user.id, amount_ml: amountMl })
+      .select()
+      .single();
+
+    setSaving(false);
+    if (error) { Alert.alert('Error', error.message); return; }
+    if (data) {
+      setTodayTotalMl(p => p + amountMl);
+      setTodayEntries(p => [data, ...p]);
+      onSaved(data);
+      setAmountMl(250);
+      onClose();
+    }
+  };
+
+  const formatTime = (dateStr: string) =>
+    new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
+      <Animated.View style={[styles.overlay, { opacity: overlayAnim }]}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={handleClose} />
+      </Animated.View>
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1, justifyContent: 'flex-end' }}
+      >
+        <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
+          <View {...panResponder.panHandlers} style={styles.handleArea}>
+            <View style={styles.handleBar} />
+          </View>
+
+          <Text style={styles.title}>◈ LOG WATER</Text>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Progress */}
+            <View style={styles.progressCard}>
+              <View style={styles.progressHeader}>
+                <Text style={styles.progressLabel}>TODAY</Text>
+                <Text style={[styles.progressValue, { color: progressColor }]}>
+                  {formatDisplay(todayTotalMl)} / {isImperial ? `${DAILY_GOAL_FLOZ} fl oz` : `${DAILY_GOAL_ML / 1000}L`}
+                </Text>
+              </View>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${progressPercent}%` as any, backgroundColor: progressColor }]} />
+              </View>
+              <Text style={styles.progressPercent}>{Math.round(progressPercent)}% of daily goal</Text>
+            </View>
+
+            {/* Quick amounts */}
+            <Text style={styles.label}>QUICK ADD</Text>
+            <View style={styles.quickRow}>
+              {quickAmounts.map((q) => (
+                <TouchableOpacity
+                  key={q.value}
+                  style={[styles.quickCard, amountMl === q.value && { borderColor: COLORS.neonBlue, backgroundColor: COLORS.neonBlue + '22' }]}
+                  onPress={() => setAmountMl(q.value)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.quickEmoji}>{q.emoji}</Text>
+                  <Text style={[styles.quickLabel, amountMl === q.value && { color: COLORS.neonBlue }]}>{q.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Custom slider */}
+            <Text style={styles.label}>CUSTOM — {formatDisplay(amountMl).toUpperCase()}</Text>
+            <Slider
+              style={[styles.slider, { marginBottom: SPACING.lg }]}
+              minimumValue={isImperial ? 1 : 50}
+              maximumValue={isImperial ? 68 : 2000}
+              step={isImperial ? 1 : 50}
+              value={displayAmount}
+              onValueChange={(val) => setAmountMl(Math.round(fromDisplay(val)))}
+              minimumTrackTintColor={COLORS.neonBlue}
+              maximumTrackTintColor={COLORS.borderDefault}
+              thumbTintColor={COLORS.neonBlue}
+            />
+
+            {todayEntries.length > 0 && (
+              <View style={{ marginBottom: SPACING.lg }}>
+                <Text style={[styles.label, { marginTop: SPACING.sm }]}>TODAY'S LOG</Text>
+                {todayEntries.slice(0, 5).map((entry) => (
+                  <View key={entry.id} style={styles.historyRow}>
+                    <Text style={styles.historyAmount}>{formatDisplay(entry.amount_ml)}</Text>
+                    <Text style={styles.historyTime}>{formatTime(entry.created_at)}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[styles.saveButton, saving && { opacity: 0.6 }]}
+              onPress={handleSave}
+              activeOpacity={0.8}
+              disabled={saving}
+            >
+              <Text style={styles.saveText}>{saving ? 'SAVING...' : '▸ LOG WATER'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.cancelButton} onPress={handleClose} activeOpacity={0.7}>
+              <Text style={styles.cancelText}>CANCEL</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </Animated.View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.bgOverlay },
+  sheet: {
+    backgroundColor: COLORS.bgSecondary, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
+    borderWidth: 1, borderColor: COLORS.neonBlue + '88', borderBottomWidth: 0,
+    maxHeight: '85%', paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxxl,
+  },
+  handleArea: { alignItems: 'center', paddingVertical: SPACING.md },
+  handleBar: { width: 40, height: 4, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full },
+  title: {
+    fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary,
+    fontFamily: 'monospace', letterSpacing: 3, marginBottom: SPACING.lg, textAlign: 'center',
+  },
+  label: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontFamily: 'monospace', letterSpacing: 2, marginBottom: SPACING.sm },
+  progressCard: {
+    backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
+    marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDefault,
+  },
+  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.sm },
+  progressLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontFamily: 'monospace', letterSpacing: 2 },
+  progressValue: { fontSize: FONT_SIZES.xs, fontFamily: 'monospace', fontWeight: FONT_WEIGHTS.bold },
+  progressTrack: { height: 6, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full, overflow: 'hidden', marginBottom: SPACING.xs },
+  progressFill: { height: '100%', borderRadius: RADIUS.full },
+  progressPercent: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontFamily: 'monospace', textAlign: 'right' },
+  quickRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
+  quickCard: {
+    flex: 1, backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault,
+    borderWidth: 1, borderRadius: RADIUS.md, alignItems: 'center', paddingVertical: SPACING.md,
+  },
+  quickEmoji: { fontSize: FONT_SIZES.xl, marginBottom: 4 },
+  quickLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontFamily: 'monospace', fontWeight: FONT_WEIGHTS.bold },
+  slider: { width: '100%', height: 40 },
+  historyRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.borderDefault,
+  },
+  historyAmount: { color: COLORS.textPrimary, fontFamily: 'monospace', fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
+  historyTime: { color: COLORS.textMuted, fontFamily: 'monospace', fontSize: FONT_SIZES.xs },
+  saveButton: { backgroundColor: COLORS.neonBlue + 'dd', borderRadius: RADIUS.md, padding: SPACING.lg, alignItems: 'center', marginBottom: SPACING.sm },
+  saveText: { color: COLORS.bgPrimary, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.md, fontFamily: 'monospace', letterSpacing: 3 },
+  cancelButton: { padding: SPACING.lg, alignItems: 'center' },
+  cancelText: { color: COLORS.textMuted, fontSize: FONT_SIZES.sm, fontFamily: 'monospace', letterSpacing: 2 },
+});

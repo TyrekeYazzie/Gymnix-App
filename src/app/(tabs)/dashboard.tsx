@@ -1,20 +1,177 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import Svg, { Circle } from 'react-native-svg';
+import { BlurView } from 'expo-blur';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/context/ProfileContext';
+import WorkoutLog from '@/components/logs/WorkoutLog';
+import CardioLog from '@/components/logs/CardioLog';
+import WaterLog from '@/components/logs/WaterLog';
+import CaloriesLog from '@/components/logs/CaloriesLog';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS, CARD
 } from '@/constants/theme';
 
+const CALORIE_GOAL = 2000;
+
+const HERO_SIZE = 220;
+const HERO_STROKE = 14;
+const HERO_RADIUS = (HERO_SIZE - HERO_STROKE) / 2;
+const HERO_CIRCUMFERENCE = 2 * Math.PI * HERO_RADIUS;
+
+const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+const TASKS = [
+  { key: 'workout',  label: 'Log Workout',  emoji: '💪', color: COLORS.primary },
+  { key: 'cardio',   label: 'Log Cardio',   emoji: '🏃', color: COLORS.neonGreen },
+  { key: 'water',    label: 'Log Water',    emoji: '💧', color: COLORS.neonBlue },
+  { key: 'calories', label: 'Log Meal',     emoji: '🔥', color: COLORS.neonYellow },
+];
+
+interface RecentWorkout {
+  id: string;
+  name: string;
+  category: string;
+  created_at: string;
+}
+
+interface WeekDay {
+  label: string;
+  isToday: boolean;
+  isFuture: boolean;
+  percent: number;
+}
+
+function localMidnight(daysAgo = 0): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - daysAgo);
+  return d;
+}
+
+function startOfWeek(): Date {
+  const d = localMidnight();
+  const dayOfWeek = d.getDay(); // 0 = Sun ... 6 = Sat
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  d.setDate(d.getDate() + diffToMonday);
+  return d;
+}
+
+function formatRelativeDate(dateStr: string): string {
+  const logDate = new Date(dateStr);
+  const logMidnight = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate());
+  const days = Math.round((localMidnight().getTime() - logMidnight.getTime()) / (1000 * 60 * 60 * 24));
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return `${days} days ago`;
+}
+
+function getInitials(name: string | null | undefined): string {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  const initials = parts.slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('');
+  return initials || '?';
+}
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'GOOD MORNING';
+  if (hour < 18) return 'GOOD AFTERNOON';
+  return 'GOOD EVENING';
+}
+
 export default function DashboardScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const { profile } = useProfile();
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.replace('/(auth)/login');
-  };
+  const [todayCalories, setTodayCalories] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [recentWorkouts, setRecentWorkouts] = useState<RecentWorkout[]>([]);
+  const [weekDays, setWeekDays] = useState<WeekDay[]>([]);
+
+  const [workoutOpen, setWorkoutOpen] = useState(false);
+  const [cardioOpen, setCardioOpen] = useState(false);
+  const [waterOpen, setWaterOpen] = useState(false);
+  const [caloriesOpen, setCaloriesOpen] = useState(false);
+
+  const loadDashboard = useCallback(async () => {
+    if (!user) return;
+
+    const weekStart = startOfWeek();
+
+    const { data: calorieRows, error: calorieError } = await supabase
+      .from('calorie_logs')
+      .select('calories, created_at')
+      .eq('user_id', user.id)
+      .gte('created_at', weekStart.toISOString());
+    if (calorieError) {
+      console.error('Failed to load calories:', calorieError.message);
+    } else {
+      const rows = calorieRows ?? [];
+
+      const todayTotal = rows
+        .filter(r => new Date(r.created_at) >= localMidnight())
+        .reduce((sum, r) => sum + r.calories, 0);
+      setTodayCalories(todayTotal);
+
+      const totalsByDay = new Map<string, number>();
+      rows.forEach(r => {
+        const key = new Date(r.created_at).toDateString();
+        totalsByDay.set(key, (totalsByDay.get(key) ?? 0) + r.calories);
+      });
+
+      const today = localMidnight();
+      const days: WeekDay[] = DAY_LABELS.map((label, i) => {
+        const date = new Date(weekStart);
+        date.setDate(weekStart.getDate() + i);
+        const isFuture = date > today;
+        const isToday = date.toDateString() === today.toDateString();
+        const total = totalsByDay.get(date.toDateString()) ?? 0;
+        const percent = isFuture ? 0 : Math.min(Math.round((total / CALORIE_GOAL) * 100), 100);
+        return { label, isToday, isFuture, percent };
+      });
+      setWeekDays(days);
+    }
+
+    const { data: weekRows, error: weekError } = await supabase
+      .from('workouts')
+      .select('created_at')
+      .eq('user_id', user.id)
+      .gte('created_at', localMidnight(7).toISOString());
+    if (weekError) {
+      console.error('Failed to load weekly workouts:', weekError.message);
+    } else {
+      const loggedDays = new Set(
+        (weekRows ?? []).map(r => new Date(r.created_at).toDateString())
+      );
+      let streakCount = 0;
+      for (let i = 0; i < 7; i++) {
+        if (!loggedDays.has(localMidnight(i).toDateString())) break;
+        streakCount++;
+      }
+      setStreak(streakCount);
+    }
+
+    const { data: recent, error: recentError } = await supabase
+      .from('workouts')
+      .select('id, name, category, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(3);
+    if (recentError) console.error('Failed to load recent workouts:', recentError.message);
+    else setRecentWorkouts(recent ?? []);
+  }, [user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboard();
+    }, [loadDashboard])
+  );
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -22,11 +179,11 @@ export default function DashboardScreen() {
     day: 'numeric',
   });
 
+  const calorieProgress = Math.min((todayCalories / CALORIE_GOAL) * 100, 100);
+  const heroDashOffset = HERO_CIRCUMFERENCE * (1 - calorieProgress / 100);
+
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={['top']}
-    >
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -36,73 +193,137 @@ export default function DashboardScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>GOOD MORNING</Text>
+            <Text style={styles.greeting}>{getGreeting()}</Text>
             <Text style={styles.date}>{today}</Text>
           </View>
           <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-            activeOpacity={0.7}
+            style={styles.avatar}
+            onPress={() => router.push('/(tabs)/profile')}
+            activeOpacity={0.8}
           >
-            <Text style={styles.logoutText}>LOG OUT</Text>
+            <Text style={styles.avatarText}>{getInitials(profile?.full_name)}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Decorative line */}
-        <View style={styles.dividerLine} />
-
-        {/* Stats Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>TODAY'S STATS</Text>
-
-          <Text style={styles.statLabel}>Calories Consumed</Text>
-          <Text style={styles.statValue}>1240 / 2000</Text>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, {
-              width: '62%',
-              backgroundColor: COLORS.primary
-            }]} />
+        {/* Hero circle */}
+        <View style={styles.heroWrapper}>
+          <Svg width={HERO_SIZE} height={HERO_SIZE}>
+            <Circle
+              cx={HERO_SIZE / 2}
+              cy={HERO_SIZE / 2}
+              r={HERO_RADIUS}
+              stroke={COLORS.circleTrack}
+              strokeWidth={HERO_STROKE}
+              fill="none"
+            />
+            <Circle
+              cx={HERO_SIZE / 2}
+              cy={HERO_SIZE / 2}
+              r={HERO_RADIUS}
+              stroke={COLORS.primary}
+              strokeWidth={HERO_STROKE}
+              strokeDasharray={`${HERO_CIRCUMFERENCE} ${HERO_CIRCUMFERENCE}`}
+              strokeDashoffset={heroDashOffset}
+              strokeLinecap="round"
+              fill="none"
+              rotation={-90}
+              origin={`${HERO_SIZE / 2}, ${HERO_SIZE / 2}`}
+            />
+          </Svg>
+          <View style={styles.heroCenter}>
+            <Text style={styles.heroNumber}>{todayCalories}</Text>
+            <Text style={styles.heroSubtitle}>kcal today</Text>
+            <View style={styles.heroBadge}>
+              <Text style={styles.heroBadgeText}>{Math.round(calorieProgress)}% of goal</Text>
+            </View>
           </View>
+        </View>
 
-          <View style={{ height: SPACING.lg }} />
+        {/* Week row */}
+        <View style={styles.weekRow}>
+          {weekDays.map((day, i) => (
+            <View key={i} style={styles.weekDayWrapper}>
+              {day.isToday ? (
+                <View style={[styles.weekCircle, styles.weekCircleToday]}>
+                  <Text style={[styles.weekPercent, styles.weekPercentToday]}>{day.percent}%</Text>
+                </View>
+              ) : (
+                <BlurView
+                  intensity={30}
+                  tint="dark"
+                  style={[styles.weekCircle, day.isFuture && styles.weekCircleFuture]}
+                >
+                  {!day.isFuture && (
+                    <Text style={styles.weekPercent}>{day.percent}%</Text>
+                  )}
+                </BlurView>
+              )}
+              <Text style={styles.weekLabel}>{day.label}</Text>
+            </View>
+          ))}
+        </View>
 
-          <Text style={styles.statLabel}>Workouts This Week</Text>
-          <Text style={styles.statValue}>3 / 4</Text>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, {
-              width: '75%',
-              backgroundColor: COLORS.neonGreen
-            }]} />
+        {/* Streak card */}
+        <View style={styles.tipCard}>
+          <Text style={styles.tipEmoji}>🔥</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.tipTitle}>{streak} day streak</Text>
+            <Text style={styles.tipBody}>
+              {streak > 0
+                ? 'Keep logging workouts daily to build your streak.'
+                : 'Log a workout today to start a new streak.'}
+            </Text>
           </View>
         </View>
 
-        {/* Streak Card */}
-        <View style={[styles.card, styles.streakCard]}>
-          <Text style={styles.streakNumber}>7</Text>
-          <Text style={styles.streakLabel}>DAY STREAK 🔥</Text>
-          <View style={styles.streakBadge}>
-            <Text style={styles.streakBadgeText}>KEEP IT UP</Text>
+        {/* Daily Tasks */}
+        <Text style={styles.sectionTitle}>DAILY TASKS</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.lg }}>
+          <View style={styles.taskRow}>
+            {TASKS.map((task) => (
+              <TouchableOpacity
+                key={task.key}
+                style={[styles.taskCard, { borderColor: task.color }]}
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (task.key === 'workout') setWorkoutOpen(true);
+                  if (task.key === 'cardio') setCardioOpen(true);
+                  if (task.key === 'water') setWaterOpen(true);
+                  if (task.key === 'calories') setCaloriesOpen(true);
+                }}
+              >
+                <Text style={styles.taskEmoji}>{task.emoji}</Text>
+                <Text style={[styles.taskLabel, { color: task.color }]}>{task.label}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        </View>
+        </ScrollView>
 
         {/* Recent Workouts */}
         <Text style={styles.sectionTitle}>RECENT WORKOUTS</Text>
 
-        {[
-          { name: 'Chest Day', category: 'Upper Body', date: 'Today' },
-          { name: 'Leg Press', category: 'Lower Body', date: 'Yesterday' },
-          { name: 'Back & Biceps', category: 'Pull Day', date: '2 days ago' },
-        ].map((workout, index) => (
-          <View key={index} style={styles.workoutCard}>
-            <View style={styles.workoutLeft}>
-              <Text style={styles.workoutName}>{workout.name}</Text>
-              <Text style={styles.workoutCategory}>{workout.category}</Text>
-            </View>
-            <Text style={styles.workoutDate}>{workout.date}</Text>
-          </View>
-        ))}
+        {recentWorkouts.length === 0 ? (
+          <BlurView intensity={25} tint="dark" style={styles.workoutCard}>
+            <Text style={styles.workoutCategory}>No workouts logged yet</Text>
+          </BlurView>
+        ) : (
+          recentWorkouts.map((workout) => (
+            <BlurView key={workout.id} intensity={25} tint="dark" style={styles.workoutCard}>
+              <View style={styles.workoutLeft}>
+                <Text style={styles.workoutName}>{workout.name}</Text>
+                <Text style={styles.workoutCategory}>{workout.category}</Text>
+              </View>
+              <Text style={styles.workoutDate}>{formatRelativeDate(workout.created_at)}</Text>
+            </BlurView>
+          ))
+        )}
 
       </ScrollView>
+
+      <WorkoutLog visible={workoutOpen} onClose={() => setWorkoutOpen(false)} onSaved={() => { setWorkoutOpen(false); loadDashboard(); }} />
+      <CardioLog visible={cardioOpen} onClose={() => setCardioOpen(false)} onSaved={() => { setCardioOpen(false); loadDashboard(); }} />
+      <WaterLog visible={waterOpen} onClose={() => setWaterOpen(false)} onSaved={() => { setWaterOpen(false); loadDashboard(); }} />
+      <CaloriesLog visible={caloriesOpen} onClose={() => setCaloriesOpen(false)} onSaved={() => { setCaloriesOpen(false); loadDashboard(); }} />
     </SafeAreaView>
   );
 }
@@ -123,7 +344,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.lg,
   },
   greeting: {
     fontSize: FONT_SIZES.xxl,
@@ -139,96 +360,134 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
     letterSpacing: 1,
   },
-  logoutButton: {
-    borderColor: COLORS.accent,
-    borderWidth: 1,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-  },
-  logoutText: {
-    color: COLORS.accent,
-    fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
-    fontWeight: FONT_WEIGHTS.bold,
-    letterSpacing: 1,
-  },
-  dividerLine: {
-    height: 1,
-    backgroundColor: COLORS.primary,
-    width: 40,
-    marginBottom: SPACING.lg,
-  },
-  card: {
-    ...CARD.default,
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.bgElevated,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...SHADOWS.purple,
-    marginBottom: SPACING.lg,
   },
-  cardTitle: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textMuted,
+  avatarText: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZES.md,
+    fontWeight: FONT_WEIGHTS.black,
     fontFamily: 'monospace',
-    letterSpacing: 3,
-    marginBottom: SPACING.lg,
   },
-  statLabel: {
+
+  // Hero circle
+  heroWrapper: {
+    alignSelf: 'center',
+    width: HERO_SIZE,
+    height: HERO_SIZE,
+    marginBottom: SPACING.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroNumber: {
+    fontSize: FONT_SIZES.xxxl,
+    fontWeight: FONT_WEIGHTS.black,
+    color: COLORS.textPrimary,
+    fontFamily: 'monospace',
+  },
+  heroSubtitle: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
     fontFamily: 'monospace',
     letterSpacing: 1,
-    marginBottom: SPACING.xs,
-  },
-  statValue: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
-    fontFamily: 'monospace',
-    marginBottom: SPACING.sm,
-  },
-  progressTrack: {
-    height: 6,
-    backgroundColor: COLORS.borderDefault,
-    borderRadius: RADIUS.full,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: RADIUS.full,
-  },
-  streakCard: {
-    ...SHADOWS.crimson,
-    borderColor: COLORS.accent,
-    alignItems: 'center',
-    paddingVertical: SPACING.xl,
-  },
-  streakNumber: {
-    fontSize: FONT_SIZES.hero,
-    fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.accent,
-    fontFamily: 'monospace',
-  },
-  streakLabel: {
-    fontSize: FONT_SIZES.lg,
-    color: COLORS.textPrimary,
-    fontFamily: 'monospace',
-    letterSpacing: 2,
     marginTop: SPACING.xs,
   },
-  streakBadge: {
+  heroBadge: {
     marginTop: SPACING.md,
-    borderColor: COLORS.neonGreen,
+    borderColor: COLORS.borderDefault,
     borderWidth: 1,
-    borderRadius: RADIUS.sm,
+    borderRadius: RADIUS.full,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.xs,
   },
-  streakBadgeText: {
-    color: COLORS.neonGreen,
+  heroBadgeText: {
+    color: COLORS.textMuted,
     fontSize: FONT_SIZES.xs,
     fontFamily: 'monospace',
-    letterSpacing: 2,
+    letterSpacing: 1,
   },
+
+  // Week row
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.lg,
+  },
+  weekDayWrapper: {
+    alignItems: 'center',
+  },
+  weekCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: RADIUS.full,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 166, 35, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.xs,
+  },
+  weekCircleToday: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+    ...SHADOWS.purple,
+  },
+  weekCircleFuture: {
+    opacity: 0.4,
+  },
+  weekPercent: {
+    fontSize: 9,
+    color: COLORS.textSecondary,
+    fontFamily: 'monospace',
+    fontWeight: FONT_WEIGHTS.bold,
+  },
+  weekPercentToday: {
+    color: COLORS.textInverse,
+  },
+  weekLabel: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    fontFamily: 'monospace',
+  },
+
+  // Tip / streak card
+  tipCard: {
+    ...CARD.glowing,
+    ...SHADOWS.purple,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  tipEmoji: {
+    fontSize: FONT_SIZES.xxl,
+  },
+  tipTitle: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.textPrimary,
+    fontFamily: 'monospace',
+    marginBottom: SPACING.xs,
+  },
+  tipBody: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textSecondary,
+    fontFamily: 'monospace',
+  },
+
   sectionTitle: {
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
@@ -237,12 +496,43 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     marginBottom: SPACING.md,
   },
+
+  // Daily tasks
+  taskRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    paddingBottom: SPACING.xs,
+  },
+  taskCard: {
+    width: 110,
+    backgroundColor: COLORS.bgTertiary,
+    borderWidth: 1,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    paddingVertical: SPACING.lg,
+  },
+  taskEmoji: {
+    fontSize: FONT_SIZES.xl,
+    marginBottom: SPACING.sm,
+  },
+  taskLabel: {
+    fontSize: FONT_SIZES.xs,
+    fontFamily: 'monospace',
+    fontWeight: FONT_WEIGHTS.bold,
+    textAlign: 'center',
+    letterSpacing: 1,
+  },
+
+  // Recent workouts
   workoutCard: {
-    ...CARD.default,
-    ...SHADOWS.subtle,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 166, 35, 0.15)',
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg,
+    overflow: 'hidden',
     marginBottom: SPACING.sm,
   },
   workoutLeft: {
