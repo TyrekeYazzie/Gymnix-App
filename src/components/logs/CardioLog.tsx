@@ -1,18 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Modal, Alert,
+  StyleSheet, Modal, Alert, Dimensions,
   KeyboardAvoidingView, Platform, Animated, PanResponder
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/context/ProfileContext';
+import { awardXP, calcCardioXP } from '@/lib/xp';
+import NumberWheel from '@/components/NumberWheel';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS
 } from '@/constants/theme';
 
-const CARDIO_TYPES = [
+export const CARDIO_TYPES = [
   { name: 'Run',   emoji: '🏃', color: COLORS.neonGreen },
   { name: 'Bike',  emoji: '🚴', color: COLORS.neonBlue },
   { name: 'Swim',  emoji: '🏊', color: COLORS.primary },
@@ -21,26 +24,48 @@ const CARDIO_TYPES = [
   { name: 'Row',   emoji: '🚣', color: COLORS.neonOrange },
 ];
 
+const DURATION_MIN = 1;
+const DURATION_MAX = 120;
+const DURATION_OPTIONS = Array.from({ length: DURATION_MAX - DURATION_MIN + 1 }, (_, i) => DURATION_MIN + i);
+const TENTH_OPTIONS = Array.from({ length: 10 }, (_, i) => i);
+
+const CALORIE_CHIPS = [150, 300, 500, 750];
+
+// slide the sheet fully past the bottom edge regardless of device height or sheet content length
+const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
+
 interface Props {
   visible: boolean;
   onClose: () => void;
   onSaved: (log: any) => void;
 }
 
+export const KM_TO_MI = 0.621371;
+
 export default function CardioLog({ visible, onClose, onSaved }: Props) {
   const { user } = useAuth();
+  const { isImperial, refreshProfile } = useProfile();
   const [type, setType] = useState('');
-  const [distance, setDistance] = useState(5.0);
+  // distance is captured in whichever unit is currently displayed (mi or km), split into whole + tenth wheels
+  const [distanceWhole, setDistanceWhole] = useState(5);
+  const [distanceTenth, setDistanceTenth] = useState(0);
   const [duration, setDuration] = useState(30);
   const [calories, setCalories] = useState(280);
   const [saving, setSaving] = useState(false);
 
-  const slideAnim = useRef(new Animated.Value(600)).current;
+  const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
 
+  const distanceUnit = isImperial ? 'mi' : 'km';
+  const distanceMaxWhole = isImperial ? 26 : 42;
+  const WHOLE_OPTIONS = Array.from({ length: distanceMaxWhole + 1 }, (_, i) => i);
+  const displayDistance = distanceWhole + distanceTenth / 10;
+  // always stored to the database as km
+  const distanceKm = isImperial ? displayDistance / KM_TO_MI : displayDistance;
+
   const pace = type === 'Swim'
-    ? `${Math.floor(duration / distance)}:${String(Math.round(((duration / distance) % 1) * 60)).padStart(2, '0')} /100m`
-    : `${Math.floor(duration / distance)}:${String(Math.round(((duration / distance) % 1) * 60)).padStart(2, '0')} /km`;
+    ? `${Math.floor(duration / distanceKm)}:${String(Math.round(((duration / distanceKm) % 1) * 60)).padStart(2, '0')} /100m`
+    : `${Math.floor(duration / displayDistance)}:${String(Math.round(((duration / displayDistance) % 1) * 60)).padStart(2, '0')} /${isImperial ? 'mi' : 'km'}`;
 
   const panResponder = useRef(
     PanResponder.create({
@@ -49,8 +74,7 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
       onPanResponderMove: (_, g) => { if (g.dy > 0) slideAnim.setValue(g.dy); },
       onPanResponderRelease: (_, g) => {
         if (g.dy > 100 || g.vy > 0.5) {
-          Animated.spring(slideAnim, { toValue: 600, useNativeDriver: true, damping: 20, stiffness: 200 })
-            .start(() => handleClose());
+          animateClose();
         } else {
           Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }).start();
         }
@@ -66,7 +90,7 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
       ]).start();
     } else {
       Animated.parallel([
-        Animated.spring(slideAnim, { toValue: 600, useNativeDriver: true, damping: 20, stiffness: 200 }),
+        Animated.spring(slideAnim, { toValue: SLIDE_DISTANCE, useNativeDriver: true, damping: 20, stiffness: 200 }),
         Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start();
     }
@@ -74,12 +98,22 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
 
   const reset = () => {
     setType('');
-    setDistance(5.0);
+    setDistanceWhole(5);
+    setDistanceTenth(0);
     setDuration(30);
     setCalories(280);
   };
 
   const handleClose = () => { reset(); onClose(); };
+
+  // plays the slide-down/fade-out first, then closes — used for backdrop taps and Cancel,
+  // since Modal's `visible` prop hides the native modal instantly otherwise, cutting the animation short
+  const animateClose = () => {
+    Animated.parallel([
+      Animated.spring(slideAnim, { toValue: SLIDE_DISTANCE, useNativeDriver: true, damping: 20, stiffness: 200 }),
+      Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => handleClose());
+  };
 
   const handleSave = async () => {
     if (!type) {
@@ -94,7 +128,7 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
       .insert({
         user_id: user.id,
         type,
-        distance_km: distance,
+        distance_km: distanceKm,
         duration: `${duration} min`,
         calories,
       })
@@ -109,7 +143,12 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
       return;
     }
 
-    if (data) { onSaved(data); reset(); onClose(); }
+    if (data) {
+      const xp = calcCardioXP(duration);
+      await awardXP(user.id, xp);
+      await refreshProfile();
+      onSaved(data); reset(); onClose();
+    }
   };
 
   const getTypeColor = (t: string) =>
@@ -118,7 +157,7 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
       <Animated.View style={[styles.overlay, { opacity: overlayAnim }]}>
-        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={handleClose} />
+        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={animateClose} />
       </Animated.View>
 
       <KeyboardAvoidingView
@@ -130,12 +169,12 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
             <View style={styles.handleBar} />
           </View>
 
-          <Text style={styles.title}>◈ LOG CARDIO</Text>
+          <Text style={styles.title}>Log Cardio</Text>
 
           <ScrollView showsVerticalScrollIndicator={false}>
 
             {/* Type selector */}
-            <Text style={styles.label}>TYPE</Text>
+            <Text style={styles.label}>Type</Text>
             <View style={styles.typeGrid}>
               {CARDIO_TYPES.map((t) => (
                 <TouchableOpacity
@@ -155,44 +194,69 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
               ))}
             </View>
 
-            {/* Distance slider */}
-            <Text style={styles.label}>DISTANCE — {distance.toFixed(1)} KM</Text>
-            <Slider
-              style={styles.slider}
-              minimumValue={0.5}
-              maximumValue={42}
-              step={0.5}
-              value={distance}
-              onValueChange={setDistance}
-              minimumTrackTintColor={COLORS.neonGreen}
-              maximumTrackTintColor={COLORS.borderDefault}
-              thumbTintColor={COLORS.neonGreen}
-            />
+            {/* Distance + Duration wheels, side by side */}
+            <View style={styles.metricsRow}>
+              <View style={styles.metricCol}>
+                <Text style={[styles.label, { textAlign: 'center' }]}>Distance — {displayDistance.toFixed(1)} {distanceUnit}</Text>
+                <View style={styles.distanceWheelsRow}>
+                  <NumberWheel
+                    options={WHOLE_OPTIONS}
+                    value={distanceWhole}
+                    onChange={setDistanceWhole}
+                    width={60}
+                    accentColor={COLORS.neonGreen}
+                  />
+                  <Text style={styles.distanceDot}>.</Text>
+                  <NumberWheel
+                    options={TENTH_OPTIONS}
+                    value={distanceTenth}
+                    onChange={setDistanceTenth}
+                    width={50}
+                    accentColor={COLORS.neonGreen}
+                  />
+                </View>
+                <Text style={styles.wheelUnit}>{distanceUnit}</Text>
+              </View>
 
-            {/* Duration slider */}
-            <Text style={[styles.label, { marginTop: SPACING.md }]}>DURATION — {duration} MIN</Text>
-            <Slider
-              style={styles.slider}
-              minimumValue={5}
-              maximumValue={180}
-              step={5}
-              value={duration}
-              onValueChange={setDuration}
-              minimumTrackTintColor={COLORS.primary}
-              maximumTrackTintColor={COLORS.borderDefault}
-              thumbTintColor={COLORS.primary}
-            />
+              <View style={styles.metricCol}>
+                <Text style={[styles.label, { textAlign: 'center' }]}>Duration</Text>
+                <NumberWheel
+                  options={DURATION_OPTIONS}
+                  value={duration}
+                  onChange={setDuration}
+                  width={90}
+                  accentColor={COLORS.primary}
+                />
+                <Text style={styles.wheelUnit}>minutes</Text>
+              </View>
+            </View>
+            <Text style={styles.wheelHint}>Tap a number to type it directly</Text>
 
             {/* Auto pace */}
-            {distance > 0 && duration > 0 && (
+            {displayDistance > 0 && duration > 0 && (
               <View style={styles.paceBox}>
-                <Text style={styles.paceLabel}>AVG PACE</Text>
+                <Text style={styles.paceLabel}>Average pace</Text>
                 <Text style={styles.paceValue}>{pace}</Text>
               </View>
             )}
 
-            {/* Calories slider */}
-            <Text style={[styles.label, { marginTop: SPACING.md }]}>CALORIES — {calories} KCAL</Text>
+            {/* Calories quick-picks */}
+            <Text style={[styles.label, { marginTop: SPACING.md }]}>Calories — {calories} kcal</Text>
+            <View style={styles.chipRow}>
+              {CALORIE_CHIPS.map((c) => {
+                const selected = calories === c;
+                return (
+                  <TouchableOpacity
+                    key={c}
+                    style={[styles.chip, selected && { borderColor: COLORS.accent, backgroundColor: COLORS.accent + '22' }]}
+                    onPress={() => setCalories(c)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.chipText, selected && { color: COLORS.accentLight }]}>{c}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
             <Slider
               style={[styles.slider, { marginBottom: SPACING.lg }]}
               minimumValue={50}
@@ -211,11 +275,11 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
               activeOpacity={0.8}
               disabled={saving}
             >
-              <Text style={styles.saveText}>{saving ? 'SAVING...' : '▸ SAVE CARDIO'}</Text>
+              <Text style={styles.saveText}>{saving ? 'Saving…' : 'Save Cardio'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.cancelButton} onPress={handleClose} activeOpacity={0.7}>
-              <Text style={styles.cancelText}>CANCEL</Text>
+            <TouchableOpacity style={styles.cancelButton} onPress={animateClose} activeOpacity={0.7}>
+              <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
 
           </ScrollView>
@@ -243,12 +307,10 @@ const styles = StyleSheet.create({
   handleBar: { width: 40, height: 4, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full },
   title: {
     fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary, fontFamily: 'monospace',
-    letterSpacing: 3, marginBottom: SPACING.lg, textAlign: 'center',
+    letterSpacing: 0.5, marginBottom: SPACING.lg, textAlign: 'center',
   },
   label: {
     fontSize: FONT_SIZES.xs, color: COLORS.textMuted,
-    fontFamily: 'monospace', letterSpacing: 2, marginBottom: SPACING.sm,
   },
   typeGrid: {
     flexDirection: 'row', flexWrap: 'wrap',
@@ -262,9 +324,41 @@ const styles = StyleSheet.create({
   typeEmoji: { fontSize: FONT_SIZES.xl, marginBottom: 4 },
   typeName: {
     fontSize: FONT_SIZES.xs, color: COLORS.textSecondary,
-    fontFamily: 'monospace', fontWeight: FONT_WEIGHTS.bold,
   },
   slider: { width: '100%', height: 40 },
+  chipRow: {
+    flexDirection: 'row', gap: SPACING.sm,
+    marginTop: SPACING.xs, marginBottom: SPACING.sm,
+  },
+  chip: {
+    flex: 1, backgroundColor: COLORS.bgTertiary,
+    borderColor: COLORS.borderDefault, borderWidth: 1,
+    borderRadius: RADIUS.sm, alignItems: 'center', paddingVertical: SPACING.sm,
+  },
+  chipText: {
+    fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textSecondary,
+  },
+  metricsRow: {
+    flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'flex-start',
+    marginTop: SPACING.md,
+  },
+  metricCol: { alignItems: 'center' },
+  distanceWheelsRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 2, marginTop: SPACING.xs,
+  },
+  distanceDot: {
+    fontSize: FONT_SIZES.xl, fontWeight: FONT_WEIGHTS.black, color: COLORS.textMuted,
+    marginHorizontal: 2,
+  },
+  wheelUnit: {
+    fontSize: FONT_SIZES.xs, color: COLORS.textMuted, textAlign: 'center',
+    letterSpacing: 1, marginTop: 2,
+  },
+  wheelHint: {
+    fontSize: FONT_SIZES.xs, color: COLORS.textMuted, textAlign: 'center',
+    marginTop: SPACING.xs, fontStyle: 'italic',
+  },
   paceBox: {
     backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.md,
     padding: SPACING.md, alignItems: 'center', marginVertical: SPACING.md,
@@ -272,11 +366,9 @@ const styles = StyleSheet.create({
   },
   paceLabel: {
     fontSize: FONT_SIZES.xs, color: COLORS.textMuted,
-    fontFamily: 'monospace', letterSpacing: 2,
   },
   paceValue: {
     fontSize: FONT_SIZES.xl, color: COLORS.neonGreen,
-    fontFamily: 'monospace', fontWeight: FONT_WEIGHTS.black,
   },
   saveButton: {
     backgroundColor: COLORS.neonGreen + 'dd', borderRadius: RADIUS.md,
@@ -285,11 +377,9 @@ const styles = StyleSheet.create({
   },
   saveText: {
     color: COLORS.bgPrimary, fontWeight: FONT_WEIGHTS.bold,
-    fontSize: FONT_SIZES.md, fontFamily: 'monospace', letterSpacing: 3,
   },
   cancelButton: { padding: SPACING.lg, alignItems: 'center' },
   cancelText: {
     color: COLORS.textMuted, fontSize: FONT_SIZES.sm,
-    fontFamily: 'monospace', letterSpacing: 2,
   },
 });

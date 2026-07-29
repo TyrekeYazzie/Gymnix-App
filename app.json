@@ -3,7 +3,7 @@
     "name": "FitnessApp",
     "slug": "fitnessapp",
     "version": "1.0.0",
-    "scheme": "exp+fitnessapp://",
+    "scheme": "fitnessapp",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

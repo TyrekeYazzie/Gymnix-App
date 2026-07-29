@@ -1,17 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  StyleSheet, Modal, Alert,
+  StyleSheet, Modal, Alert, Dimensions,
   KeyboardAvoidingView, Platform, Animated, PanResponder
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
+import { awardXP, calcWorkoutXP } from '@/lib/xp';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS
 } from '@/constants/theme';
+
+// slide the sheet fully past the bottom edge regardless of device height or sheet content length
+const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
 
 const CATEGORIES = [
   { name: 'CHEST',     emoji: '💪', color: COLORS.primary },
@@ -23,12 +27,12 @@ const CATEGORIES = [
 ];
 
 const COMMON_EXERCISES: Record<string, string[]> = {
-  CHEST: ['Bench Press', 'Incline Bench Press', 'Push-Ups', 'Dumbbell Press', 'Chest Fly', 'Cable Crossover', 'Dips'],
-  BACK: ['Pull-Ups', 'Deadlift', 'Lat Pulldown', 'Bent-Over Row', 'Seated Row', 'T-Bar Row', 'Face Pull'],
-  LEGS: ['Squat', 'Leg Press', 'Lunges', 'Leg Curl', 'Leg Extension', 'Calf Raise', 'Romanian Deadlift'],
+  CHEST:     ['Bench Press', 'Incline Press', 'Push-Ups', 'Dumbbell Press', 'Chest Fly', 'Cable Crossover', 'Dips'],
+  BACK:      ['Pull-Ups', 'Deadlift', 'Lat Pulldown', 'Bent-Over Row', 'Seated Row', 'T-Bar Row', 'Face Pull'],
+  LEGS:      ['Squat', 'Leg Press', 'Lunges', 'Leg Curl', 'Leg Extension', 'Calf Raise', 'Romanian Deadlift'],
   SHOULDERS: ['Overhead Press', 'Lateral Raise', 'Front Raise', 'Arnold Press', 'Shrugs', 'Rear Delt Fly', 'Upright Row'],
-  ARMS: ['Bicep Curl', 'Tricep Extension', 'Hammer Curl', 'Skull Crushers', 'Cable Curl', 'Tricep Dips', 'Preacher Curl'],
-  ABS: ['Crunches', 'Plank', 'Leg Raises', 'Russian Twists', 'Sit-Ups', 'Mountain Climbers', 'Cable Woodchopper'],
+  ARMS:      ['Bicep Curl', 'Tricep Extension', 'Hammer Curl', 'Skull Crushers', 'Cable Curl', 'Tricep Dips', 'Preacher Curl'],
+  ABS:       ['Crunches', 'Plank', 'Leg Raises', 'Russian Twists', 'Sit-Ups', 'Mountain Climbers', 'Cable Woodchopper'],
 };
 
 interface SetEntry {
@@ -45,7 +49,7 @@ interface Props {
 
 export default function WorkoutLog({ visible, onClose, onSaved, initialCategory }: Props) {
   const { user } = useAuth();
-  const { isImperial } = useProfile();
+  const { isImperial, refreshProfile } = useProfile();
   const weightUnit = isImperial ? 'lbs' : 'kg';
 
   const [category, setCategory] = useState(initialCategory || 'CHEST');
@@ -55,7 +59,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
   const [duration, setDuration] = useState(30);
   const [saving, setSaving] = useState(false);
 
-  const slideAnim = useRef(new Animated.Value(600)).current;
+  const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -65,12 +69,11 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, g) => g.dy > 5,
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 8,
       onPanResponderMove: (_, g) => { if (g.dy > 0) slideAnim.setValue(g.dy); },
       onPanResponderRelease: (_, g) => {
-        if (g.dy > 100 || g.vy > 0.5) {
-          Animated.spring(slideAnim, { toValue: 600, useNativeDriver: true, damping: 20, stiffness: 200 })
-            .start(() => handleClose());
+        if (g.dy > 120 || g.vy > 0.5) {
+          animateClose();
         } else {
           Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }).start();
         }
@@ -81,13 +84,13 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
   useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }),
-        Animated.timing(overlayAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 180 }),
+        Animated.timing(overlayAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.spring(slideAnim, { toValue: 600, useNativeDriver: true, damping: 20, stiffness: 200 }),
-        Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.spring(slideAnim, { toValue: SLIDE_DISTANCE, useNativeDriver: true, damping: 20, stiffness: 200 }),
+        Animated.timing(overlayAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
       ]).start();
     }
   }, [visible]);
@@ -100,66 +103,64 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
   };
   const handleClose = () => { reset(); onClose(); };
 
+  // plays the slide-down/fade-out first, then closes — used for backdrop taps and the close button,
+  // since Modal's `visible` prop hides the native modal instantly otherwise, cutting the animation short
+  const animateClose = () => {
+    Animated.parallel([
+      Animated.spring(slideAnim, { toValue: SLIDE_DISTANCE, useNativeDriver: true, damping: 20, stiffness: 200 }),
+      Animated.timing(overlayAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+    ]).start(() => handleClose());
+  };
+
   const handleCategoryChange = (cat: string) => {
     setCategory(cat);
     setName('');
     setCustomName('');
   };
 
-  const handleSelectExercise = (exercise: string) => {
-    setName(exercise);
-    setCustomName('');
-  };
-
   const addSet = () => setSets(prev => [...prev, { reps: '', weight: '' }]);
   const removeSet = (index: number) => setSets(prev => prev.filter((_, i) => i !== index));
-  const updateSet = (index: number, field: keyof SetEntry, value: string) => {
+  const updateSet = (index: number, field: keyof SetEntry, value: string) =>
     setSets(prev => prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)));
-  };
 
   const finalName = customName.trim() || name;
 
+  const activeCat = CATEGORIES.find(c => c.name === category)!;
+
   const handleSave = async () => {
-    if (!finalName.trim()) { Alert.alert('Missing Info', 'Please select or enter an exercise name'); return; }
+    if (!finalName.trim()) { Alert.alert('Missing Exercise', 'Tap an exercise or type a custom name.'); return; }
     if (!user) return;
 
     const cleanSets = sets
       .filter(s => s.reps.trim() && s.weight.trim())
       .map(s => ({ reps: Number(s.reps), weight: Number(s.weight) }));
 
-    const hasInvalidSet = cleanSets.some(
-      s => s.reps <= 0 || s.reps > 200 || s.weight < 0 || s.weight > 2000
-    );
-    if (hasInvalidSet) {
-      Alert.alert('Invalid Set', 'Please enter realistic reps and weight values');
+    if (cleanSets.some(s => s.reps <= 0 || s.reps > 200 || s.weight < 0 || s.weight > 2000)) {
+      Alert.alert('Invalid Set', 'Check your reps and weight values.');
       return;
     }
 
     setSaving(true);
-
     const { data, error } = await supabase
       .from('workouts')
-      .insert({
-        user_id: user.id,
-        name: finalName.trim(),
-        category,
-        duration: `${duration} min`,
-        calories: 0,
-        sets: cleanSets,
-      })
+      .insert({ user_id: user.id, name: finalName.trim(), category, duration: `${duration} min`, calories: 0, sets: cleanSets })
       .select()
       .single();
-
     setSaving(false);
 
     if (error) { Alert.alert('Error', error.message); return; }
-    if (data) { onSaved(data); reset(); onClose(); }
+    if (data) {
+      const xp = calcWorkoutXP(cleanSets);
+      await awardXP(user.id, xp);
+      await refreshProfile();
+      onSaved(data); reset(); onClose();
+    }
   };
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
       <Animated.View style={[styles.overlay, { opacity: overlayAnim }]}>
-        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={handleClose} />
+        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={animateClose} />
       </Animated.View>
 
       <KeyboardAvoidingView
@@ -167,116 +168,144 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
         style={{ flex: 1, justifyContent: 'flex-end' }}
       >
         <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
+          {/* Drag handle */}
           <View {...panResponder.panHandlers} style={styles.handleArea}>
             <View style={styles.handleBar} />
           </View>
 
-          <Text style={styles.title}>◈ LOG WORKOUT</Text>
-
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.label}>CATEGORY</Text>
-            <View style={styles.typeGrid}>
-              {CATEGORIES.map((c) => (
-                <TouchableOpacity
-                  key={c.name}
-                  style={[styles.typeCard, category === c.name && { borderColor: c.color, backgroundColor: c.color + '22' }]}
-                  onPress={() => handleCategoryChange(c.name)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.typeEmoji}>{c.emoji}</Text>
-                  <Text style={[styles.typeName, category === c.name && { color: c.color }]}>{c.name}</Text>
-                </TouchableOpacity>
-              ))}
+          {/* Header with active category accent */}
+          <View style={[styles.sheetHeader, { borderLeftColor: activeCat.color }]}>
+            <View>
+              <Text style={styles.sheetLabel}>New workout</Text>
+              <Text style={styles.sheetTitle}>Log {activeCat.emoji} {activeCat.name}</Text>
             </View>
+            <TouchableOpacity onPress={animateClose} style={styles.closeBtn} activeOpacity={0.7}>
+              <Text style={styles.closeBtnText}>✕</Text>
+            </TouchableOpacity>
+          </View>
 
-            <Text style={styles.label}>EXERCISE</Text>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+
+            {/* Category selector — horizontal scroll */}
+            <Text style={styles.sectionLabel}>Muscle group</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.lg }}>
+              <View style={styles.categoryRow}>
+                {CATEGORIES.map((c) => (
+                  <TouchableOpacity
+                    key={c.name}
+                    style={[
+                      styles.categoryPill,
+                      category === c.name && { backgroundColor: c.color, borderColor: c.color },
+                    ]}
+                    onPress={() => handleCategoryChange(c.name)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={styles.categoryEmoji}>{c.emoji}</Text>
+                    <Text style={[styles.categoryName, category === c.name && { color: COLORS.textInverse }]}>
+                      {c.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+
+            {/* Exercise picker */}
+            <Text style={styles.sectionLabel}>Exercise</Text>
             <View style={styles.exerciseGrid}>
-              {(COMMON_EXERCISES[category] ?? []).map((exercise) => (
-                <TouchableOpacity
-                  key={exercise}
-                  style={[
-                    styles.exerciseChip,
-                    name === exercise && !customName.trim() && styles.exerciseChipActive,
-                  ]}
-                  onPress={() => handleSelectExercise(exercise)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[
-                    styles.exerciseChipText,
-                    name === exercise && !customName.trim() && styles.exerciseChipTextActive,
-                  ]}>
-                    {exercise}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {(COMMON_EXERCISES[category] ?? []).map((ex) => {
+                const isSelected = name === ex && !customName.trim();
+                return (
+                  <TouchableOpacity
+                    key={ex}
+                    style={[styles.exerciseChip, isSelected && { backgroundColor: activeCat.color + '22', borderColor: activeCat.color }]}
+                    onPress={() => { setName(ex); setCustomName(''); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.exerciseChipText, isSelected && { color: activeCat.color, fontWeight: FONT_WEIGHTS.bold }]}>
+                      {ex}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
-            <Text style={[styles.label, { marginTop: SPACING.md }]}>OR ENTER CUSTOM NAME (OPTIONAL)</Text>
+            {/* Custom name */}
             <TextInput
-              style={styles.input}
+              style={styles.customInput}
               value={customName}
               onChangeText={setCustomName}
-              placeholder="e.g. Cable Lateral Raise"
+              placeholder="Or type a custom exercise name…"
               placeholderTextColor={COLORS.textMuted}
             />
 
-            <Text style={[styles.label, { marginTop: SPACING.md }]}>SETS</Text>
+            {/* Sets */}
+            <View style={styles.setsHeader}>
+              <Text style={styles.sectionLabel}>Sets</Text>
+              <TouchableOpacity onPress={addSet} style={styles.addSetBtn} activeOpacity={0.7}>
+                <Text style={styles.addSetText}>+ Add Set</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Column headers */}
+            <View style={styles.setColHeaders}>
+              <Text style={[styles.setColLabel, { width: 32 }]}>#</Text>
+              <Text style={[styles.setColLabel, { flex: 1 }]}>Reps</Text>
+              <Text style={[styles.setColLabel, { flex: 1 }]}>{weightUnit}</Text>
+              <View style={{ width: 32 }} />
+            </View>
+
             {sets.map((s, i) => (
               <View key={i} style={styles.setRow}>
-                <Text style={styles.setIndex}>{i + 1}</Text>
+                <View style={styles.setNumCircle}>
+                  <Text style={styles.setNum}>{i + 1}</Text>
+                </View>
                 <TextInput
-                  style={[styles.input, styles.setInput]}
+                  style={styles.setInput}
                   value={s.reps}
                   onChangeText={(v) => updateSet(i, 'reps', v)}
-                  placeholder="reps"
+                  placeholder="0"
                   placeholderTextColor={COLORS.textMuted}
                   keyboardType="numeric"
                 />
                 <TextInput
-                  style={[styles.input, styles.setInput]}
+                  style={styles.setInput}
                   value={s.weight}
                   onChangeText={(v) => updateSet(i, 'weight', v)}
-                  placeholder={weightUnit}
+                  placeholder="0"
                   placeholderTextColor={COLORS.textMuted}
                   keyboardType="numeric"
                 />
-                {sets.length > 1 && (
-                  <TouchableOpacity onPress={() => removeSet(i)} style={styles.removeSetButton}>
-                    <Text style={styles.removeSetText}>✕</Text>
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  onPress={() => sets.length > 1 && removeSet(i)}
+                  style={styles.removeBtn}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ color: sets.length > 1 ? COLORS.textMuted : 'transparent', fontSize: 16 }}>−</Text>
+                </TouchableOpacity>
               </View>
             ))}
 
-            <TouchableOpacity onPress={addSet} style={styles.addSetButton} activeOpacity={0.7}>
-              <Text style={styles.addSetText}>+ ADD SET</Text>
-            </TouchableOpacity>
-
-            <Text style={[styles.label, { marginTop: SPACING.md }]}>DURATION — {duration} MIN</Text>
+            {/* Duration */}
+            <Text style={[styles.sectionLabel, { marginTop: SPACING.lg }]}>DURATION — {duration} MIN</Text>
             <Slider
-              style={[styles.slider, { marginBottom: SPACING.lg }]}
-              minimumValue={5}
-              maximumValue={180}
-              step={5}
-              value={duration}
-              onValueChange={setDuration}
-              minimumTrackTintColor={COLORS.primary}
+              style={styles.slider}
+              minimumValue={5} maximumValue={180} step={5}
+              value={duration} onValueChange={setDuration}
+              minimumTrackTintColor={activeCat.color}
               maximumTrackTintColor={COLORS.borderDefault}
-              thumbTintColor={COLORS.primary}
+              thumbTintColor={activeCat.color}
             />
 
+            {/* Save */}
             <TouchableOpacity
-              style={[styles.saveButton, saving && { opacity: 0.6 }]}
+              style={[styles.saveButton, { backgroundColor: activeCat.color }, saving && { opacity: 0.6 }]}
               onPress={handleSave}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               disabled={saving}
             >
-              <Text style={styles.saveText}>{saving ? 'SAVING...' : '▸ SAVE WORKOUT'}</Text>
+              <Text style={styles.saveText}>{saving ? 'Saving…' : 'Save Workout'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.cancelButton} onPress={handleClose} activeOpacity={0.7}>
-              <Text style={styles.cancelText}>CANCEL</Text>
-            </TouchableOpacity>
           </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
@@ -287,58 +316,184 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
 const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.bgOverlay },
   sheet: {
-    backgroundColor: COLORS.bgSecondary,
-    borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
-    borderWidth: 1, borderColor: COLORS.primary + '88', borderBottomWidth: 0,
-    maxHeight: '85%', paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxxl,
-    ...SHADOWS.purple,
+    backgroundColor: '#111120',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+    paddingBottom: SPACING.xxxl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 20,
   },
-  handleArea: { alignItems: 'center', paddingVertical: SPACING.md },
-  handleBar: { width: 40, height: 4, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full },
-  title: {
-    fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary,
-    fontFamily: 'monospace', letterSpacing: 3, marginBottom: SPACING.lg, textAlign: 'center',
+  handleArea: { alignItems: 'center', paddingVertical: 12 },
+  handleBar: { width: 36, height: 4, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full },
+
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.lg,
+    borderLeftWidth: 3,
+    marginLeft: SPACING.lg,
+    paddingLeft: SPACING.md,
+    marginBottom: SPACING.xs,
   },
-  label: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontFamily: 'monospace', letterSpacing: 2, marginBottom: SPACING.sm },
-  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.lg },
-  typeCard: {
-    width: '30.6%', backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault,
-    borderWidth: 1, borderRadius: RADIUS.md, alignItems: 'center', paddingVertical: SPACING.md,
+  sheetLabel: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    fontWeight: FONT_WEIGHTS.semibold,
+    letterSpacing: 1,
+    marginBottom: 2,
   },
-  typeEmoji: { fontSize: FONT_SIZES.xl, marginBottom: 4 },
-  typeName: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontFamily: 'monospace', fontWeight: FONT_WEIGHTS.bold },
+  sheetTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: FONT_WEIGHTS.black,
+    color: COLORS.textPrimary,
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    backgroundColor: COLORS.bgTertiary,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnText: { color: COLORS.textMuted, fontSize: 14, fontWeight: FONT_WEIGHTS.bold },
+
+  scrollContent: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.lg },
+
+  sectionLabel: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.textMuted,
+    letterSpacing: 1.5,
+    marginBottom: SPACING.sm,
+  },
+
+  // Category pills
+  categoryRow: { flexDirection: 'row', gap: SPACING.sm, paddingBottom: 4 },
+  categoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.bgTertiary,
+    borderWidth: 1,
+    borderColor: COLORS.borderDefault,
+  },
+  categoryEmoji: { fontSize: 16 },
+  categoryName: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.textSecondary,
+    letterSpacing: 0.5,
+  },
+
+  // Exercise chips
   exerciseGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.md },
   exerciseChip: {
-    backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault, borderWidth: 1,
-    borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
-  },
-  exerciseChipActive: {
-    backgroundColor: COLORS.primary, borderColor: COLORS.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.bgTertiary,
+    borderWidth: 1,
+    borderColor: COLORS.borderDefault,
   },
   exerciseChipText: {
-    fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontFamily: 'monospace', fontWeight: FONT_WEIGHTS.bold,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    fontWeight: FONT_WEIGHTS.medium,
   },
-  exerciseChipTextActive: {
-    color: COLORS.textInverse,
+
+  customInput: {
+    backgroundColor: COLORS.bgTertiary,
+    borderWidth: 1,
+    borderColor: COLORS.borderDefault,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    color: COLORS.textPrimary,
+    fontSize: FONT_SIZES.md,
+    marginBottom: SPACING.lg,
   },
-  input: {
-    backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault, borderWidth: 1,
-    borderRadius: RADIUS.sm, padding: SPACING.md, color: COLORS.textPrimary,
-    fontSize: FONT_SIZES.md, fontFamily: 'monospace',
+
+  // Sets
+  setsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
+  addSetBtn: { paddingVertical: 4, paddingHorizontal: 8 },
+  addSetText: { color: COLORS.primary, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
+
+  setColHeaders: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: 6,
+    paddingHorizontal: 4,
   },
-  setRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
-  setIndex: { color: COLORS.textMuted, fontFamily: 'monospace', fontSize: FONT_SIZES.sm, width: 16 },
-  setInput: { flex: 1 },
-  removeSetButton: { padding: SPACING.sm },
-  removeSetText: { color: COLORS.textMuted, fontSize: FONT_SIZES.md },
-  addSetButton: { alignSelf: 'flex-start', marginBottom: SPACING.md },
-  addSetText: { color: COLORS.primary, fontFamily: 'monospace', fontSize: FONT_SIZES.xs, letterSpacing: 2, fontWeight: FONT_WEIGHTS.bold },
-  slider: { width: '100%', height: 40 },
+  setColLabel: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    fontWeight: FONT_WEIGHTS.bold,
+    letterSpacing: 1,
+    textAlign: 'center',
+  },
+
+  setRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  setNumCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.bgElevated,
+    borderWidth: 1,
+    borderColor: COLORS.borderDefault,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setNum: {
+    color: COLORS.textMuted,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.bold,
+  },
+  setInput: {
+    flex: 1,
+    backgroundColor: COLORS.bgTertiary,
+    borderWidth: 1,
+    borderColor: COLORS.borderDefault,
+    borderRadius: RADIUS.sm,
+    paddingVertical: 10,
+    paddingHorizontal: SPACING.md,
+    color: COLORS.textPrimary,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.bold,
+    textAlign: 'center',
+  },
+  removeBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  slider: { width: '100%', height: 40, marginBottom: SPACING.lg },
+
   saveButton: {
-    backgroundColor: COLORS.primary + 'dd', borderRadius: RADIUS.md,
-    padding: SPACING.lg, alignItems: 'center', marginBottom: SPACING.sm, ...SHADOWS.purple,
+    borderRadius: RADIUS.md,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: SPACING.sm,
   },
-  saveText: { color: COLORS.bgPrimary, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.md, fontFamily: 'monospace', letterSpacing: 3 },
-  cancelButton: { padding: SPACING.lg, alignItems: 'center' },
-  cancelText: { color: COLORS.textMuted, fontSize: FONT_SIZES.sm, fontFamily: 'monospace', letterSpacing: 2 },
+  saveText: {
+    color: COLORS.textInverse,
+    fontWeight: FONT_WEIGHTS.black,
+    fontSize: FONT_SIZES.lg,
+    letterSpacing: 0.5,
+  },
 });

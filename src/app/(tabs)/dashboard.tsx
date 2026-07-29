@@ -7,6 +7,8 @@ import { BlurView } from 'expo-blur';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
+import { xpProgress } from '@/lib/xp';
+import { getRank } from '@/constants/ranks';
 import WorkoutLog from '@/components/logs/WorkoutLog';
 import CardioLog from '@/components/logs/CardioLog';
 import WaterLog from '@/components/logs/WaterLog';
@@ -15,8 +17,9 @@ import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS, CARD
 } from '@/constants/theme';
+import { DEFAULT_CALORIE_GOAL } from '@/constants/nutrition';
 
-const CALORIE_GOAL = 2000;
+const CALORIE_GOAL = DEFAULT_CALORIE_GOAL;
 
 const HERO_SIZE = 220;
 const HERO_STROKE = 14;
@@ -79,9 +82,9 @@ function getInitials(name: string | null | undefined): string {
 
 function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'GOOD MORNING';
-  if (hour < 18) return 'GOOD AFTERNOON';
-  return 'GOOD EVENING';
+  if (hour < 12) return 'Good Morning';
+  if (hour < 18) return 'Good Afternoon';
+  return 'Good Evening';
 }
 
 export default function DashboardScreen() {
@@ -250,7 +253,7 @@ export default function DashboardScreen() {
               ) : (
                 <BlurView
                   intensity={30}
-                  tint="dark"
+                  tint="light"
                   style={[styles.weekCircle, day.isFuture && styles.weekCircleFuture]}
                 >
                   {!day.isFuture && (
@@ -276,8 +279,39 @@ export default function DashboardScreen() {
           </View>
         </View>
 
+        {/* XP / Level card */}
+        {(() => {
+          const totalXP = profile?.total_xp ?? 0;
+          const xp = xpProgress(totalXP);
+          const rank = getRank(xp.level);
+          return (
+            <View style={[styles.xpCard, { borderColor: rank.color + '55' }]}>
+              <View style={styles.xpHeader}>
+                <View>
+                  <Text style={styles.xpLevelLabel}>Level</Text>
+                  <Text style={[styles.xpLevelNumber, { color: rank.color }]}>{xp.level}</Text>
+                </View>
+                <View style={[styles.xpRankBadge, { borderColor: rank.color }]}>
+                  <Text style={[styles.xpRankText, { color: rank.color }]}>{rank.name}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.xpLevelLabel}>Total XP</Text>
+                  <Text style={styles.xpTotalText}>{totalXP.toLocaleString()}</Text>
+                </View>
+              </View>
+              <View style={styles.xpBarTrack}>
+                <View style={[styles.xpBarFill, { width: `${xp.percent}%` as any, backgroundColor: rank.color }]} />
+              </View>
+              <View style={styles.xpBarFooter}>
+                <Text style={styles.xpBarLabel}>{xp.current} XP</Text>
+                <Text style={styles.xpBarLabel}>{xp.needed} XP to Lv {xp.level + 1}</Text>
+              </View>
+            </View>
+          );
+        })()}
+
         {/* Daily Tasks */}
-        <Text style={styles.sectionTitle}>DAILY TASKS</Text>
+        <Text style={styles.sectionTitle}>Daily tasks</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.lg }}>
           <View style={styles.taskRow}>
             {TASKS.map((task) => (
@@ -300,15 +334,15 @@ export default function DashboardScreen() {
         </ScrollView>
 
         {/* Recent Workouts */}
-        <Text style={styles.sectionTitle}>RECENT WORKOUTS</Text>
+        <Text style={styles.sectionTitle}>Recent workouts</Text>
 
         {recentWorkouts.length === 0 ? (
-          <BlurView intensity={25} tint="dark" style={styles.workoutCard}>
+          <BlurView intensity={25} tint="light" style={styles.workoutCard}>
             <Text style={styles.workoutCategory}>No workouts logged yet</Text>
           </BlurView>
         ) : (
           recentWorkouts.map((workout) => (
-            <BlurView key={workout.id} intensity={25} tint="dark" style={styles.workoutCard}>
+            <BlurView key={workout.id} intensity={25} tint="light" style={styles.workoutCard}>
               <View style={styles.workoutLeft}>
                 <Text style={styles.workoutName}>{workout.name}</Text>
                 <Text style={styles.workoutCategory}>{workout.category}</Text>
@@ -347,18 +381,16 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   greeting: {
-    fontSize: FONT_SIZES.xxl,
+    fontSize: FONT_SIZES.xxxl,
     fontWeight: FONT_WEIGHTS.black,
     color: COLORS.textPrimary,
-    fontFamily: 'monospace',
-    letterSpacing: 2,
+    letterSpacing: -0.5,
   },
   date: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
-    fontFamily: 'monospace',
     marginTop: SPACING.xs,
-    letterSpacing: 1,
+    letterSpacing: 0,
   },
   avatar: {
     width: 48,
@@ -375,7 +407,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: FONT_SIZES.md,
     fontWeight: FONT_WEIGHTS.black,
-    fontFamily: 'monospace',
   },
 
   // Hero circle
@@ -396,12 +427,10 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xxxl,
     fontWeight: FONT_WEIGHTS.black,
     color: COLORS.textPrimary,
-    fontFamily: 'monospace',
   },
   heroSubtitle: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
-    fontFamily: 'monospace',
     letterSpacing: 1,
     marginTop: SPACING.xs,
   },
@@ -416,7 +445,6 @@ const styles = StyleSheet.create({
   heroBadgeText: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
     letterSpacing: 1,
   },
 
@@ -435,7 +463,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(245, 166, 35, 0.18)',
+    borderColor: 'rgba(74, 107, 90, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.xs,
@@ -451,7 +479,6 @@ const styles = StyleSheet.create({
   weekPercent: {
     fontSize: 9,
     color: COLORS.textSecondary,
-    fontFamily: 'monospace',
     fontWeight: FONT_WEIGHTS.bold,
   },
   weekPercentToday: {
@@ -460,7 +487,6 @@ const styles = StyleSheet.create({
   weekLabel: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textMuted,
-    fontFamily: 'monospace',
   },
 
   // Tip / streak card
@@ -479,21 +505,78 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.md,
     fontWeight: FONT_WEIGHTS.bold,
     color: COLORS.textPrimary,
-    fontFamily: 'monospace',
     marginBottom: SPACING.xs,
   },
   tipBody: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textSecondary,
-    fontFamily: 'monospace',
+  },
+
+  // XP card
+  xpCard: {
+    backgroundColor: COLORS.bgSecondary,
+    borderWidth: 1,
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg,
+    marginBottom: SPACING.lg,
+  },
+  xpHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  xpLevelLabel: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    letterSpacing: 0.3,
+  },
+  xpLevelNumber: {
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: FONT_WEIGHTS.black,
+  },
+  xpRankBadge: {
+    borderWidth: 1,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+  },
+  xpRankText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: FONT_WEIGHTS.black,
+    letterSpacing: 0.3,
+  },
+  xpTotalText: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.textPrimary,
+  },
+  xpBarTrack: {
+    height: 8,
+    backgroundColor: COLORS.bgTertiary,
+    borderRadius: RADIUS.full,
+    overflow: 'hidden',
+    marginBottom: SPACING.xs,
+  },
+  xpBarFill: {
+    height: '100%',
+    borderRadius: RADIUS.full,
+  },
+  xpBarFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  xpBarLabel: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    letterSpacing: 1,
   },
 
   sectionTitle: {
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
     color: COLORS.textMuted,
-    fontFamily: 'monospace',
-    letterSpacing: 3,
+    letterSpacing: 0.5,
     marginBottom: SPACING.md,
   },
 
@@ -517,7 +600,6 @@ const styles = StyleSheet.create({
   },
   taskLabel: {
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
     fontWeight: FONT_WEIGHTS.bold,
     textAlign: 'center',
     letterSpacing: 1,
@@ -529,7 +611,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(245, 166, 35, 0.15)',
+    borderColor: 'rgba(74, 107, 90, 0.15)',
     borderRadius: RADIUS.md,
     padding: SPACING.lg,
     overflow: 'hidden',
@@ -542,20 +624,17 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.lg,
     fontWeight: FONT_WEIGHTS.bold,
     color: COLORS.textPrimary,
-    fontFamily: 'monospace',
     letterSpacing: 1,
     marginBottom: SPACING.xs,
   },
   workoutCategory: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.primary,
-    fontFamily: 'monospace',
     letterSpacing: 1,
   },
   workoutDate: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textMuted,
-    fontFamily: 'monospace',
     letterSpacing: 1,
   },
 });

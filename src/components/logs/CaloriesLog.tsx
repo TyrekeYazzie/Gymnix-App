@@ -1,16 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Modal, TextInput, Alert,
+  StyleSheet, Modal, TextInput, Alert, Dimensions,
   KeyboardAvoidingView, Platform, Animated, PanResponder
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/context/ProfileContext';
+import { awardXP, XP_MEAL } from '@/lib/xp';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS
 } from '@/constants/theme';
+
+// slide the sheet fully past the bottom edge regardless of device height or sheet content length
+const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
 
 const MEAL_TYPES = [
   { name: 'Breakfast', emoji: '🌅', color: COLORS.neonYellow },
@@ -37,6 +42,7 @@ interface Props {
 
 export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
   const { user } = useAuth();
+  const { refreshProfile } = useProfile();
   const [mealType, setMealType] = useState('');
   const [mealName, setMealName] = useState('');
   const [calories, setCalories] = useState(400);
@@ -47,7 +53,7 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
   const [todayCalories, setTodayCalories] = useState(0);
   const [saving, setSaving] = useState(false);
 
-  const slideAnim = useRef(new Animated.Value(600)).current;
+  const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
 
   const remaining = CALORIE_GOAL - todayCalories;
@@ -61,8 +67,7 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
       onPanResponderMove: (_, g) => { if (g.dy > 0) slideAnim.setValue(g.dy); },
       onPanResponderRelease: (_, g) => {
         if (g.dy > 100 || g.vy > 0.5) {
-          Animated.spring(slideAnim, { toValue: 600, useNativeDriver: true, damping: 20, stiffness: 200 })
-            .start(() => handleClose());
+          animateClose();
         } else {
           Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }).start();
         }
@@ -79,7 +84,7 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
       ]).start();
     } else {
       Animated.parallel([
-        Animated.spring(slideAnim, { toValue: 600, useNativeDriver: true, damping: 20, stiffness: 200 }),
+        Animated.spring(slideAnim, { toValue: SLIDE_DISTANCE, useNativeDriver: true, damping: 20, stiffness: 200 }),
         Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start();
     }
@@ -104,6 +109,15 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
   };
 
   const handleClose = () => { reset(); onClose(); };
+
+  // plays the slide-down/fade-out first, then closes — used for backdrop taps and Cancel,
+  // since Modal's `visible` prop hides the native modal instantly otherwise, cutting the animation short
+  const animateClose = () => {
+    Animated.parallel([
+      Animated.spring(slideAnim, { toValue: SLIDE_DISTANCE, useNativeDriver: true, damping: 20, stiffness: 200 }),
+      Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => handleClose());
+  };
 
   const getMealColor = (m: string) => MEAL_TYPES.find(t => t.name === m)?.color ?? COLORS.neonYellow;
 
@@ -137,13 +151,17 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
 
     setSaving(false);
     if (error) { Alert.alert('Error', error.message); return; }
-    if (data) { setTodayCalories(p => p + calories); onSaved(data); reset(); onClose(); }
+    if (data) {
+      await awardXP(user.id, XP_MEAL);
+      await refreshProfile();
+      setTodayCalories(p => p + calories); onSaved(data); reset(); onClose();
+    }
   };
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
       <Animated.View style={[styles.overlay, { opacity: overlayAnim }]}>
-        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={handleClose} />
+        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={animateClose} />
       </Animated.View>
 
       <KeyboardAvoidingView
@@ -155,15 +173,15 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
             <View style={styles.handleBar} />
           </View>
 
-          <Text style={styles.title}>◈ LOG MEAL</Text>
+          <Text style={styles.title}>Log Meal</Text>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Progress */}
             <View style={styles.progressCard}>
               <View style={styles.progressHeader}>
-                <Text style={styles.progressLabel}>TODAY</Text>
+                <Text style={styles.progressLabel}>Today</Text>
                 <Text style={[styles.progressValue, { color: progressColor }]}>
-                  {todayCalories} / {CALORIE_GOAL} KCAL
+                  {todayCalories} / {CALORIE_GOAL} kcal
                 </Text>
               </View>
               <View style={styles.progressTrack}>
@@ -175,7 +193,7 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
             </View>
 
             {/* Quick meals */}
-            <Text style={styles.label}>QUICK ADD</Text>
+            <Text style={styles.label}>Quick add</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.lg }}>
               <View style={styles.chipRow}>
                 {QUICK_MEALS.map((m) => (
@@ -197,7 +215,7 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
             </ScrollView>
 
             {/* Meal type */}
-            <Text style={styles.label}>MEAL TYPE</Text>
+            <Text style={styles.label}>Meal type</Text>
             <View style={styles.mealTypeRow}>
               {MEAL_TYPES.map((t) => (
                 <TouchableOpacity
@@ -213,7 +231,7 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
             </View>
 
             {/* Meal name */}
-            <Text style={styles.label}>MEAL NAME</Text>
+            <Text style={styles.label}>Meal name</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g. Chicken and rice"
@@ -224,7 +242,7 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
             />
 
             {/* Calories slider */}
-            <Text style={styles.label}>CALORIES — {calories} KCAL</Text>
+            <Text style={styles.label}>Calories — {calories} kcal</Text>
             <Slider
               style={styles.slider}
               minimumValue={50} maximumValue={1500} step={10}
@@ -241,23 +259,23 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
               activeOpacity={0.7}
             >
               <Text style={styles.macroToggleText}>
-                {showMacros ? '▾ HIDE MACROS' : '▸ ADD MACROS (OPTIONAL)'}
+                {showMacros ? 'Hide macros' : 'Add macros (optional)'}
               </Text>
             </TouchableOpacity>
 
             {showMacros && (
               <View>
-                <Text style={styles.label}>PROTEIN — {protein}G</Text>
+                <Text style={styles.label}>Protein — {protein}g</Text>
                 <Slider style={styles.slider} minimumValue={0} maximumValue={100} step={1}
                   value={protein} onValueChange={setProtein}
                   minimumTrackTintColor={COLORS.neonGreen} maximumTrackTintColor={COLORS.borderDefault} thumbTintColor={COLORS.neonGreen} />
 
-                <Text style={[styles.label, { marginTop: SPACING.sm }]}>CARBS — {carbs}G</Text>
+                <Text style={[styles.label, { marginTop: SPACING.sm }]}>Carbs — {carbs}g</Text>
                 <Slider style={styles.slider} minimumValue={0} maximumValue={200} step={1}
                   value={carbs} onValueChange={setCarbs}
                   minimumTrackTintColor={COLORS.primary} maximumTrackTintColor={COLORS.borderDefault} thumbTintColor={COLORS.primary} />
 
-                <Text style={[styles.label, { marginTop: SPACING.sm }]}>FAT — {fat}G</Text>
+                <Text style={[styles.label, { marginTop: SPACING.sm }]}>Fat — {fat}g</Text>
                 <Slider style={[styles.slider, { marginBottom: SPACING.md }]} minimumValue={0} maximumValue={100} step={1}
                   value={fat} onValueChange={setFat}
                   minimumTrackTintColor={COLORS.accent} maximumTrackTintColor={COLORS.borderDefault} thumbTintColor={COLORS.accent} />
@@ -268,11 +286,11 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
               style={[styles.saveButton, saving && { opacity: 0.6 }]}
               onPress={handleSave} activeOpacity={0.8} disabled={saving}
             >
-              <Text style={styles.saveText}>{saving ? 'SAVING...' : '▸ LOG MEAL'}</Text>
+              <Text style={styles.saveText}>{saving ? 'Saving…' : 'Log Meal'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.cancelButton} onPress={handleClose} activeOpacity={0.7}>
-              <Text style={styles.cancelText}>CANCEL</Text>
+            <TouchableOpacity style={styles.cancelButton} onPress={animateClose} activeOpacity={0.7}>
+              <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </ScrollView>
         </Animated.View>
@@ -292,39 +310,40 @@ const styles = StyleSheet.create({
   handleBar: { width: 40, height: 4, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full },
   title: {
     fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary,
-    fontFamily: 'monospace', letterSpacing: 3, marginBottom: SPACING.lg, textAlign: 'center',
   },
-  label: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontFamily: 'monospace', letterSpacing: 2, marginBottom: SPACING.sm },
   progressCard: {
     backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
     marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDefault,
   },
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.sm },
-  progressLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontFamily: 'monospace', letterSpacing: 2 },
-  progressValue: { fontSize: FONT_SIZES.xs, fontFamily: 'monospace', fontWeight: FONT_WEIGHTS.bold },
+  progressLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, letterSpacing: 1 },
+  progressValue: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
   progressTrack: { height: 6, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full, overflow: 'hidden', marginBottom: SPACING.xs },
   progressFill: { height: '100%', borderRadius: RADIUS.full },
-  remainingText: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontFamily: 'monospace', textAlign: 'right' },
+  remainingText: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, textAlign: 'center' },
+  label: {
+    fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted,
+    letterSpacing: 1.5, marginBottom: SPACING.sm,
+  },
   chipRow: { flexDirection: 'row', gap: SPACING.sm, paddingBottom: SPACING.xs },
   chip: { borderColor: COLORS.borderDefault, borderWidth: 1, borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs },
-  chipText: { color: COLORS.textSecondary, fontSize: FONT_SIZES.xs, fontFamily: 'monospace', letterSpacing: 1 },
+  chipText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.medium },
   mealTypeRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
   mealTypeCard: {
     flex: 1, backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault,
     borderWidth: 1, borderRadius: RADIUS.md, alignItems: 'center', paddingVertical: SPACING.md,
   },
   mealEmoji: { fontSize: FONT_SIZES.lg, marginBottom: 4 },
-  mealTypeName: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontFamily: 'monospace', fontWeight: FONT_WEIGHTS.bold },
+  mealTypeName: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.bold },
   input: {
     backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault, borderWidth: 1,
     borderRadius: RADIUS.sm, padding: SPACING.md, color: COLORS.textPrimary,
-    fontSize: FONT_SIZES.md, fontFamily: 'monospace', marginBottom: SPACING.lg,
   },
   slider: { width: '100%', height: 40 },
   macroToggle: { marginBottom: SPACING.lg, paddingVertical: SPACING.sm },
-  macroToggleText: { color: COLORS.primary, fontSize: FONT_SIZES.xs, fontFamily: 'monospace', letterSpacing: 2, fontWeight: FONT_WEIGHTS.bold },
+  macroToggleText: { fontSize: FONT_SIZES.sm, color: COLORS.primary, fontWeight: FONT_WEIGHTS.bold },
   saveButton: { backgroundColor: COLORS.neonYellow + 'dd', borderRadius: RADIUS.md, padding: SPACING.lg, alignItems: 'center', marginBottom: SPACING.sm },
-  saveText: { color: COLORS.bgPrimary, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.md, fontFamily: 'monospace', letterSpacing: 3 },
+  saveText: { color: COLORS.textPrimary, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md, letterSpacing: 0.5 },
   cancelButton: { padding: SPACING.lg, alignItems: 'center' },
-  cancelText: { color: COLORS.textMuted, fontSize: FONT_SIZES.sm, fontFamily: 'monospace', letterSpacing: 2 },
+  cancelText: { color: COLORS.textMuted, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm, letterSpacing: 0.5 },
 });

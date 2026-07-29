@@ -1,17 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Modal, Alert,
+  StyleSheet, Modal, Alert, Dimensions,
   KeyboardAvoidingView, Platform, Animated, PanResponder
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
+import { awardXP, XP_WATER } from '@/lib/xp';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS
 } from '@/constants/theme';
+
+// slide the sheet fully past the bottom edge regardless of device height or sheet content length
+const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
 
 // metric quick amounts in ml
 const QUICK_AMOUNTS_METRIC = [
@@ -21,16 +25,16 @@ const QUICK_AMOUNTS_METRIC = [
   { label: '1L',    value: 1000, emoji: '🍶' },
 ];
 
-// imperial quick amounts in fl oz (stored as ml)
+// imperial quick amounts in fl oz (stored as ml) — small bottle up to a huge 64 fl oz bottle
 const QUICK_AMOUNTS_IMPERIAL = [
   { label: '8 fl oz',  value: 237,  emoji: '🥤' },
-  { label: '12 fl oz', value: 355,  emoji: '💧' },
-  { label: '16 fl oz', value: 473,  emoji: '🫗' },
-  { label: '32 fl oz', value: 946,  emoji: '🍶' },
+  { label: '16 fl oz', value: 473,  emoji: '💧' },
+  { label: '24 fl oz', value: 710,  emoji: '🫗' },
+  { label: '64 fl oz', value: 1893, emoji: '🍶' },
 ];
 
-const DAILY_GOAL_ML = 2500;
-const DAILY_GOAL_FLOZ = 84;
+export const DAILY_GOAL_ML = 2500;
+export const DAILY_GOAL_FLOZ = 84;
 
 interface WaterEntry { id: string; amount_ml: number; created_at: string; }
 
@@ -42,7 +46,7 @@ interface Props {
 
 export default function WaterLog({ visible, onClose, onSaved }: Props) {
   const { user } = useAuth();
-  const { isImperial } = useProfile();
+  const { isImperial, refreshProfile } = useProfile();
 
   // always stored as ml internally
   const [amountMl, setAmountMl] = useState(250);
@@ -50,7 +54,7 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
   const [todayEntries, setTodayEntries] = useState<WaterEntry[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const slideAnim = useRef(new Animated.Value(600)).current;
+  const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
 
   // display conversions
@@ -72,8 +76,7 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
       onPanResponderMove: (_, g) => { if (g.dy > 0) slideAnim.setValue(g.dy); },
       onPanResponderRelease: (_, g) => {
         if (g.dy > 100 || g.vy > 0.5) {
-          Animated.spring(slideAnim, { toValue: 600, useNativeDriver: true, damping: 20, stiffness: 200 })
-            .start(() => handleClose());
+          animateClose();
         } else {
           Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }).start();
         }
@@ -90,7 +93,7 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
       ]).start();
     } else {
       Animated.parallel([
-        Animated.spring(slideAnim, { toValue: 600, useNativeDriver: true, damping: 20, stiffness: 200 }),
+        Animated.spring(slideAnim, { toValue: SLIDE_DISTANCE, useNativeDriver: true, damping: 20, stiffness: 200 }),
         Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start();
     }
@@ -115,6 +118,15 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
 
   const handleClose = () => { setAmountMl(250); onClose(); };
 
+  // plays the slide-down/fade-out first, then closes — used for backdrop taps and Cancel,
+  // since Modal's `visible` prop hides the native modal instantly otherwise, cutting the animation short
+  const animateClose = () => {
+    Animated.parallel([
+      Animated.spring(slideAnim, { toValue: SLIDE_DISTANCE, useNativeDriver: true, damping: 20, stiffness: 200 }),
+      Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => handleClose());
+  };
+
   const formatDisplay = (ml: number) => {
     if (isImperial) return `${toDisplay(ml).toFixed(0)} fl oz`;
     return ml >= 1000 ? `${(ml / 1000).toFixed(1)}L` : `${ml}ml`;
@@ -133,6 +145,8 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
     setSaving(false);
     if (error) { Alert.alert('Error', error.message); return; }
     if (data) {
+      await awardXP(user.id, XP_WATER);
+      await refreshProfile();
       setTodayTotalMl(p => p + amountMl);
       setTodayEntries(p => [data, ...p]);
       onSaved(data);
@@ -147,7 +161,7 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
       <Animated.View style={[styles.overlay, { opacity: overlayAnim }]}>
-        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={handleClose} />
+        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={animateClose} />
       </Animated.View>
 
       <KeyboardAvoidingView
@@ -159,13 +173,13 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
             <View style={styles.handleBar} />
           </View>
 
-          <Text style={styles.title}>◈ LOG WATER</Text>
+          <Text style={styles.title}>Log Water</Text>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Progress */}
             <View style={styles.progressCard}>
               <View style={styles.progressHeader}>
-                <Text style={styles.progressLabel}>TODAY</Text>
+                <Text style={styles.progressLabel}>Today</Text>
                 <Text style={[styles.progressValue, { color: progressColor }]}>
                   {formatDisplay(todayTotalMl)} / {isImperial ? `${DAILY_GOAL_FLOZ} fl oz` : `${DAILY_GOAL_ML / 1000}L`}
                 </Text>
@@ -177,7 +191,7 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
             </View>
 
             {/* Quick amounts */}
-            <Text style={styles.label}>QUICK ADD</Text>
+            <Text style={styles.label}>Quick add</Text>
             <View style={styles.quickRow}>
               {quickAmounts.map((q) => (
                 <TouchableOpacity
@@ -193,9 +207,9 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
             </View>
 
             {/* Custom slider */}
-            <Text style={styles.label}>CUSTOM — {formatDisplay(amountMl).toUpperCase()}</Text>
+            <Text style={styles.label}>Custom — {formatDisplay(amountMl)}</Text>
             <Slider
-              style={[styles.slider, { marginBottom: SPACING.lg }]}
+              style={[styles.slider, styles.sliderThick]}
               minimumValue={isImperial ? 1 : 50}
               maximumValue={isImperial ? 68 : 2000}
               step={isImperial ? 1 : 50}
@@ -205,10 +219,14 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
               maximumTrackTintColor={COLORS.borderDefault}
               thumbTintColor={COLORS.neonBlue}
             />
+            <View style={[styles.sliderRangeRow, { marginBottom: SPACING.lg }]}>
+              <Text style={styles.sliderRangeText}>{isImperial ? '1 fl oz' : '50 ml'}</Text>
+              <Text style={styles.sliderRangeText}>{isImperial ? '68 fl oz' : '2L'}</Text>
+            </View>
 
             {todayEntries.length > 0 && (
               <View style={{ marginBottom: SPACING.lg }}>
-                <Text style={[styles.label, { marginTop: SPACING.sm }]}>TODAY'S LOG</Text>
+                <Text style={[styles.label, { marginTop: SPACING.sm }]}>Today's log</Text>
                 {todayEntries.slice(0, 5).map((entry) => (
                   <View key={entry.id} style={styles.historyRow}>
                     <Text style={styles.historyAmount}>{formatDisplay(entry.amount_ml)}</Text>
@@ -224,11 +242,11 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
               activeOpacity={0.8}
               disabled={saving}
             >
-              <Text style={styles.saveText}>{saving ? 'SAVING...' : '▸ LOG WATER'}</Text>
+              <Text style={styles.saveText}>{saving ? 'Saving…' : 'Log Water'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.cancelButton} onPress={handleClose} activeOpacity={0.7}>
-              <Text style={styles.cancelText}>CANCEL</Text>
+            <TouchableOpacity style={styles.cancelButton} onPress={animateClose} activeOpacity={0.7}>
+              <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </ScrollView>
         </Animated.View>
@@ -248,35 +266,43 @@ const styles = StyleSheet.create({
   handleBar: { width: 40, height: 4, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full },
   title: {
     fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary,
-    fontFamily: 'monospace', letterSpacing: 3, marginBottom: SPACING.lg, textAlign: 'center',
   },
-  label: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontFamily: 'monospace', letterSpacing: 2, marginBottom: SPACING.sm },
   progressCard: {
     backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
     marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDefault,
   },
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.sm },
-  progressLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontFamily: 'monospace', letterSpacing: 2 },
-  progressValue: { fontSize: FONT_SIZES.xs, fontFamily: 'monospace', fontWeight: FONT_WEIGHTS.bold },
+  progressLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, letterSpacing: 1 },
+  progressValue: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
   progressTrack: { height: 6, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full, overflow: 'hidden', marginBottom: SPACING.xs },
   progressFill: { height: '100%', borderRadius: RADIUS.full },
-  progressPercent: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontFamily: 'monospace', textAlign: 'right' },
+  progressPercent: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, textAlign: 'center' },
+  label: {
+    fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted,
+    letterSpacing: 1.5, marginBottom: SPACING.sm,
+  },
   quickRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
   quickCard: {
     flex: 1, backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault,
     borderWidth: 1, borderRadius: RADIUS.md, alignItems: 'center', paddingVertical: SPACING.md,
   },
   quickEmoji: { fontSize: FONT_SIZES.xl, marginBottom: 4 },
-  quickLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontFamily: 'monospace', fontWeight: FONT_WEIGHTS.bold },
+  quickLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.bold, marginTop: 2 },
   slider: { width: '100%', height: 40 },
+  sliderThick: { transform: [{ scaleY: 1.4 }] },
+  sliderRangeRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    marginTop: -SPACING.xs,
+  },
+  sliderRangeText: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted },
   historyRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.borderDefault,
   },
-  historyAmount: { color: COLORS.textPrimary, fontFamily: 'monospace', fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
-  historyTime: { color: COLORS.textMuted, fontFamily: 'monospace', fontSize: FONT_SIZES.xs },
+  historyAmount: { fontSize: FONT_SIZES.sm, color: COLORS.textPrimary, fontWeight: FONT_WEIGHTS.medium },
+  historyTime: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted },
   saveButton: { backgroundColor: COLORS.neonBlue + 'dd', borderRadius: RADIUS.md, padding: SPACING.lg, alignItems: 'center', marginBottom: SPACING.sm },
-  saveText: { color: COLORS.bgPrimary, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.md, fontFamily: 'monospace', letterSpacing: 3 },
+  saveText: { color: COLORS.textInverse, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md, letterSpacing: 0.5 },
   cancelButton: { padding: SPACING.lg, alignItems: 'center' },
-  cancelText: { color: COLORS.textMuted, fontSize: FONT_SIZES.sm, fontFamily: 'monospace', letterSpacing: 2 },
+  cancelText: { color: COLORS.textMuted, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm, letterSpacing: 0.5 },
 });

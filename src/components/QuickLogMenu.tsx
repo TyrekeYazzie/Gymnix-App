@@ -153,7 +153,7 @@ export default function QuickLogMenu({ visible, onClose, onSelect }: Props) {
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(8, 8, 20, 0.82)',
+    backgroundColor: COLORS.bgOverlay,
   },
   orbsAnchor: {
     position: 'absolute',
@@ -174,17 +174,16 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 4,
   },
   orbEmoji: {
     fontSize: 24,
   },
   orbLabel: {
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 1,
     marginTop: 4,

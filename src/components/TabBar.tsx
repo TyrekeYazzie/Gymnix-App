@@ -80,7 +80,7 @@ export default function TabBar({ state, descriptors, navigation, onPressCenter }
 
   return (
     <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, SPACING.md) }]}>
-      <BlurView intensity={40} tint="dark" style={styles.container}>
+      <BlurView intensity={40} tint="light" style={styles.container}>
         {/* Left tabs */}
         <View style={styles.tabGroup}>
           {leftTabs.map((route, i) => renderTab(route, i, 0))}
@@ -119,9 +119,9 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     width: '100%',
-    backgroundColor: 'rgba(34, 29, 66, 0.55)',
+    backgroundColor: 'rgba(251, 248, 241, 0.85)',
     borderWidth: 1,
-    borderColor: 'rgba(245, 166, 35, 0.18)',
+    borderColor: 'rgba(74, 107, 90, 0.22)',
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
     paddingTop: SPACING.sm,
@@ -146,7 +146,6 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
     fontWeight: FONT_WEIGHTS.semibold,
     marginTop: 2,
     letterSpacing: 0.5,
@@ -168,11 +167,11 @@ const styles = StyleSheet.create({
     marginTop: -24,
   },
   centerButtonWrapper: {
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 12,
-    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
   centerButton: {
     width: 56,
@@ -185,7 +184,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primaryLight,
   },
   centerIcon: {
-    color: COLORS.textPrimary,
+    color: COLORS.textInverse,
     fontSize: 28,
     fontWeight: FONT_WEIGHTS.black,
     lineHeight: 32,

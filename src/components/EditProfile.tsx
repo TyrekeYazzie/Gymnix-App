@@ -124,7 +124,7 @@ export default function EditProfile() {
     >
 
       {/* Units toggle — first so user sets this before entering values */}
-      <Text style={styles.sectionTitle}>◈ UNITS</Text>
+      <Text style={styles.sectionTitle}>Units</Text>
       <View style={styles.unitsRow}>
         <TouchableOpacity
           style={[styles.unitButton, units === 'metric' && styles.unitButtonActive]}
@@ -132,7 +132,7 @@ export default function EditProfile() {
           activeOpacity={0.7}
         >
           <Text style={[styles.unitButtonText, units === 'metric' && styles.unitButtonTextActive]}>
-            METRIC
+            Metric
           </Text>
           <Text style={[styles.unitSub, units === 'metric' && { color: COLORS.primary }]}>
             kg · cm · km
@@ -145,7 +145,7 @@ export default function EditProfile() {
           activeOpacity={0.7}
         >
           <Text style={[styles.unitButtonText, units === 'imperial' && styles.unitButtonTextActive]}>
-            IMPERIAL
+            Imperial
           </Text>
           <Text style={[styles.unitSub, units === 'imperial' && { color: COLORS.primary }]}>
             lbs · ft/in · mi
@@ -154,14 +154,14 @@ export default function EditProfile() {
       </View>
 
       {/* Identity */}
-      <Text style={[styles.sectionTitle, { marginTop: SPACING.lg }]}>◈ IDENTITY</Text>
+      <Text style={[styles.sectionTitle, { marginTop: SPACING.lg }]}>About you</Text>
 
       <Text style={styles.label}>Full name</Text>
       <TextInput
         style={styles.input}
         value={name}
         onChangeText={setName}
-        placeholder="e.g. Spike Spiegel"
+        placeholder="e.g. Jamie Smith"
         placeholderTextColor={COLORS.textMuted}
       />
 
@@ -194,7 +194,7 @@ export default function EditProfile() {
       />
 
       {/* Stats */}
-      <Text style={[styles.sectionTitle, { marginTop: SPACING.lg }]}>◈ STATS</Text>
+      <Text style={[styles.sectionTitle, { marginTop: SPACING.lg }]}>Body stats</Text>
 
       {/* Height */}
       <Text style={styles.label}>Height {units === 'imperial' ? '(ft / in)' : '(cm)'}</Text>
@@ -249,7 +249,7 @@ export default function EditProfile() {
         activeOpacity={0.8}
       >
         <Text style={[styles.buttonText, saved && { color: COLORS.neonGreen }]}>
-          {saved ? '✓ SAVED' : '▸ SAVE PROFILE'}
+          {saved ? '✓ Saved' : 'Save Profile'}
         </Text>
       </TouchableOpacity>
 
@@ -263,14 +263,12 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
     color: COLORS.textMuted,
-    fontFamily: 'monospace',
-    letterSpacing: 3,
+    letterSpacing: 0.5,
     marginBottom: SPACING.md,
   },
   label: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
-    fontFamily: 'monospace',
     letterSpacing: 1,
     marginBottom: SPACING.xs,
     marginTop: SPACING.md,
@@ -283,7 +281,6 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     color: COLORS.textPrimary,
     fontSize: FONT_SIZES.md,
-    fontFamily: 'monospace',
   },
   row: { flexDirection: 'row' },
   unitsRow: {
@@ -303,16 +300,14 @@ const styles = StyleSheet.create({
   unitButtonText: {
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
-    fontFamily: 'monospace',
     color: COLORS.textMuted,
-    letterSpacing: 2,
+    letterSpacing: 0.3,
   },
   unitButtonTextActive: {
     color: COLORS.primary,
   },
   unitSub: {
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
     color: COLORS.textMuted,
     marginTop: 4,
     letterSpacing: 1,
@@ -331,7 +326,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: FONT_WEIGHTS.bold,
     fontSize: FONT_SIZES.md,
-    fontFamily: 'monospace',
-    letterSpacing: 3,
+    letterSpacing: 0.5,
   },
 })

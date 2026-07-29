@@ -7,6 +7,7 @@ import {
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { COLORS } from '@/constants/theme';
+import { validateName, validateEmail, validatePassword, sanitizeInput } from '@/utils/validation';
 
 export default function Signup() {
   const router = useRouter();
@@ -20,24 +21,32 @@ export default function Signup() {
   const handleSignup = async () => {
     setError('');
 
-    if (!fullName.trim()) {
-      setError('Please enter your full name');
+    const cleanName = sanitizeInput(fullName);
+    const cleanEmail = email.trim().toLowerCase();
+
+    const nameCheck = validateName(cleanName);
+    if (!nameCheck.isValid) {
+      setError(nameCheck.error!);
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError('Please enter a valid email address');
+
+    const emailCheck = validateEmail(cleanEmail);
+    if (!emailCheck.isValid) {
+      setError(emailCheck.error!);
       return;
     }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.isValid) {
+      setError(passwordCheck.errors!.join('\n'));
       return;
     }
 
     setLoading(true);
     const { error } = await supabase.auth.signUp({
-      email,
+      email: cleanEmail,
       password,
-      options: { data: { full_name: fullName } }
+      options: { data: { full_name: cleanName } }
     });
     if (error) setError(error.message);
     else setSuccess(true);
@@ -95,6 +104,9 @@ export default function Signup() {
           onChangeText={setPassword}
           secureTextEntry
         />
+        <Text style={styles.hint}>
+          8+ characters, with an uppercase letter, a number, and a symbol
+        </Text>
 
         <TouchableOpacity
           style={styles.button}
@@ -102,7 +114,7 @@ export default function Signup() {
           disabled={loading}
         >
           {loading
-            ? <ActivityIndicator color={COLORS.textPrimary} />
+            ? <ActivityIndicator color={COLORS.textInverse} />
             : <Text style={styles.buttonText}>Sign Up</Text>
           }
         </TouchableOpacity>
@@ -129,7 +141,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary, borderRadius: 12,
     padding: 16, alignItems: 'center', marginTop: 8
   },
-  buttonText: { color: COLORS.textPrimary, fontWeight: 'bold', fontSize: 16 },
+  buttonText: { color: COLORS.textInverse, fontWeight: 'bold', fontSize: 16 },
   error: { color: COLORS.error, marginBottom: 16 },
+  hint: { color: COLORS.textMuted, fontSize: 12, marginTop: -8, marginBottom: 16 },
   link: { color: COLORS.primary, textAlign: 'center', marginTop: 24 }
 });

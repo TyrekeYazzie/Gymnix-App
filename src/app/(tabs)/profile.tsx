@@ -8,29 +8,44 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'expo-router'
 import { useProfile } from '@/context/ProfileContext'
 import EditProfile from '@/components/EditProfile'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS, CARD
 } from '@/constants/theme'
+import { xpProgress } from '@/lib/xp'
+import { getRank } from '@/constants/ranks'
+
+function DataRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+  return (
+    <View style={styles.dataRow}>
+      <Text style={styles.dataLabel}>{label}</Text>
+      <View style={styles.dataDots} />
+      <Text style={[styles.dataValue, valueColor ? { color: valueColor } : {}]}>{value}</Text>
+    </View>
+  )
+}
 
 export default function Profile() {
   const router = useRouter()
   const { profile, isImperial } = useProfile()
   const [editing, setEditing] = useState(false)
 
+  const xp = xpProgress(profile?.total_xp ?? 0)
+  const rank = getRank(xp.level)
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.replace('/(auth)/login')
   }
 
-  // get initials from name or fallback
   const initials = profile?.full_name
     ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : '??'
 
   const heightDisplay = (() => {
     if (!profile?.height_cm) return '—'
-    if (!isImperial) return `${Math.round(profile.height_cm)}`
+    if (!isImperial) return `${Math.round(profile.height_cm)} CM`
     const totalIn = profile.height_cm / 2.54
     const ft = Math.floor(totalIn / 12)
     const inches = Math.round(totalIn % 12)
@@ -39,26 +54,22 @@ export default function Profile() {
 
   const weightDisplay = (() => {
     if (!profile?.weight_kg) return '—'
-    if (!isImperial) return `${Math.round(profile.weight_kg)}`
-    return `${Math.round(profile.weight_kg * 2.2046)}`
+    if (!isImperial) return `${Math.round(profile.weight_kg)} KG`
+    return `${Math.round(profile.weight_kg * 2.2046)} LBS`
   })()
 
   if (editing) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Edit Header */}
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.editHeader}>
-            <Text style={styles.screenTitle}>EDIT PROFILE</Text>
-            <TouchableOpacity onPress={() => setEditing(false)}>
-              <Text style={styles.doneButton}>✕ DONE</Text>
+            <TouchableOpacity onPress={() => setEditing(false)} style={styles.backRow} activeOpacity={0.7}>
+              <Ionicons name="chevron-back" size={16} color={COLORS.primary} />
+              <Text style={styles.backText}>BACK</Text>
             </TouchableOpacity>
+            <Text style={styles.screenTitle}>EDIT PROFILE</Text>
           </View>
           <View style={styles.dividerLine} />
-
           <EditProfile />
         </ScrollView>
       </SafeAreaView>
@@ -67,310 +78,360 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
         {/* Header */}
-        <Text style={styles.screenTitle}>PROFILE</Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.headerLabel}>Profile</Text>
+            <Text style={styles.screenTitle}>
+              {profile?.full_name || 'Your Profile'}
+            </Text>
+          </View>
+          <View style={[styles.idTag, { borderColor: rank.color }]}>
+            <Text style={[styles.idTagText, { color: rank.color }]}>Level {xp.level}</Text>
+          </View>
+        </View>
         <View style={styles.dividerLine} />
 
-        {/* Avatar Section */}
-        <View style={styles.avatarSection}>
-          <View style={styles.avatarRing}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials}</Text>
+        {/* Avatar + quick stats card */}
+        <View style={styles.hudCard}>
+          <View style={styles.hudInner}>
+            {/* Avatar panel */}
+            <View style={styles.avatarPanel}>
+              <View style={styles.avatarFrame}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{initials}</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Data panel */}
+            <View style={styles.dataPanel}>
+              <DataRow label="Age" value={profile?.age ? `${profile.age} yrs` : '—'} />
+              <View style={styles.dataRowDivider} />
+              <DataRow label="Height" value={heightDisplay} valueColor={COLORS.neonBlue} />
+              <View style={styles.dataRowDivider} />
+              <DataRow label="Weight" value={weightDisplay} valueColor={COLORS.neonBlue} />
+              <View style={styles.dataRowDivider} />
+              <DataRow
+                label="Units"
+                value={isImperial ? 'Imperial' : 'Metric'}
+                valueColor={COLORS.textMuted}
+              />
             </View>
           </View>
-          <Text style={styles.name}>
-            {profile?.full_name ? profile.full_name.toUpperCase() : 'NO NAME SET'}
-          </Text>
-          <View style={styles.levelBadge}>
-            <Text style={styles.levelText}>◈ NIGHT DRIVER</Text>
-          </View>
         </View>
 
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>
-              {profile?.age ?? '—'}
-            </Text>
-            <Text style={styles.statLabel}>AGE</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>
-              {heightDisplay}
-            </Text>
-            <Text style={styles.statLabel}>HEIGHT {isImperial ? '' : 'CM'}</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>
-              {weightDisplay}
-            </Text>
-            <Text style={styles.statLabel}>WEIGHT {isImperial ? 'LBS' : 'KG'}</Text>
-          </View>
-        </View>
-
-        {/* Goals Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>◈ MISSION</Text>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Goal</Text>
-            <Text style={styles.rowValue}>
-              {profile?.goal ?? 'Not set'}
-            </Text>
-          </View>
-          <View style={styles.rowDivider} />
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Activity level</Text>
-            <Text style={styles.rowValue}>
-              {profile?.activity_level ?? 'Not set'}
-            </Text>
-          </View>
-        </View>
-
-        {/* Settings Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>◈ SETTINGS</Text>
-          {[
-            { label: 'Edit Profile', onPress: () => setEditing(true) },
-            { label: 'Notifications', onPress: () => {} },
-            { label: 'Privacy', onPress: () => {} },
-            { label: 'Help & Support', onPress: () => {} },
-          ].map((item, index, arr) => (
-            <View key={item.label}>
-              <TouchableOpacity
-                style={styles.settingsRow}
-                onPress={item.onPress}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.settingsLabel}>{item.label}</Text>
-                <Text style={styles.settingsArrow}>›</Text>
-              </TouchableOpacity>
-              {index < arr.length - 1 && <View style={styles.rowDivider} />}
+        {/* Level / XP bar */}
+        <View style={styles.clearanceCard}>
+          <View style={styles.clearanceHeader}>
+            <Text style={styles.clearanceLabel}>Level {xp.level}</Text>
+            <View style={[styles.rankBadge, { borderColor: rank.color }]}>
+              <Text style={[styles.rankText, { color: rank.color }]}>{rank.name}</Text>
             </View>
-          ))}
+          </View>
+          <View style={styles.xpTrack}>
+            <View style={[styles.xpFill, { width: `${xp.percent}%` as any, backgroundColor: rank.color }]} />
+          </View>
+          <View style={styles.xpFooter}>
+            <Text style={styles.xpLabel}>{xp.current} XP</Text>
+            <Text style={styles.xpLabel}>{(profile?.total_xp ?? 0).toLocaleString()} total</Text>
+            <Text style={styles.xpLabel}>{xp.needed} to next</Text>
+          </View>
+        </View>
+
+        {/* About me */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>About Me</Text>
+          <View style={styles.sectionLine} />
+        </View>
+        <View style={[styles.missionCard]}>
+          <DataRow
+            label="Goal"
+            value={profile?.goal || 'Not set'}
+            valueColor={COLORS.neonGreen}
+          />
+          <View style={styles.dataRowDivider} />
+          <DataRow
+            label="Activity"
+            value={profile?.activity_level || 'Not set'}
+            valueColor={COLORS.neonGreen}
+          />
+        </View>
+
+        {/* More */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>More</Text>
+          <View style={styles.sectionLine} />
+        </View>
+        <View style={styles.systemCard}>
+          <TouchableOpacity
+            style={styles.systemRow}
+            onPress={() => router.push('/progress')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.sysIcon, { borderColor: COLORS.neonGreen }]}>
+              <Ionicons name="trending-up-outline" size={14} color={COLORS.neonGreen} />
+            </View>
+            <Text style={styles.systemLabel}>Progress</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.dataRowDivider} />
+          <TouchableOpacity
+            style={styles.systemRow}
+            onPress={() => setEditing(true)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.sysIcon, { borderColor: COLORS.primary }]}>
+              <Ionicons name="person-outline" size={14} color={COLORS.primary} />
+            </View>
+            <Text style={styles.systemLabel}>Edit Profile</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.dataRowDivider} />
+          <TouchableOpacity
+            style={styles.systemRow}
+            onPress={() => router.push('/settings')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.sysIcon, { borderColor: COLORS.accent }]}>
+              <Ionicons name="settings-outline" size={14} color={COLORS.accent} />
+            </View>
+            <Text style={styles.systemLabel}>App Settings</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          </TouchableOpacity>
         </View>
 
         {/* Logout */}
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.logoutText}>▸ LOG OUT</Text>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
+          <Ionicons name="log-out-outline" size={16} color={COLORS.neonOrange} />
+          <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
         <Text style={styles.version}>FitnessApp v1.0.0</Text>
+
       </ScrollView>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bgPrimary,
+  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
+  content: { padding: SPACING.lg, paddingBottom: SPACING.xxxl },
+
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: SPACING.sm,
   },
-  content: {
-    padding: SPACING.lg,
-    paddingBottom: SPACING.xxxl,
+  headerLabel: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
   screenTitle: {
-    fontSize: FONT_SIZES.xxl,
+    fontSize: FONT_SIZES.xl,
     fontWeight: FONT_WEIGHTS.black,
     color: COLORS.textPrimary,
-    fontFamily: 'monospace',
-    letterSpacing: 4,
-    marginBottom: SPACING.sm,
+    letterSpacing: 0.3,
+  },
+  idTag: {
+    borderWidth: 1,
+    borderRadius: RADIUS.xs,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+  },
+  idTagText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: FONT_WEIGHTS.black,
+    letterSpacing: 0.3,
   },
   dividerLine: {
     height: 1,
     backgroundColor: COLORS.primary,
     width: 40,
-    marginBottom: SPACING.xl,
-  },
-  editHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-  doneButton: {
-    color: COLORS.accent,
-    fontSize: FONT_SIZES.sm,
-    fontFamily: 'monospace',
-    fontWeight: FONT_WEIGHTS.bold,
-    letterSpacing: 2,
+    marginBottom: SPACING.lg,
   },
 
-  // Avatar
-  avatarSection: {
-    alignItems: 'center',
-    marginBottom: SPACING.xl,
+  editHeader: { marginBottom: SPACING.sm },
+  backRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: SPACING.sm },
+  backText: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZES.xs,
+    fontWeight: FONT_WEIGHTS.bold,
+    letterSpacing: 1,
   },
-  avatarRing: {
-    width: 96,
-    height: 96,
-    borderRadius: RADIUS.full,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
+
+  // HUD card
+  hudCard: {
+    backgroundColor: COLORS.bgSecondary,
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg,
+    marginBottom: SPACING.lg,
+    position: 'relative',
     ...SHADOWS.purple,
   },
-  avatar: {
+  hudInner: { flexDirection: 'row', gap: SPACING.lg, alignItems: 'center' },
+  avatarPanel: { alignItems: 'center', gap: SPACING.xs },
+  avatarFrame: {
     width: 80,
     height: 80,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.bgElevated,
-    justifyContent: 'center',
+    position: 'relative',
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 6,
+  },
+  avatar: {
+    width: 68,
+    height: 68,
+    backgroundColor: COLORS.bgTertiary,
     borderWidth: 1,
-    borderColor: COLORS.borderFocus,
+    borderColor: COLORS.borderDefault,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarText: {
     color: COLORS.primary,
     fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
-    fontFamily: 'monospace',
   },
-  name: {
+  dataPanel: { flex: 1, gap: 2 },
+  dataRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5 },
+  dataLabel: {
+    color: COLORS.textMuted,
+    fontSize: FONT_SIZES.xs,
+    letterSpacing: 1,
+    width: 60,
+  },
+  dataDots: { flex: 1, borderBottomWidth: 1, borderBottomColor: COLORS.borderDefault, borderStyle: 'dotted', marginHorizontal: SPACING.xs },
+  dataValue: {
     color: COLORS.textPrimary,
-    fontSize: FONT_SIZES.xl,
-    fontWeight: FONT_WEIGHTS.black,
-    fontFamily: 'monospace',
-    letterSpacing: 3,
+    fontSize: FONT_SIZES.xs,
+    fontWeight: FONT_WEIGHTS.bold,
+    letterSpacing: 1,
+  },
+  dataRowDivider: { height: 1, backgroundColor: COLORS.borderDefault },
+
+  // Clearance card
+  clearanceCard: {
+    ...CARD.default,
+    ...SHADOWS.purple,
+    marginBottom: SPACING.lg,
+  },
+  clearanceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: SPACING.md,
   },
-  levelBadge: {
-    borderColor: COLORS.accent,
+  clearanceLabel: {
+    color: COLORS.textMuted,
+    fontSize: FONT_SIZES.xs,
+    letterSpacing: 0.3,
+  },
+  rankBadge: {
     borderWidth: 1,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.xs,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
   },
-  levelText: {
-    color: COLORS.accent,
+  rankText: {
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
-    letterSpacing: 2,
-  },
-
-  // Stats
-  statsRow: {
-    ...CARD.default,
-    ...SHADOWS.purple,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-    paddingVertical: SPACING.lg,
-  },
-  statBox: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
-    fontFamily: 'monospace',
+    letterSpacing: 0.3,
   },
-  statLabel: {
-    fontSize: FONT_SIZES.xs,
+  xpTrack: {
+    height: 6,
+    backgroundColor: COLORS.bgTertiary,
+    borderRadius: RADIUS.full,
+    overflow: 'hidden',
+    marginBottom: SPACING.xs,
+  },
+  xpFill: { height: '100%', borderRadius: RADIUS.full },
+  xpFooter: { flexDirection: 'row', justifyContent: 'space-between' },
+  xpLabel: {
     color: COLORS.textMuted,
-    fontFamily: 'monospace',
+    fontSize: 9,
     letterSpacing: 1,
-    marginTop: SPACING.xs,
-  },
-  statDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: COLORS.borderDefault,
   },
 
-  // Cards
-  card: {
-    ...CARD.default,
-    ...SHADOWS.purple,
-    marginBottom: SPACING.lg,
+  // Section headers
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
   },
-  cardTitle: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: FONT_WEIGHTS.bold,
+  sectionTitle: {
     color: COLORS.textMuted,
-    fontFamily: 'monospace',
-    letterSpacing: 3,
+    fontSize: FONT_SIZES.xs,
+    letterSpacing: 0.5,
+  },
+  sectionLine: { flex: 1, height: 1, backgroundColor: COLORS.borderDefault },
+
+  // Mission card
+  missionCard: {
+    backgroundColor: COLORS.bgSecondary,
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg,
     marginBottom: SPACING.lg,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.sm,
-  },
-  rowLabel: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZES.md,
-    fontFamily: 'monospace',
-  },
-  rowValue: {
-    color: COLORS.textPrimary,
-    fontSize: FONT_SIZES.md,
-    fontWeight: FONT_WEIGHTS.bold,
-    fontFamily: 'monospace',
-  },
-  rowDivider: {
-    height: 1,
-    backgroundColor: COLORS.borderDefault,
+    position: 'relative',
+    gap: 2,
   },
 
-  // Settings
-  settingsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
+  // System card
+  systemCard: {
+    ...CARD.default,
+    marginBottom: SPACING.lg,
+    gap: 0,
+    padding: 0,
+    overflow: 'hidden',
   },
-  settingsLabel: {
+  systemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    padding: SPACING.lg,
+  },
+  sysIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: RADIUS.xs,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  systemLabel: {
+    flex: 1,
     color: COLORS.textPrimary,
     fontSize: FONT_SIZES.md,
-    fontFamily: 'monospace',
-  },
-  settingsArrow: {
-    color: COLORS.primary,
-    fontSize: FONT_SIZES.xl,
-    fontFamily: 'monospace',
   },
 
   // Logout
   logoutButton: {
-    backgroundColor: 'transparent',
-    borderColor: COLORS.accent,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
     borderWidth: 1,
+    borderColor: COLORS.neonOrange + '66',
     borderRadius: RADIUS.md,
     padding: SPACING.lg,
-    alignItems: 'center',
     marginBottom: SPACING.lg,
-    ...SHADOWS.crimson,
   },
   logoutText: {
-    color: COLORS.accent,
+    color: COLORS.neonOrange,
     fontWeight: FONT_WEIGHTS.bold,
-    fontSize: FONT_SIZES.md,
-    fontFamily: 'monospace',
-    letterSpacing: 3,
+    fontSize: FONT_SIZES.sm,
+    letterSpacing: 0.5,
   },
   version: {
     color: COLORS.textMuted,
-    fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
+    fontSize: 9,
     textAlign: 'center',
-    letterSpacing: 2,
+    letterSpacing: 0.3,
   },
 })

@@ -89,7 +89,7 @@ export default function Workouts() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.screenTitle}>WORKOUTS</Text>
+            <Text style={styles.screenTitle}>Workouts</Text>
             <Text style={styles.subtitle}>{totalThisWeek} sessions this week</Text>
           </View>
           <TouchableOpacity
@@ -97,7 +97,7 @@ export default function Workouts() {
             onPress={() => { setLogCategory(''); setModalVisible(true); }}
             activeOpacity={0.8}
           >
-            <Text style={styles.addButtonText}>+ LOG</Text>
+            <Text style={styles.addButtonText}>+ Log</Text>
           </TouchableOpacity>
         </View>
 
@@ -105,19 +105,19 @@ export default function Workouts() {
         <View style={styles.summaryRow}>
           <View style={styles.summaryBox}>
             <Text style={styles.summaryNumber}>{workouts.length}</Text>
-            <Text style={styles.summaryLabel}>TOTAL</Text>
+            <Text style={styles.summaryLabel}>Total</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryBox}>
             <Text style={styles.summaryNumber}>{totalThisWeek}</Text>
-            <Text style={styles.summaryLabel}>THIS WEEK</Text>
+            <Text style={styles.summaryLabel}>This week</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryBox}>
             <Text style={styles.summaryNumber}>
               {workouts.reduce((s, w) => s + (w.sets?.length ?? 0), 0)}
             </Text>
-            <Text style={styles.summaryLabel}>TOTAL SETS</Text>
+            <Text style={styles.summaryLabel}>Total sets</Text>
           </View>
         </View>
 
@@ -141,7 +141,7 @@ export default function Workouts() {
               onPress={() => setActiveFilter('ALL')}
               activeOpacity={0.7}
             >
-              <Text style={[styles.filterPillText, activeFilter === 'ALL' && styles.filterPillTextActive]}>ALL</Text>
+              <Text style={[styles.filterPillText, activeFilter === 'ALL' && styles.filterPillTextActive]}>All</Text>
             </TouchableOpacity>
             {categories.map((cat) => (
               <TouchableOpacity
@@ -168,13 +168,13 @@ export default function Workouts() {
 
         {/* Workout list */}
         <Text style={styles.sectionTitle}>
-          {activeFilter === 'ALL' ? '◈ RECENT WORKOUTS' : `◈ ${activeFilter}`}
+          {activeFilter === 'ALL' ? 'Recent workouts' : activeFilter}
         </Text>
 
         {filteredWorkouts.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>NO WORKOUTS FOUND</Text>
-            <Text style={styles.emptySubText}>Tap + LOG to start tracking</Text>
+            <Text style={styles.emptyText}>No workouts found</Text>
+            <Text style={styles.emptySubText}>Tap + Log to start tracking</Text>
           </View>
         ) : (
           filteredWorkouts.map((workout, i) => {
@@ -225,13 +225,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
     color: COLORS.textPrimary,
-    fontFamily: 'monospace',
-    letterSpacing: 4,
+    letterSpacing: 0.5,
   },
   subtitle: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textSecondary,
-    fontFamily: 'monospace',
     marginTop: SPACING.xs,
     letterSpacing: 1,
   },
@@ -246,9 +244,8 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: COLORS.primary,
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
     fontWeight: FONT_WEIGHTS.bold,
-    letterSpacing: 2,
+    letterSpacing: 0.3,
   },
   summaryRow: {
     ...CARD.default,
@@ -264,12 +261,10 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
     color: COLORS.textPrimary,
-    fontFamily: 'monospace',
   },
   summaryLabel: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textMuted,
-    fontFamily: 'monospace',
     letterSpacing: 1,
     marginTop: SPACING.xs,
   },
@@ -290,7 +285,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: COLORS.textPrimary,
-    fontFamily: 'monospace',
     fontSize: FONT_SIZES.sm,
     paddingVertical: SPACING.md,
   },
@@ -321,7 +315,6 @@ const styles = StyleSheet.create({
   filterPillText: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textSecondary,
-    fontFamily: 'monospace',
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 1,
   },
@@ -333,8 +326,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
     color: COLORS.textMuted,
-    fontFamily: 'monospace',
-    letterSpacing: 3,
+    letterSpacing: 0.5,
     marginBottom: SPACING.md,
   },
 
@@ -362,28 +354,24 @@ const styles = StyleSheet.create({
   workoutName: {
     color: COLORS.textPrimary,
     fontSize: FONT_SIZES.md,
-    fontFamily: 'monospace',
     fontWeight: FONT_WEIGHTS.bold,
     marginBottom: SPACING.xs,
   },
   workoutMeta: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
     letterSpacing: 1,
   },
   workoutRight: { alignItems: 'flex-end' },
   workoutDate: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
     letterSpacing: 1,
     marginBottom: SPACING.xs,
   },
   workoutCalories: {
     color: COLORS.neonGreen,
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
     fontWeight: FONT_WEIGHTS.bold,
   },
   emptyState: {
@@ -394,13 +382,11 @@ const styles = StyleSheet.create({
   emptyText: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZES.sm,
-    fontFamily: 'monospace',
-    letterSpacing: 2,
+    letterSpacing: 0.3,
     marginBottom: SPACING.sm,
   },
   emptySubText: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
   },
 });

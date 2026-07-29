@@ -1,17 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Modal, TextInput, Alert,
+  StyleSheet, Modal, TextInput, Alert, Dimensions,
   KeyboardAvoidingView, Platform, Animated, PanResponder
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
+import { awardXP, XP_WEIGHT } from '@/lib/xp';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS
 } from '@/constants/theme';
+
+// slide the sheet fully past the bottom edge regardless of device height or sheet content length
+const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
 
 interface WeightEntry { id?: string; weight_kg: number; created_at: string; }
 
@@ -23,7 +27,7 @@ interface Props {
 
 export default function WeightLog({ visible, onClose, onSaved }: Props) {
   const { user } = useAuth();
-  const { profile, isImperial } = useProfile();
+  const { profile, isImperial, refreshProfile } = useProfile();
 
   // always stored as kg internally
   const startKg = profile?.weight_kg ?? 70;
@@ -33,13 +37,13 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
   const [recentEntries, setRecentEntries] = useState<WeightEntry[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const slideAnim = useRef(new Animated.Value(600)).current;
+  const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
 
   // display helpers
   const toDisplay = (kg: number) => isImperial ? kg * 2.2046 : kg;
   const fromDisplay = (val: number) => isImperial ? val / 2.2046 : val;
-  const displayUnit = isImperial ? 'LBS' : 'KG';
+  const displayUnit = isImperial ? 'lbs' : 'kg';
   const displayWeight = toDisplay(weightKg);
   const sliderMin = isImperial ? 66 : 30;
   const sliderMax = isImperial ? 440 : 200;
@@ -52,8 +56,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
       onPanResponderMove: (_, g) => { if (g.dy > 0) slideAnim.setValue(g.dy); },
       onPanResponderRelease: (_, g) => {
         if (g.dy > 100 || g.vy > 0.5) {
-          Animated.spring(slideAnim, { toValue: 600, useNativeDriver: true, damping: 20, stiffness: 200 })
-            .start(() => handleClose());
+          animateClose();
         } else {
           Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }).start();
         }
@@ -70,7 +73,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
       ]).start();
     } else {
       Animated.parallel([
-        Animated.spring(slideAnim, { toValue: 600, useNativeDriver: true, damping: 20, stiffness: 200 }),
+        Animated.spring(slideAnim, { toValue: SLIDE_DISTANCE, useNativeDriver: true, damping: 20, stiffness: 200 }),
         Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start();
     }
@@ -106,6 +109,15 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
 
   const handleClose = () => { setNotes(''); onClose(); };
 
+  // plays the slide-down/fade-out first, then closes — used for backdrop taps and Cancel,
+  // since Modal's `visible` prop hides the native modal instantly otherwise, cutting the animation short
+  const animateClose = () => {
+    Animated.parallel([
+      Animated.spring(slideAnim, { toValue: SLIDE_DISTANCE, useNativeDriver: true, damping: 20, stiffness: 200 }),
+      Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => handleClose());
+  };
+
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
@@ -119,6 +131,8 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
     setSaving(false);
     if (error) { Alert.alert('Error', error.message); return; }
     if (data) {
+      await awardXP(user.id, XP_WEIGHT);
+      await refreshProfile();
       setRecentEntries(p => [data, ...p].slice(0, 5));
       onSaved(data);
       setNotes('');
@@ -129,7 +143,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
       <Animated.View style={[styles.overlay, { opacity: overlayAnim }]}>
-        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={handleClose} />
+        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={animateClose} />
       </Animated.View>
 
       <KeyboardAvoidingView
@@ -141,12 +155,12 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
             <View style={styles.handleBar} />
           </View>
 
-          <Text style={styles.title}>◈ LOG WEIGHT</Text>
+          <Text style={styles.title}>Log Weight</Text>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {lastEntry && (
               <View style={styles.lastEntry}>
-                <Text style={styles.lastLabel}>LAST LOGGED</Text>
+                <Text style={styles.lastLabel}>Last logged</Text>
                 <Text style={styles.lastValue}>
                   {toDisplay(lastEntry.weight_kg).toFixed(1)} {displayUnit} — {formatDate(lastEntry.created_at)}
                 </Text>
@@ -178,7 +192,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
 
             {recentEntries.length > 1 && (
               <View style={{ marginBottom: SPACING.lg }}>
-                <Text style={styles.label}>RECENT ENTRIES</Text>
+                <Text style={styles.label}>Recent entries</Text>
                 {recentEntries.slice(1).map((entry, i) => (
                   <View key={entry.id ?? i} style={styles.historyRow}>
                     <Text style={styles.historyAmount}>{toDisplay(entry.weight_kg).toFixed(1)} {displayUnit}</Text>
@@ -188,7 +202,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
               </View>
             )}
 
-            <Text style={styles.label}>NOTES (OPTIONAL)</Text>
+            <Text style={styles.label}>Notes (optional)</Text>
             <TextInput
               style={[styles.input, { marginBottom: SPACING.lg }]}
               placeholder="e.g. Morning, after workout..."
@@ -203,11 +217,11 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
               activeOpacity={0.8}
               disabled={saving}
             >
-              <Text style={styles.saveText}>{saving ? 'SAVING...' : '▸ LOG WEIGHT'}</Text>
+              <Text style={styles.saveText}>{saving ? 'Saving…' : 'Log Weight'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.cancelButton} onPress={handleClose} activeOpacity={0.7}>
-              <Text style={styles.cancelText}>CANCEL</Text>
+            <TouchableOpacity style={styles.cancelButton} onPress={animateClose} activeOpacity={0.7}>
+              <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </ScrollView>
         </Animated.View>
@@ -227,34 +241,35 @@ const styles = StyleSheet.create({
   handleBar: { width: 40, height: 4, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full },
   title: {
     fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary,
-    fontFamily: 'monospace', letterSpacing: 3, marginBottom: SPACING.lg, textAlign: 'center',
   },
-  label: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontFamily: 'monospace', letterSpacing: 2, marginBottom: SPACING.sm },
   lastEntry: {
     backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
     marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDefault,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  lastLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontFamily: 'monospace', letterSpacing: 2 },
-  lastValue: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontFamily: 'monospace', fontWeight: FONT_WEIGHTS.bold },
+  lastLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, letterSpacing: 1 },
+  lastValue: { fontSize: FONT_SIZES.sm, color: COLORS.textPrimary, fontWeight: FONT_WEIGHTS.bold },
   weightDisplay: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', marginBottom: SPACING.sm },
-  weightNumber: { fontSize: FONT_SIZES.hero, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary, fontFamily: 'monospace' },
-  weightUnit: { fontSize: FONT_SIZES.xl, color: COLORS.textMuted, fontFamily: 'monospace', marginBottom: 10, marginLeft: SPACING.sm },
-  weightDiff: { fontSize: FONT_SIZES.sm, fontFamily: 'monospace', textAlign: 'center', marginBottom: SPACING.md, letterSpacing: 1 },
+  weightNumber: { fontSize: FONT_SIZES.xxxl, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary, marginRight: SPACING.xs },
+  weightUnit: { fontSize: FONT_SIZES.lg, color: COLORS.textMuted, marginBottom: SPACING.xs },
+  weightDiff: { fontSize: FONT_SIZES.xs, textAlign: 'center', marginBottom: SPACING.lg },
+  label: {
+    fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted,
+    letterSpacing: 1.5, marginBottom: SPACING.sm,
+  },
   slider: { width: '100%', height: 40 },
   historyRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.borderDefault,
   },
-  historyAmount: { color: COLORS.textPrimary, fontFamily: 'monospace', fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
-  historyTime: { color: COLORS.textMuted, fontFamily: 'monospace', fontSize: FONT_SIZES.xs },
+  historyAmount: { fontSize: FONT_SIZES.sm, color: COLORS.textPrimary, fontWeight: FONT_WEIGHTS.medium },
+  historyTime: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted },
   input: {
     backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault, borderWidth: 1,
     borderRadius: RADIUS.sm, padding: SPACING.md, color: COLORS.textPrimary,
-    fontSize: FONT_SIZES.md, fontFamily: 'monospace',
   },
   saveButton: { backgroundColor: COLORS.accent, borderRadius: RADIUS.md, padding: SPACING.lg, alignItems: 'center', marginBottom: SPACING.sm, ...SHADOWS.crimson },
-  saveText: { color: COLORS.textPrimary, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.md, fontFamily: 'monospace', letterSpacing: 3 },
+  saveText: { color: COLORS.textInverse, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md, letterSpacing: 0.5 },
   cancelButton: { padding: SPACING.lg, alignItems: 'center' },
-  cancelText: { color: COLORS.textMuted, fontSize: FONT_SIZES.sm, fontFamily: 'monospace', letterSpacing: 2 },
+  cancelText: { color: COLORS.textMuted, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm, letterSpacing: 0.5 },
 });

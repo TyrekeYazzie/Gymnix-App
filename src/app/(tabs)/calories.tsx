@@ -12,8 +12,9 @@ import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS, CARD
 } from '@/constants/theme';
+import { DEFAULT_CALORIE_GOAL } from '@/constants/nutrition';
 
-const GOAL = 2000;
+const GOAL = DEFAULT_CALORIE_GOAL;
 
 const MEAL_TYPES = [
   { name: 'Breakfast', emoji: '🌅', color: COLORS.neonYellow },
@@ -104,7 +105,7 @@ export default function Calories() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.screenTitle}>CALORIES</Text>
+            <Text style={styles.screenTitle}>Calories</Text>
             <Text style={styles.date}>{today}</Text>
           </View>
           <TouchableOpacity
@@ -112,7 +113,7 @@ export default function Calories() {
             onPress={() => setModalVisible(true)}
             activeOpacity={0.8}
           >
-            <Text style={styles.addButtonText}>+ ADD</Text>
+            <Text style={styles.addButtonText}>+ Add</Text>
           </TouchableOpacity>
         </View>
 
@@ -120,14 +121,14 @@ export default function Calories() {
 
         {/* Today's Summary Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>◈ TODAY'S INTAKE</Text>
+          <Text style={styles.cardTitle}>Today's intake</Text>
 
           <View style={styles.calorieRow}>
             <View>
               <Text style={styles.calorieNumber}>
                 {totalCalories.toLocaleString()}
               </Text>
-              <Text style={styles.calorieLabel}>CONSUMED</Text>
+              <Text style={styles.calorieLabel}>Consumed</Text>
             </View>
             <View style={styles.calorieDivider} />
             <View style={{ alignItems: 'flex-end' }}>
@@ -138,7 +139,7 @@ export default function Calories() {
                 {Math.abs(remaining).toLocaleString()}
               </Text>
               <Text style={styles.calorieLabel}>
-                {remaining < 0 ? 'OVER GOAL' : 'REMAINING'}
+                {remaining < 0 ? 'Over goal' : 'Remaining'}
               </Text>
             </View>
           </View>
@@ -153,7 +154,7 @@ export default function Calories() {
 
           <View style={styles.goalRow}>
             <Text style={styles.goalText}>0</Text>
-            <Text style={styles.goalText}>GOAL: {GOAL.toLocaleString()} kcal</Text>
+            <Text style={styles.goalText}>Goal: {GOAL.toLocaleString()} kcal</Text>
             <Text style={styles.goalText}>{GOAL.toLocaleString()}</Text>
           </View>
         </View>
@@ -161,9 +162,9 @@ export default function Calories() {
         {/* Macros Row */}
         <View style={styles.macrosRow}>
           {[
-            { label: 'PROTEIN', value: `${protein}g`, color: COLORS.neonBlue },
-            { label: 'CARBS', value: `${carbs}g`, color: COLORS.neonYellow },
-            { label: 'FAT', value: `${fat}g`, color: COLORS.accent },
+            { label: 'Protein', value: `${protein}g`, color: COLORS.neonBlue },
+            { label: 'Carbs', value: `${carbs}g`, color: COLORS.neonYellow },
+            { label: 'Fat', value: `${fat}g`, color: COLORS.accent },
           ].map((macro) => (
             <View key={macro.label} style={styles.macroCard}>
               <Text style={[styles.macroValue, { color: macro.color }]}>
@@ -194,7 +195,7 @@ export default function Calories() {
               onPress={() => setActiveFilter('ALL')}
               activeOpacity={0.7}
             >
-              <Text style={[styles.filterPillText, activeFilter === 'ALL' && styles.filterPillTextActive]}>ALL</Text>
+              <Text style={[styles.filterPillText, activeFilter === 'ALL' && styles.filterPillTextActive]}>All</Text>
             </TouchableOpacity>
             {MEAL_TYPES.map((type) => (
               <TouchableOpacity
@@ -220,13 +221,13 @@ export default function Calories() {
 
         {/* Meals List */}
         <Text style={styles.sectionTitle}>
-          {activeFilter === 'ALL' ? "◈ TODAY'S MEALS" : `◈ ${activeFilter.toUpperCase()}`}
+          {activeFilter === 'ALL' ? "Today's meals" : activeFilter}
         </Text>
 
         {filteredMeals.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>NO MEALS FOUND</Text>
-            <Text style={styles.emptySubText}>Tap + ADD to log your first meal</Text>
+            <Text style={styles.emptyText}>No meals found</Text>
+            <Text style={styles.emptySubText}>Tap + Add to log your first meal</Text>
           </View>
         ) : (
           filteredMeals.map((meal) => {
@@ -283,13 +284,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
     color: COLORS.textPrimary,
-    fontFamily: 'monospace',
-    letterSpacing: 4,
+    letterSpacing: 0.5,
   },
   date: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textSecondary,
-    fontFamily: 'monospace',
     marginTop: SPACING.xs,
     letterSpacing: 1,
   },
@@ -304,9 +303,8 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: COLORS.primary,
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
     fontWeight: FONT_WEIGHTS.bold,
-    letterSpacing: 2,
+    letterSpacing: 0.3,
   },
   dividerLine: {
     height: 1,
@@ -325,8 +323,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
     color: COLORS.textMuted,
-    fontFamily: 'monospace',
-    letterSpacing: 3,
+    letterSpacing: 0.5,
     marginBottom: SPACING.lg,
   },
   calorieRow: {
@@ -339,13 +336,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xxxl,
     fontWeight: FONT_WEIGHTS.black,
     color: COLORS.textPrimary,
-    fontFamily: 'monospace',
   },
   calorieLabel: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textMuted,
-    fontFamily: 'monospace',
-    letterSpacing: 2,
+    letterSpacing: 0.3,
     marginTop: SPACING.xs,
   },
   calorieDivider: {
@@ -371,7 +366,6 @@ const styles = StyleSheet.create({
   goalText: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textMuted,
-    fontFamily: 'monospace',
     letterSpacing: 1,
   },
 
@@ -390,14 +384,12 @@ const styles = StyleSheet.create({
   macroValue: {
     fontSize: FONT_SIZES.xl,
     fontWeight: FONT_WEIGHTS.black,
-    fontFamily: 'monospace',
     marginBottom: SPACING.xs,
   },
   macroLabel: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textMuted,
-    fontFamily: 'monospace',
-    letterSpacing: 2,
+    letterSpacing: 0.3,
   },
 
   // Search
@@ -415,7 +407,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: COLORS.textPrimary,
-    fontFamily: 'monospace',
     fontSize: FONT_SIZES.sm,
     paddingVertical: SPACING.md,
   },
@@ -446,7 +437,6 @@ const styles = StyleSheet.create({
   filterPillText: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textSecondary,
-    fontFamily: 'monospace',
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 1,
   },
@@ -459,8 +449,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
     color: COLORS.textMuted,
-    fontFamily: 'monospace',
-    letterSpacing: 3,
+    letterSpacing: 0.5,
     marginBottom: SPACING.md,
   },
   mealCard: {
@@ -488,14 +477,12 @@ const styles = StyleSheet.create({
   mealName: {
     color: COLORS.textPrimary,
     fontSize: FONT_SIZES.md,
-    fontFamily: 'monospace',
     fontWeight: FONT_WEIGHTS.bold,
     marginBottom: SPACING.xs,
   },
   mealTime: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
     letterSpacing: 1,
   },
   mealRight: {
@@ -504,13 +491,11 @@ const styles = StyleSheet.create({
   mealCalories: {
     color: COLORS.primary,
     fontSize: FONT_SIZES.lg,
-    fontFamily: 'monospace',
     fontWeight: FONT_WEIGHTS.black,
   },
   mealKcal: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
   },
 
   // Empty State
@@ -522,13 +507,11 @@ const styles = StyleSheet.create({
   emptyText: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZES.sm,
-    fontFamily: 'monospace',
-    letterSpacing: 2,
+    letterSpacing: 0.3,
     marginBottom: SPACING.sm,
   },
   emptySubText: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZES.xs,
-    fontFamily: 'monospace',
   },
 });

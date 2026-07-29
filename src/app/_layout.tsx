@@ -40,7 +40,6 @@ export default function Layout() {
             <Text style={{
               color: COLORS.textSecondary,
               marginTop: SPACING.lg,
-              fontFamily: 'monospace'
             }}>
               Loading...
             </Text>
