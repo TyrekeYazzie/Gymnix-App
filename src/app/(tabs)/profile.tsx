@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'expo-router'
+import { useSwipeTabs } from '@/hooks/useSwipeTabs'
 import { useProfile } from '@/context/ProfileContext'
 import EditProfile from '@/components/EditProfile'
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -30,6 +31,7 @@ export default function Profile() {
   const router = useRouter()
   const { profile, isImperial } = useProfile()
   const [editing, setEditing] = useState(false)
+  const swipeHandlers = useSwipeTabs()
 
   const xp = xpProgress(profile?.total_xp ?? 0)
   const rank = getRank(xp.level)
@@ -77,7 +79,7 @@ export default function Profile() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top']} {...swipeHandlers}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Header */}

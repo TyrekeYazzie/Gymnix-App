@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import Svg, { Circle } from 'react-native-svg';
 import { BlurView } from 'expo-blur';
 import { supabase } from '@/lib/supabase';
@@ -185,8 +186,10 @@ export default function DashboardScreen() {
   const calorieProgress = Math.min((todayCalories / CALORIE_GOAL) * 100, 100);
   const heroDashOffset = HERO_CIRCUMFERENCE * (1 - calorieProgress / 100);
 
+  const swipeHandlers = useSwipeTabs();
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top']} {...swipeHandlers}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

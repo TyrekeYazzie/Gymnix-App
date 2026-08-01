@@ -7,6 +7,7 @@ import { useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import CaloriesLog from '@/components/logs/CaloriesLog';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
@@ -95,8 +96,10 @@ export default function Calories() {
     return matchesFilter && matchesSearch;
   });
 
+  const swipeHandlers = useSwipeTabs();
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top']} {...swipeHandlers}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

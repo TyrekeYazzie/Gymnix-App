@@ -151,11 +151,13 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
         style={{ flex: 1, justifyContent: 'flex-end' }}
       >
         <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
-          <View {...panResponder.panHandlers} style={styles.handleArea}>
-            <View style={styles.handleBar} />
+          {/* Drag handle + title — swipe down anywhere here to close */}
+          <View {...panResponder.panHandlers}>
+            <View style={styles.handleArea}>
+              <View style={styles.handleBar} />
+            </View>
+            <Text style={styles.title}>Log Weight</Text>
           </View>
-
-          <Text style={styles.title}>Log Weight</Text>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {lastEntry && (

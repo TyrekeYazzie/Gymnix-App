@@ -141,7 +141,7 @@ export default function QuickLogMenu({ visible, onClose, onSelect }: Props) {
               >
                 <Text style={styles.orbEmoji}>{orb.emoji}</Text>
               </TouchableOpacity>
-              <Text style={[styles.orbLabel, { color: orb.color }]}>{orb.label}</Text>
+              <Text style={styles.orbLabel}>{orb.label}</Text>
             </Animated.View>
           );
         })}
@@ -183,12 +183,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   orbLabel: {
-    fontSize: FONT_SIZES.xs,
+    fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
-    letterSpacing: 1,
-    marginTop: 4,
-    textShadowColor: 'rgba(0,0,0,0.8)',
+    letterSpacing: 0.5,
+    marginTop: 6,
+    color: COLORS.textInverse,
+    textShadowColor: 'rgba(0,0,0,0.55)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    textShadowRadius: 2,
   },
 });
