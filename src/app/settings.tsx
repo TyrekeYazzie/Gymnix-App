@@ -150,6 +150,18 @@ export default function Settings() {
           />
         </View>
 
+        {/* Training */}
+        <Text style={styles.sectionTitle}>Training</Text>
+        <View style={styles.card}>
+          <SettingsRow
+            icon="calendar-outline"
+            iconColor={COLORS.neonGreen}
+            label="Weekly Routine"
+            subtext="Set your training split by day"
+            onPress={() => router.push('/routine')}
+          />
+        </View>
+
         {/* Preferences */}
         <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.card}>

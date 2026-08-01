@@ -6,20 +6,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import WorkoutLog from '@/components/logs/WorkoutLog';
+import { WORKOUT_CATEGORIES as categories } from '@/constants/workoutCategories';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS, CARD
 } from '@/constants/theme';
-
-const categories = [
-  { name: 'CHEST',     emoji: '💪', color: COLORS.primary },
-  { name: 'BACK',      emoji: '🏋️', color: COLORS.accent },
-  { name: 'LEGS',      emoji: '🦵', color: COLORS.neonGreen },
-  { name: 'SHOULDERS', emoji: '🏆', color: COLORS.neonBlue },
-  { name: 'ARMS',      emoji: '💯', color: COLORS.neonYellow },
-  { name: 'ABS',       emoji: '🔥', color: COLORS.neonOrange },
-];
 
 interface Workout {
   id?: string;
@@ -82,8 +75,10 @@ export default function Workouts() {
     return matchesFilter && matchesSearch;
   });
 
+  const swipeHandlers = useSwipeTabs();
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top']} {...swipeHandlers}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Header */}

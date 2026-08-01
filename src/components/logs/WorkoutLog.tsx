@@ -9,6 +9,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { awardXP, calcWorkoutXP } from '@/lib/xp';
+import { WORKOUT_CATEGORIES as CATEGORIES } from '@/constants/workoutCategories';
+import { getTodayKey, toDayCategories } from '@/utils/routine';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS
@@ -16,15 +18,6 @@ import {
 
 // slide the sheet fully past the bottom edge regardless of device height or sheet content length
 const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
-
-const CATEGORIES = [
-  { name: 'CHEST',     emoji: '💪', color: COLORS.primary },
-  { name: 'BACK',      emoji: '🏋️', color: COLORS.accent },
-  { name: 'LEGS',      emoji: '🦵', color: COLORS.neonGreen },
-  { name: 'SHOULDERS', emoji: '🏆', color: COLORS.neonBlue },
-  { name: 'ARMS',      emoji: '💯', color: COLORS.neonYellow },
-  { name: 'ABS',       emoji: '🔥', color: COLORS.neonOrange },
-];
 
 const COMMON_EXERCISES: Record<string, string[]> = {
   CHEST:     ['Bench Press', 'Incline Press', 'Push-Ups', 'Dumbbell Press', 'Chest Fly', 'Cable Crossover', 'Dips'],
@@ -49,7 +42,7 @@ interface Props {
 
 export default function WorkoutLog({ visible, onClose, onSaved, initialCategory }: Props) {
   const { user } = useAuth();
-  const { isImperial, refreshProfile } = useProfile();
+  const { profile, isImperial, refreshProfile } = useProfile();
   const weightUnit = isImperial ? 'lbs' : 'kg';
 
   const [category, setCategory] = useState(initialCategory || 'CHEST');
@@ -65,6 +58,19 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
   useEffect(() => {
     if (initialCategory) setCategory(initialCategory);
   }, [initialCategory]);
+
+  // Today's scheduled muscle groups — narrows the picker below unless the caller
+  // explicitly requested a category (e.g. long-pressing a filter pill on the Workouts tab).
+  const scheduledCategories = initialCategory ? [] : toDayCategories(profile?.weekly_routine?.[getTodayKey()]);
+  const displayCategories = scheduledCategories.length > 0
+    ? CATEGORIES.filter(c => scheduledCategories.includes(c.name))
+    : CATEGORIES;
+
+  // On open, default to the first scheduled group for today.
+  useEffect(() => {
+    if (!visible || initialCategory) return;
+    if (scheduledCategories.length > 0) setCategory(scheduledCategories[0]);
+  }, [visible]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -116,6 +122,33 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
     setCategory(cat);
     setName('');
     setCustomName('');
+    setSets([{ reps: '', weight: '' }]);
+  };
+
+  // Pulls the most recent logged sets for this exact exercise name so the user
+  // can just confirm/adjust numbers instead of retyping last week's workout.
+  const loadPreviousSets = async (exerciseName: string) => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('workouts')
+      .select('sets')
+      .eq('user_id', user.id)
+      .eq('name', exerciseName)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (data?.sets?.length) {
+      setSets(data.sets.map((s: { reps: number; weight: number }) => ({ reps: String(s.reps), weight: String(s.weight) })));
+    } else {
+      setSets([{ reps: '', weight: '' }]);
+    }
+  };
+
+  const handleExerciseSelect = (ex: string) => {
+    setName(ex);
+    setCustomName('');
+    loadPreviousSets(ex);
   };
 
   const addSet = () => setSets(prev => [...prev, { reps: '', weight: '' }]);
@@ -168,29 +201,31 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
         style={{ flex: 1, justifyContent: 'flex-end' }}
       >
         <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
-          {/* Drag handle */}
-          <View {...panResponder.panHandlers} style={styles.handleArea}>
-            <View style={styles.handleBar} />
-          </View>
-
-          {/* Header with active category accent */}
-          <View style={[styles.sheetHeader, { borderLeftColor: activeCat.color }]}>
-            <View>
-              <Text style={styles.sheetLabel}>New workout</Text>
-              <Text style={styles.sheetTitle}>Log {activeCat.emoji} {activeCat.name}</Text>
+          {/* Drag handle + header — swipe down anywhere here to close */}
+          <View {...panResponder.panHandlers}>
+            <View style={styles.handleArea}>
+              <View style={styles.handleBar} />
             </View>
-            <TouchableOpacity onPress={animateClose} style={styles.closeBtn} activeOpacity={0.7}>
-              <Text style={styles.closeBtnText}>✕</Text>
-            </TouchableOpacity>
+
+            {/* Header with active category accent */}
+            <View style={[styles.sheetHeader, { borderLeftColor: activeCat.color }]}>
+              <View>
+                <Text style={styles.sheetLabel}>New workout</Text>
+                <Text style={styles.sheetTitle}>Log {activeCat.emoji} {activeCat.name}</Text>
+              </View>
+              <TouchableOpacity onPress={animateClose} style={styles.closeBtn} activeOpacity={0.7}>
+                <Text style={styles.closeBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-            {/* Category selector — horizontal scroll */}
+            {/* Category selector — horizontal scroll, narrowed to today's routine when scheduled */}
             <Text style={styles.sectionLabel}>Muscle group</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.lg }}>
               <View style={styles.categoryRow}>
-                {CATEGORIES.map((c) => (
+                {displayCategories.map((c) => (
                   <TouchableOpacity
                     key={c.name}
                     style={[
@@ -218,7 +253,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
                   <TouchableOpacity
                     key={ex}
                     style={[styles.exerciseChip, isSelected && { backgroundColor: activeCat.color + '22', borderColor: activeCat.color }]}
-                    onPress={() => { setName(ex); setCustomName(''); }}
+                    onPress={() => handleExerciseSelect(ex)}
                     activeOpacity={0.7}
                   >
                     <Text style={[styles.exerciseChipText, isSelected && { color: activeCat.color, fontWeight: FONT_WEIGHTS.bold }]}>
@@ -316,16 +351,15 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
 const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.bgOverlay },
   sheet: {
-    backgroundColor: '#111120',
+    backgroundColor: COLORS.bgSecondary,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '88',
+    borderBottomWidth: 0,
     maxHeight: '90%',
     paddingBottom: SPACING.xxxl,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 20,
+    ...SHADOWS.purple,
   },
   handleArea: { alignItems: 'center', paddingVertical: 12 },
   handleBar: { width: 36, height: 4, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full },

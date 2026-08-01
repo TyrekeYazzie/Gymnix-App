@@ -17,7 +17,7 @@ import {
   SPACING, RADIUS, SHADOWS, CARD
 } from '@/constants/theme';
 
-const TABS = ['Weight', 'Water', 'Cardio'] as const;
+const TABS = ['Weight', 'Strength', 'Water', 'Cardio'] as const;
 type Tab = typeof TABS[number];
 
 const CHART_WIDTH = Dimensions.get('window').width - (SPACING.lg + CARD.default.padding) * 2;
@@ -26,6 +26,7 @@ const CHART_HEIGHT = 140;
 interface WeightEntry { id: string; weight_kg: number; created_at: string; }
 interface WaterEntry { amount_ml: number; created_at: string; }
 interface CardioEntry { id: string; type: string; distance_km: number | null; duration: string | null; calories: number | null; created_at: string; }
+interface WorkoutEntry { id: string; name: string; sets: { reps: number; weight: number }[]; created_at: string; }
 
 // maps values onto an evenly-spaced x axis within [0, width], scaled to fit [0, height] with a little breathing room
 function linePoints(values: number[], width: number, height: number): { x: number; y: number }[] {
@@ -61,15 +62,18 @@ export default function Progress() {
   const [weightEntries, setWeightEntries] = useState<WeightEntry[]>([]);
   const [waterEntries, setWaterEntries] = useState<WaterEntry[]>([]);
   const [cardioEntries, setCardioEntries] = useState<CardioEntry[]>([]);
+  const [workoutEntries, setWorkoutEntries] = useState<WorkoutEntry[]>([]);
   const [cardioFilter, setCardioFilter] = useState('ALL');
+  const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [weightRes, waterRes, cardioRes] = await Promise.all([
+    const [weightRes, waterRes, cardioRes, workoutRes] = await Promise.all([
       supabase.from('weight_logs').select('id,weight_kg,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(30),
       supabase.from('water_logs').select('amount_ml,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(300),
       supabase.from('cardio_logs').select('id,type,distance_km,duration,calories,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(30),
+      supabase.from('workouts').select('id,name,sets,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(200),
     ]);
     if (weightRes.error) console.error('Failed to load weight history:', weightRes.error.message);
     else setWeightEntries(weightRes.data ?? []);
@@ -77,6 +81,8 @@ export default function Progress() {
     else setWaterEntries(waterRes.data ?? []);
     if (cardioRes.error) console.error('Failed to load cardio history:', cardioRes.error.message);
     else setCardioEntries(cardioRes.data ?? []);
+    if (workoutRes.error) console.error('Failed to load workout history:', workoutRes.error.message);
+    else setWorkoutEntries(workoutRes.data ?? []);
     setLoading(false);
   }, [user]);
 
@@ -93,6 +99,21 @@ export default function Progress() {
   const currentWeight = weightEntries[0]?.weight_kg;
   const startWeight = weightChrono[0]?.weight_kg;
   const weightDelta = currentWeight !== undefined && startWeight !== undefined ? currentWeight - startWeight : null;
+
+  // ── Strength ────────────────────────────────────────────
+  // Sets don't carry their own unit — the number stored is whatever unit was
+  // selected when logged, same assumption WorkoutLog's input already makes.
+  const exerciseNames = Array.from(new Set(workoutEntries.map(w => w.name)));
+  const activeExercise = selectedExercise && exerciseNames.includes(selectedExercise) ? selectedExercise : exerciseNames[0];
+  const exerciseDesc = workoutEntries.filter(w => w.name === activeExercise);
+  const exerciseChrono = [...exerciseDesc].reverse();
+  const topSetWeight = (w: WorkoutEntry) => w.sets.length ? Math.max(...w.sets.map(s => s.weight)) : 0;
+  const exerciseValues = exerciseChrono.map(topSetWeight);
+  const exercisePoints = linePoints(exerciseValues, CHART_WIDTH, CHART_HEIGHT);
+  const exercisePolyline = exercisePoints.map(p => `${p.x},${p.y}`).join(' ');
+  const currentTop = exerciseValues[exerciseValues.length - 1];
+  const startTop = exerciseValues[0];
+  const exerciseDelta = currentTop !== undefined && startTop !== undefined ? currentTop - startTop : null;
 
   // ── Water ───────────────────────────────────────────────
   const toFlOz = (ml: number) => ml * 0.033814;
@@ -207,6 +228,89 @@ export default function Progress() {
                   </View>
                   <View style={styles.listLeft}>
                     <Text style={styles.listName}>{displayWeight(entry.weight_kg).toFixed(1)} {weightUnit}</Text>
+                  </View>
+                  <Text style={styles.listDate}>{formatDate(entry.created_at)}</Text>
+                </View>
+              ))}
+            </>
+          )
+        )}
+
+        {/* ── STRENGTH ── */}
+        {tab === 'Strength' && (
+          exerciseNames.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No workouts logged yet</Text>
+              <Text style={styles.emptySubText}>Log a workout to see your strength trend here</Text>
+            </View>
+          ) : (
+            <>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.lg }}>
+                <View style={styles.filterRow}>
+                  {exerciseNames.map((name) => (
+                    <TouchableOpacity
+                      key={name}
+                      style={[styles.filterPill, activeExercise === name && styles.filterPillActive]}
+                      onPress={() => setSelectedExercise(name)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.filterPillText, activeExercise === name && styles.filterPillTextActive]}>{name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryBox}>
+                  <Text style={styles.summaryNumber}>{currentTop ?? '—'}</Text>
+                  <Text style={styles.summaryLabel}>Top set now</Text>
+                </View>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryBox}>
+                  <Text style={[
+                    styles.summaryNumber,
+                    exerciseDelta !== null && { color: exerciseDelta > 0 ? COLORS.neonGreen : exerciseDelta < 0 ? COLORS.accent : COLORS.textPrimary },
+                  ]}>
+                    {exerciseDelta !== null ? `${exerciseDelta > 0 ? '+' : ''}${exerciseDelta}` : '—'}
+                  </Text>
+                  <Text style={styles.summaryLabel}>Change</Text>
+                </View>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryBox}>
+                  <Text style={styles.summaryNumber}>{exerciseDesc.length}</Text>
+                  <Text style={styles.summaryLabel}>Sessions</Text>
+                </View>
+              </View>
+
+              <View style={[CARD.default, styles.chartCard]}>
+                <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
+                  {[0, 0.5, 1].map((f) => (
+                    <Line key={f} x1={0} x2={CHART_WIDTH} y1={CHART_HEIGHT * f} y2={CHART_HEIGHT * f} stroke={COLORS.graphGrid} strokeWidth={1} />
+                  ))}
+                  {exercisePoints.length > 1 && (
+                    <Polyline points={exercisePolyline} fill="none" stroke={COLORS.graphLine} strokeWidth={2} />
+                  )}
+                  {exercisePoints.map((p, i) => (
+                    <Circle
+                      key={i}
+                      cx={p.x}
+                      cy={p.y}
+                      r={i === exercisePoints.length - 1 ? 4 : 3}
+                      fill={i === exercisePoints.length - 1 ? COLORS.graphDotToday : COLORS.graphDot}
+                    />
+                  ))}
+                </Svg>
+              </View>
+
+              <Text style={styles.sectionTitle}>Recent sessions</Text>
+              {exerciseDesc.map((entry) => (
+                <View key={entry.id} style={styles.listCard}>
+                  <View style={[styles.listIcon, { borderColor: COLORS.primary }]}>
+                    <Ionicons name="barbell-outline" size={16} color={COLORS.primary} />
+                  </View>
+                  <View style={styles.listLeft}>
+                    <Text style={styles.listName}>{topSetWeight(entry)} top set</Text>
+                    <Text style={styles.listMeta}>{entry.sets.length} set{entry.sets.length === 1 ? '' : 's'}</Text>
                   </View>
                   <Text style={styles.listDate}>{formatDate(entry.created_at)}</Text>
                 </View>

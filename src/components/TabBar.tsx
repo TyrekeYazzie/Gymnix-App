@@ -34,14 +34,9 @@ export default function TabBar({ state, descriptors, navigation, onPressCenter }
     onPressCenter();
   };
 
-  // split tabs 2 left, 2 right
-  const leftTabs = state.routes.slice(0, 2);
-  const rightTabs = state.routes.slice(2, 4);
-
-  const renderTab = (route: typeof state.routes[0], index: number, offset = 0) => {
-    const actualIndex = index + offset;
+  const renderTab = (route: typeof state.routes[0], index: number) => {
     const { options } = descriptors[route.key];
-    const isFocused = state.index === actualIndex;
+    const isFocused = state.index === index;
     const label = options.title ?? route.name;
 
     const onPress = () => {
@@ -78,31 +73,24 @@ export default function TabBar({ state, descriptors, navigation, onPressCenter }
     );
   };
 
+  // The log button floats above the bar as its own element instead of taking a tab
+  // slot, so all 5 tabs split the row evenly with no odd-count asymmetry.
   return (
     <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, SPACING.md) }]}>
+      <View style={styles.centerFloating} pointerEvents="box-none">
+        <Animated.View style={[styles.centerButtonWrapper, { transform: [{ scale: scaleAnim }] }]}>
+          <TouchableOpacity
+            style={styles.centerButton}
+            onPress={handleCenterPress}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.centerIcon}>+</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
+
       <BlurView intensity={40} tint="light" style={styles.container}>
-        {/* Left tabs */}
-        <View style={styles.tabGroup}>
-          {leftTabs.map((route, i) => renderTab(route, i, 0))}
-        </View>
-
-        {/* Center + button */}
-        <View style={styles.centerContainer}>
-          <Animated.View style={[styles.centerButtonWrapper, { transform: [{ scale: scaleAnim }] }]}>
-            <TouchableOpacity
-              style={styles.centerButton}
-              onPress={handleCenterPress}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.centerIcon}>+</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
-
-        {/* Right tabs */}
-        <View style={styles.tabGroup}>
-          {rightTabs.map((route, i) => renderTab(route, i, 2))}
-        </View>
+        {state.routes.map((route, i) => renderTab(route, i))}
       </BlurView>
     </View>
   );
@@ -133,10 +121,6 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 12,
   },
-  tabGroup: {
-    flex: 1,
-    flexDirection: 'row',
-  },
   tab: {
     flex: 1,
     alignItems: 'center',
@@ -159,12 +143,14 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
   },
 
-  // Center button
-  centerContainer: {
-    width: 72,
+  // Floats above the pill bar, centered, independent of tab count/spacing
+  centerFloating: {
+    position: 'absolute',
+    top: -32,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -24,
+    zIndex: 10,
   },
   centerButtonWrapper: {
     shadowColor: '#000',

@@ -1,3 +1,9 @@
+export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+// Maps a day to the workout categories trained that day (matches Workout['category']).
+// A missing key or empty array means rest day.
+export type WeeklyRoutine = Partial<Record<DayOfWeek, string[]>>;
+
 // Mirrors the `profiles` table. Row is auto-created by the `handle_new_user`
 // trigger on signup with only id/full_name/units set — everything else
 // starts null until the user fills out EditProfile.
@@ -12,6 +18,7 @@ export interface Profile {
   units: 'metric' | 'imperial';
   reminders_enabled: boolean;
   total_xp: number;
+  weekly_routine: WeeklyRoutine;
   created_at: string;
 }
 
