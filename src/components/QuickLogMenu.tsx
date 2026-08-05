@@ -3,6 +3,8 @@ import {
   View, Text, TouchableOpacity, Animated,
   StyleSheet, Dimensions, Modal
 } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONT_SIZES, FONT_WEIGHTS, RADIUS } from '@/constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -139,6 +141,14 @@ export default function QuickLogMenu({ visible, onClose, onSelect }: Props) {
                 onPress={() => handleOrbPress(orb.key)}
                 activeOpacity={0.8}
               >
+                <BlurView intensity={45} tint="light" style={StyleSheet.absoluteFillObject} />
+                <View style={[styles.orbTint, { backgroundColor: orb.color + '33' }]} />
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+                  start={{ x: 0.2, y: 0.05 }}
+                  end={{ x: 0.85, y: 0.9 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
                 <Text style={styles.orbEmoji}>{orb.emoji}</Text>
               </TouchableOpacity>
               <Text style={styles.orbLabel}>{orb.label}</Text>
@@ -170,7 +180,11 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: RADIUS.full,
+    // Fallback fill for platforms where BlurView has no real effect (older
+    // Android, web) so the orb still reads as a solid button rather than
+    // looking broken/transparent.
     backgroundColor: COLORS.bgElevated,
+    overflow: 'hidden',
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
@@ -178,6 +192,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 6,
     elevation: 4,
+  },
+  orbTint: {
+    ...StyleSheet.absoluteFillObject,
   },
   orbEmoji: {
     fontSize: 24,
