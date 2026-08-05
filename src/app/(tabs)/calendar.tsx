@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Modal, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -9,6 +9,7 @@ import { useProfile } from '@/context/ProfileContext';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import { WORKOUT_CATEGORIES } from '@/constants/workoutCategories';
 import { CARDIO_TYPES } from '@/components/logs/CardioLog';
+import { getSignedPhotoUrls } from '@/utils/workoutPhotos';
 import { Workout, CardioLogEntry, WaterLogEntry, WeightLogEntry, Meal } from '@/types';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
@@ -16,6 +17,10 @@ import {
 } from '@/constants/theme';
 
 const WEEKDAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const VIEWER_WIDTH = Math.min(SCREEN_WIDTH - SPACING.xl * 2, 340);
+const VIEWER_HEIGHT = Math.min(VIEWER_WIDTH * 1.25, SCREEN_HEIGHT * 0.6);
 
 type LogType = 'workout' | 'cardio' | 'water' | 'meal' | 'weight';
 
@@ -55,6 +60,7 @@ export default function CalendarScreen() {
   const [water, setWater] = useState<WaterLogEntry[]>([]);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [weights, setWeights] = useState<WeightLogEntry[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
 
   const loadMonth = useCallback(async () => {
     if (!user) return;
@@ -73,6 +79,11 @@ export default function CalendarScreen() {
     if (!wt.error) setWater(wt.data ?? []);
     if (!m.error) setMeals(m.data ?? []);
     if (!wg.error) setWeights(wg.data ?? []);
+
+    const photoPaths = (w.data ?? [])
+      .map((row: Workout) => row.photo_path)
+      .filter((p): p is string => !!p);
+    setPhotoUrls(photoPaths.length > 0 ? await getSignedPhotoUrls(photoPaths) : {});
   }, [user, monthDate]);
 
   useFocusEffect(useCallback(() => { loadMonth(); }, [loadMonth]));
@@ -91,6 +102,45 @@ export default function CalendarScreen() {
     weights.forEach(w => add(w.created_at, 'weight'));
     return map;
   }, [workouts, cardio, water, meals, weights]);
+
+  // All photo paths logged on each day, oldest first. The corner badge shows
+  // the last one (most recent); tapping a photo day opens all of them.
+  const dayPhotos = useMemo(() => {
+    const map = new Map<string, string[]>();
+    const byTime = [...workouts].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    byTime.forEach(w => {
+      if (!w.photo_path) return;
+      const key = new Date(w.created_at).toDateString();
+      const arr = map.get(key) ?? [];
+      arr.push(w.photo_path);
+      map.set(key, arr);
+    });
+    return map;
+  }, [workouts]);
+
+  const [viewerDay, setViewerDay] = useState<{ date: Date; paths: string[] } | null>(null);
+  const [viewerIndex, setViewerIndex] = useState(0);
+
+  const openDay = (date: Date) => {
+    // Only offer paths whose signed URL has actually resolved, so the viewer
+    // never opens onto a broken/loading image.
+    const paths = (dayPhotos.get(date.toDateString()) ?? []).filter(p => photoUrls[p]);
+    if (paths.length > 0) {
+      setViewerDay({ date, paths });
+      setViewerIndex(0);
+    } else {
+      setSelected(date);
+    }
+  };
+
+  const closeViewer = () => setViewerDay(null);
+  const advanceViewer = () => {
+    if (!viewerDay) return;
+    setViewerIndex(i => (i + 1) % viewerDay.paths.length);
+  };
+  const viewerUrl = viewerDay ? photoUrls[viewerDay.paths[viewerIndex]] : undefined;
 
   const grid = useMemo(() => buildGrid(monthDate), [monthDate]);
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
@@ -147,20 +197,26 @@ export default function CalendarScreen() {
               const types = Array.from(dayTypes.get(date.toDateString()) ?? []);
               const isToday = sameDay(date, today);
               const isSelected = sameDay(date, selected);
+              const dayPaths = dayPhotos.get(date.toDateString());
+              const photoPath = dayPaths?.[dayPaths.length - 1];
+              const photoUrl = photoPath ? photoUrls[photoPath] : undefined;
               return (
-                <TouchableOpacity key={i} style={styles.cell} onPress={() => setSelected(date)} activeOpacity={0.7}>
-                  <View style={[
-                    styles.cellCircle,
-                    isSelected && styles.cellCircleSelected,
-                    isToday && !isSelected && styles.cellCircleToday,
-                  ]}>
-                    <Text style={[
-                      styles.cellText,
-                      isSelected && styles.cellTextSelected,
-                      isToday && !isSelected && styles.cellTextToday,
+                <TouchableOpacity key={i} style={styles.cell} onPress={() => openDay(date)} activeOpacity={0.7}>
+                  <View style={styles.cellCircleWrap}>
+                    <View style={[
+                      styles.cellCircle,
+                      isSelected && styles.cellCircleSelected,
+                      isToday && !isSelected && styles.cellCircleToday,
                     ]}>
-                      {date.getDate()}
-                    </Text>
+                      <Text style={[
+                        styles.cellText,
+                        isSelected && styles.cellTextSelected,
+                        isToday && !isSelected && styles.cellTextToday,
+                      ]}>
+                        {date.getDate()}
+                      </Text>
+                    </View>
+                    {photoUrl && <Image source={{ uri: photoUrl }} style={styles.cellPhotoBadge} />}
                   </View>
                   <View style={styles.dotRow}>
                     {types.slice(0, 4).map((t) => (
@@ -262,6 +318,28 @@ export default function CalendarScreen() {
         )}
 
       </ScrollView>
+
+      {/* Photo viewer — dark backdrop closes, tapping the photo advances to the next one */}
+      <Modal visible={!!viewerDay} transparent animationType="fade" onRequestClose={closeViewer}>
+        <TouchableOpacity style={styles.viewerBackdrop} activeOpacity={1} onPress={closeViewer} />
+        {viewerDay && (
+          <View style={styles.viewerCenter} pointerEvents="box-none">
+            <Text style={styles.viewerDate}>
+              {viewerDay.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </Text>
+            <TouchableOpacity activeOpacity={0.9} onPress={advanceViewer} style={styles.viewerImageWrap}>
+              {viewerUrl && <Image source={{ uri: viewerUrl }} style={styles.viewerImage} resizeMode="cover" />}
+            </TouchableOpacity>
+            {viewerDay.paths.length > 1 && (
+              <View style={styles.viewerDots}>
+                {viewerDay.paths.map((_, i) => (
+                  <View key={i} style={[styles.viewerDot, i === viewerIndex && styles.viewerDotActive]} />
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -304,12 +382,23 @@ const styles = StyleSheet.create({
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   cell: { width: `${100 / 7}%`, alignItems: 'center', marginBottom: SPACING.sm },
+  cellCircleWrap: { position: 'relative' },
   cellCircle: {
     width: 30, height: 30, borderRadius: RADIUS.full,
     alignItems: 'center', justifyContent: 'center',
   },
   cellCircleToday: { borderWidth: 1.5, borderColor: COLORS.primary },
   cellCircleSelected: { backgroundColor: COLORS.primary },
+  cellPhotoBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    width: 13,
+    height: 13,
+    borderRadius: RADIUS.full,
+    borderWidth: 1.5,
+    borderColor: COLORS.bgElevated,
+  },
   cellText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
   cellTextToday: { color: COLORS.primary, fontWeight: FONT_WEIGHTS.bold },
   cellTextSelected: { color: COLORS.textInverse, fontWeight: FONT_WEIGHTS.bold },
@@ -331,4 +420,30 @@ const styles = StyleSheet.create({
 
   emptyState: { ...CARD.default, alignItems: 'center', paddingVertical: SPACING.xl },
   emptyText: { color: COLORS.textMuted, fontSize: FONT_SIZES.sm },
+
+  // Photo viewer
+  viewerBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.bgOverlay },
+  viewerCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },
+  viewerDate: {
+    color: COLORS.textInverse,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.bold,
+    letterSpacing: 0.5,
+    marginBottom: SPACING.md,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  viewerImageWrap: {
+    width: VIEWER_WIDTH,
+    height: VIEWER_HEIGHT,
+    borderRadius: RADIUS.xl,
+    overflow: 'hidden',
+    backgroundColor: COLORS.bgTertiary,
+    ...SHADOWS.purple,
+  },
+  viewerImage: { width: '100%', height: '100%' },
+  viewerDots: { flexDirection: 'row', gap: 6, marginTop: SPACING.lg },
+  viewerDot: { width: 6, height: 6, borderRadius: RADIUS.full, backgroundColor: 'rgba(247, 243, 233, 0.35)' },
+  viewerDotActive: { backgroundColor: COLORS.textInverse, width: 16 },
 });

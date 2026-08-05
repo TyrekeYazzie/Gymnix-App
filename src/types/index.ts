@@ -31,6 +31,7 @@ export interface Workout {
   calories: number | null;
   notes: string | null;
   sets: { reps: number; weight: number }[];
+  photo_path: string | null;
   created_at: string;
 }
 
