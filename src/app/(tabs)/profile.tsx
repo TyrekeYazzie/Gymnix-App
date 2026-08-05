@@ -48,9 +48,9 @@ export default function Profile() {
   const heightDisplay = (() => {
     if (!profile?.height_cm) return '—'
     if (!isImperial) return `${Math.round(profile.height_cm)} CM`
-    const totalIn = profile.height_cm / 2.54
+    const totalIn = Math.round(profile.height_cm / 2.54)
     const ft = Math.floor(totalIn / 12)
-    const inches = Math.round(totalIn % 12)
+    const inches = totalIn % 12
     return `${ft}'${inches}"`
   })()
 

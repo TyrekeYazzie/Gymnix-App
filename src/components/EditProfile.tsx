@@ -24,13 +24,15 @@ export default function EditProfile() {
 
   // height state — stored internally as cm always
   const [heightCm, setHeightCm] = useState(profile?.height_cm ?? 170)
+  // Round the total inches once so ft/in are always derived from the same
+  // whole number — rounding ft and in independently can disagree (e.g. both
+  // rounding up) and produce an invalid "5'12"" instead of "6'0"".
+  const initialTotalIn = profile?.height_cm ? Math.round(profile.height_cm / 2.54) : null
   const [heightFt, setHeightFt] = useState(
-    profile?.height_cm ? Math.floor(profile.height_cm / 30.48).toString() : '5'
+    initialTotalIn !== null ? Math.floor(initialTotalIn / 12).toString() : '5'
   )
   const [heightIn, setHeightIn] = useState(
-    profile?.height_cm
-      ? Math.round((profile.height_cm / 2.54) % 12).toString()
-      : '7'
+    initialTotalIn !== null ? (initialTotalIn % 12).toString() : '7'
   )
 
   // weight state — stored internally as kg always
