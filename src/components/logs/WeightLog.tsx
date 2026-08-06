@@ -4,11 +4,11 @@ import {
   StyleSheet, Modal, TextInput, Alert, Dimensions,
   KeyboardAvoidingView, Platform, Animated, PanResponder
 } from 'react-native';
-import Slider from '@react-native-community/slider';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { awardXP, XP_WEIGHT } from '@/lib/xp';
+import WeightRuler from '@/components/WeightRuler';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS
@@ -45,9 +45,13 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
   const fromDisplay = (val: number) => isImperial ? val / 2.2046 : val;
   const displayUnit = isImperial ? 'lbs' : 'kg';
   const displayWeight = toDisplay(weightKg);
-  const sliderMin = isImperial ? 66 : 30;
-  const sliderMax = isImperial ? 440 : 200;
-  const sliderStep = isImperial ? 0.5 : 0.1;
+
+  // Ruler always spans the same real bodyweight range (50–500 lbs) — the
+  // metric bounds are just that range converted, so switching units never
+  // changes what the ruler can actually represent.
+  const ruler = isImperial
+    ? { min: 50, max: 500, step: 1, minorStep: 10, majorStep: 50 }
+    : { min: Math.round(50 / 2.2046), max: Math.round(500 / 2.2046), step: 0.5, minorStep: 5, majorStep: 25 };
 
   const panResponder = useRef(
     PanResponder.create({
@@ -180,17 +184,17 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
               </Text>
             )}
 
-            <Slider
-              style={[styles.slider, { marginBottom: SPACING.lg }]}
-              minimumValue={sliderMin}
-              maximumValue={sliderMax}
-              step={sliderStep}
+            <WeightRuler
               value={displayWeight}
-              onValueChange={(val) => setWeightKg(fromDisplay(val))}
-              minimumTrackTintColor={COLORS.accent}
-              maximumTrackTintColor={COLORS.borderDefault}
-              thumbTintColor={COLORS.accent}
+              onChange={(val) => setWeightKg(fromDisplay(val))}
+              min={ruler.min}
+              max={ruler.max}
+              step={ruler.step}
+              minorStep={ruler.minorStep}
+              majorStep={ruler.majorStep}
+              accentColor={COLORS.accent}
             />
+            <View style={{ marginBottom: SPACING.lg }} />
 
             {recentEntries.length > 1 && (
               <View style={{ marginBottom: SPACING.lg }}>
@@ -259,7 +263,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted,
     letterSpacing: 1.5, marginBottom: SPACING.sm,
   },
-  slider: { width: '100%', height: 40 },
   historyRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.borderDefault,
