@@ -73,6 +73,27 @@ export interface Meal {
   created_at: string;
 }
 
+// Row shape returned by the get_level_leaderboard / get_my_level_rank RPCs
+// (see supabase/migrations/20260805000000_leaderboards.sql). user_id/rnk are
+// absent from the "my rank" variant, which is always for the caller.
+export interface LevelLeaderboardEntry {
+  user_id: string;
+  full_name: string | null;
+  total_xp: number;
+  level: number;
+  rnk: number;
+}
+
+// Row shape returned by get_strength_leaderboard / get_cardio_leaderboard
+// and their get_my_*_rank counterparts — log_count is a count of sessions
+// logged, never a weight or pace value.
+export interface LogCountLeaderboardEntry {
+  user_id: string;
+  full_name: string | null;
+  log_count: number;
+  rnk: number;
+}
+
 export interface ValidationResult {
   isValid: boolean;
   error: string | null;
