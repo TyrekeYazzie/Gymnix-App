@@ -100,8 +100,17 @@ export default function Routine() {
             const summary = selected.length === 0
               ? 'Rest'
               : selected.length === 1
-                ? `${getCategory(selected[0])?.emoji ?? ''} ${selected[0]}`.trim()
-                : selected.map(c => getCategory(c)?.emoji ?? '').join(' ');
+                ? (
+                    <>
+                      <Ionicons name={getCategory(selected[0])?.icon ?? 'ellipse-outline'} size={12} color={COLORS.primary} /> {selected[0]}
+                    </>
+                  )
+                : selected.map((c, i) => (
+                    <React.Fragment key={c}>
+                      {i > 0 ? ' ' : ''}
+                      <Ionicons name={getCategory(c)?.icon ?? 'ellipse-outline'} size={12} color={COLORS.primary} />
+                    </React.Fragment>
+                  ));
 
             return (
               <View key={day.key}>
@@ -143,7 +152,7 @@ export default function Routine() {
                           activeOpacity={0.75}
                         >
                           <Text style={[styles.chipText, isOn && styles.chipTextActive]}>
-                            {c.emoji} {c.name}
+                            <Ionicons name={c.icon} size={12} color={isOn ? COLORS.textInverse : COLORS.textSecondary} /> {c.name}
                           </Text>
                         </TouchableOpacity>
                       );

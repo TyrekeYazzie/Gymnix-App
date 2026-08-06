@@ -35,28 +35,18 @@ export const XP_MEAL = 5;
 export const XP_WATER = 3;
 export const XP_WEIGHT = 8;
 
+// userId is kept for call-site compatibility (every caller already has it handy),
+// but the increment itself happens server-side via auth.uid() — see the
+// increment_xp migration — so two awards firing close together (e.g. logging
+// water and a meal back to back) can't race and clobber each other the way a
+// client-side read-then-write would.
 export async function awardXP(userId: string, xp: number): Promise<number | null> {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('total_xp')
-    .eq('id', userId)
-    .single();
-
-  if (!profile) return null;
-
-  const newXP = (profile.total_xp ?? 0) + xp;
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({ total_xp: newXP })
-    .eq('id', userId)
-    .select('total_xp')
-    .single();
+  const { data, error } = await supabase.rpc('increment_xp', { p_xp: xp });
 
   if (error) {
     console.error('Failed to award XP:', error.message);
     return null;
   }
 
-  return data?.total_xp ?? null;
+  return data ?? null;
 }

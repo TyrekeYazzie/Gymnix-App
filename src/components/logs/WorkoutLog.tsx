@@ -1,16 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  StyleSheet, Modal, Alert, Dimensions,
+  StyleSheet, Modal, Alert, Dimensions, Image,
   KeyboardAvoidingView, Platform, Animated, PanResponder
 } from 'react-native';
 import Slider from '@react-native-community/slider';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { awardXP, calcWorkoutXP } from '@/lib/xp';
 import { WORKOUT_CATEGORIES as CATEGORIES } from '@/constants/workoutCategories';
 import { getTodayKey, toDayCategories } from '@/utils/routine';
+import { pickWorkoutPhoto, uploadWorkoutPhoto } from '@/utils/workoutPhotos';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS
@@ -50,6 +52,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
   const [customName, setCustomName] = useState('');
   const [sets, setSets] = useState<SetEntry[]>([{ reps: '', weight: '' }]);
   const [duration, setDuration] = useState(30);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
@@ -106,6 +109,12 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
     setCustomName('');
     setSets([{ reps: '', weight: '' }]);
     setDuration(30);
+    setPhotoUri(null);
+  };
+
+  const handleAttachPhoto = async () => {
+    const uri = await pickWorkoutPhoto();
+    if (uri) setPhotoUri(uri);
   };
   const handleClose = () => { reset(); onClose(); };
 
@@ -186,7 +195,24 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
       const xp = calcWorkoutXP(cleanSets);
       await awardXP(user.id, xp);
       await refreshProfile();
-      onSaved(data); reset(); onClose();
+
+      let saved = data;
+      if (photoUri) {
+        const photoPath = await uploadWorkoutPhoto(user.id, data.id, photoUri);
+        if (photoPath) {
+          const { data: updated } = await supabase
+            .from('workouts')
+            .update({ photo_path: photoPath })
+            .eq('id', data.id)
+            .select()
+            .single();
+          if (updated) saved = updated;
+        }
+        // Upload failures are logged inside uploadWorkoutPhoto but shouldn't
+        // block the workout itself from being saved — the sets are the point.
+      }
+
+      onSaved(saved); reset(); onClose();
     }
   };
 
@@ -211,11 +237,29 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
             <View style={[styles.sheetHeader, { borderLeftColor: activeCat.color }]}>
               <View>
                 <Text style={styles.sheetLabel}>New workout</Text>
-                <Text style={styles.sheetTitle}>Log {activeCat.emoji} {activeCat.name}</Text>
+                <Text style={styles.sheetTitle}>
+                  Log <Ionicons name={activeCat.icon} size={18} color={activeCat.color} /> {activeCat.name}
+                </Text>
               </View>
-              <TouchableOpacity onPress={animateClose} style={styles.closeBtn} activeOpacity={0.7}>
-                <Text style={styles.closeBtnText}>✕</Text>
-              </TouchableOpacity>
+              <View style={styles.headerActions}>
+                <View style={styles.photoBtnWrap}>
+                  <TouchableOpacity onPress={handleAttachPhoto} activeOpacity={0.7} style={styles.photoBtn}>
+                    {photoUri ? (
+                      <Image source={{ uri: photoUri }} style={styles.photoThumb} />
+                    ) : (
+                      <Ionicons name="camera-outline" size={18} color={COLORS.textMuted} />
+                    )}
+                  </TouchableOpacity>
+                  {photoUri && (
+                    <TouchableOpacity onPress={() => setPhotoUri(null)} activeOpacity={0.7} style={styles.photoRemoveBadge}>
+                      <Ionicons name="close" size={10} color={COLORS.textInverse} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <TouchableOpacity onPress={animateClose} style={styles.closeBtn} activeOpacity={0.7}>
+                  <Ionicons name="close" size={16} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -235,7 +279,11 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
                     onPress={() => handleCategoryChange(c.name)}
                     activeOpacity={0.75}
                   >
-                    <Text style={styles.categoryEmoji}>{c.emoji}</Text>
+                    <Ionicons
+                      name={c.icon}
+                      size={16}
+                      color={category === c.name ? COLORS.textInverse : c.color}
+                    />
                     <Text style={[styles.categoryName, category === c.name && { color: COLORS.textInverse }]}>
                       {c.name}
                     </Text>
@@ -387,6 +435,42 @@ const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHTS.black,
     color: COLORS.textPrimary,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  photoBtnWrap: {
+    position: 'relative',
+  },
+  photoBtn: {
+    width: 32,
+    height: 32,
+    backgroundColor: COLORS.bgTertiary,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.borderDefault,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  photoThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  photoRemoveBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 16,
+    height: 16,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.bgSecondary,
+  },
   closeBtn: {
     width: 32,
     height: 32,
@@ -395,7 +479,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closeBtnText: { color: COLORS.textMuted, fontSize: 14, fontWeight: FONT_WEIGHTS.bold },
 
   scrollContent: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.lg },
 
@@ -420,7 +503,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.borderDefault,
   },
-  categoryEmoji: { fontSize: 16 },
   categoryName: {
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,

@@ -1,7 +1,8 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import Svg, { Circle } from 'react-native-svg';
 import { BlurView } from 'expo-blur';
@@ -10,17 +11,19 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { xpProgress } from '@/lib/xp';
 import { getRank } from '@/constants/ranks';
+import { getMyLevelRank, MyLevelRank } from '@/lib/leaderboard';
+import ProgressPreviewCard from '@/components/ProgressPreviewCard';
+import DailyQuote from '@/components/DailyQuote';
+import RankMedallion from '@/components/RankMedallion';
 import WorkoutLog from '@/components/logs/WorkoutLog';
 import CardioLog from '@/components/logs/CardioLog';
 import WaterLog from '@/components/logs/WaterLog';
 import CaloriesLog from '@/components/logs/CaloriesLog';
+import { nutritionTargetsOrDefault } from '@/lib/nutrition';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS, CARD
 } from '@/constants/theme';
-import { DEFAULT_CALORIE_GOAL } from '@/constants/nutrition';
-
-const CALORIE_GOAL = DEFAULT_CALORIE_GOAL;
 
 const HERO_SIZE = 220;
 const HERO_STROKE = 14;
@@ -29,11 +32,11 @@ const HERO_CIRCUMFERENCE = 2 * Math.PI * HERO_RADIUS;
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-const TASKS = [
-  { key: 'workout',  label: 'Log Workout',  emoji: '💪', color: COLORS.primary },
-  { key: 'cardio',   label: 'Log Cardio',   emoji: '🏃', color: COLORS.neonGreen },
-  { key: 'water',    label: 'Log Water',    emoji: '💧', color: COLORS.neonBlue },
-  { key: 'calories', label: 'Log Meal',     emoji: '🔥', color: COLORS.neonYellow },
+const TASKS: { key: string; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
+  { key: 'workout',  label: 'Log Workout',  icon: 'barbell-outline',   color: COLORS.primary },
+  { key: 'cardio',   label: 'Log Cardio',   icon: 'heart-outline',     color: COLORS.neonGreen },
+  { key: 'water',    label: 'Log Water',    icon: 'water-outline',     color: COLORS.neonBlue },
+  { key: 'calories', label: 'Log Meal',     icon: 'nutrition-outline', color: COLORS.neonYellow },
 ];
 
 interface RecentWorkout {
@@ -92,11 +95,13 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { profile } = useProfile();
+  const CALORIE_GOAL = useMemo(() => nutritionTargetsOrDefault(profile).calorieGoal, [profile]);
 
   const [todayCalories, setTodayCalories] = useState(0);
   const [streak, setStreak] = useState(0);
   const [recentWorkouts, setRecentWorkouts] = useState<RecentWorkout[]>([]);
   const [weekDays, setWeekDays] = useState<WeekDay[]>([]);
+  const [myRank, setMyRank] = useState<MyLevelRank | null>(null);
 
   const [workoutOpen, setWorkoutOpen] = useState(false);
   const [cardioOpen, setCardioOpen] = useState(false);
@@ -169,7 +174,11 @@ export default function DashboardScreen() {
       .limit(3);
     if (recentError) console.error('Failed to load recent workouts:', recentError.message);
     else setRecentWorkouts(recent ?? []);
-  }, [user]);
+
+    // Fire-and-forget — the leaderboard teaser is a nice-to-have, not
+    // something the rest of the dashboard should wait on.
+    getMyLevelRank().then(setMyRank);
+  }, [user, CALORIE_GOAL]);
 
   useFocusEffect(
     useCallback(() => {
@@ -210,6 +219,8 @@ export default function DashboardScreen() {
             <Text style={styles.avatarText}>{getInitials(profile?.full_name)}</Text>
           </TouchableOpacity>
         </View>
+
+        <DailyQuote />
 
         {/* Hero circle */}
         <View style={styles.heroWrapper}>
@@ -271,7 +282,7 @@ export default function DashboardScreen() {
 
         {/* Streak card */}
         <View style={styles.tipCard}>
-          <Text style={styles.tipEmoji}>🔥</Text>
+          <Ionicons name="flame" size={26} color={COLORS.neonOrange} style={styles.tipIcon} />
           <View style={{ flex: 1 }}>
             <Text style={styles.tipTitle}>{streak} day streak</Text>
             <Text style={styles.tipBody}>
@@ -288,14 +299,18 @@ export default function DashboardScreen() {
           const xp = xpProgress(totalXP);
           const rank = getRank(xp.level);
           return (
-            <View style={[styles.xpCard, { borderColor: rank.color + '55' }]}>
+            <TouchableOpacity
+              style={[styles.xpCard, { borderColor: rank.color + '55' }]}
+              onPress={() => router.push('/rank-chart')}
+              activeOpacity={0.8}
+            >
               <View style={styles.xpHeader}>
-                <View>
-                  <Text style={styles.xpLevelLabel}>Level</Text>
-                  <Text style={[styles.xpLevelNumber, { color: rank.color }]}>{xp.level}</Text>
-                </View>
-                <View style={[styles.xpRankBadge, { borderColor: rank.color }]}>
-                  <Text style={[styles.xpRankText, { color: rank.color }]}>{rank.name}</Text>
+                <RankMedallion rank={rank} size={40} />
+                <View style={styles.xpHeaderText}>
+                  <Text style={styles.xpLevelLabel}>Level {xp.level}</Text>
+                  <Text style={[styles.xpRankNameText, { color: rank.color }]} numberOfLines={1}>
+                    {rank.name}
+                  </Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.xpLevelLabel}>Total XP</Text>
@@ -309,9 +324,30 @@ export default function DashboardScreen() {
                 <Text style={styles.xpBarLabel}>{xp.current} XP</Text>
                 <Text style={styles.xpBarLabel}>{xp.needed} XP to Lv {xp.level + 1}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         })()}
+
+        {/* Leaderboard teaser */}
+        <TouchableOpacity
+          style={styles.leaderboardCard}
+          onPress={() => router.push('/leaderboard')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.leaderboardIcon}>
+            <Ionicons name="trophy" size={18} color={COLORS.neonYellow} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.leaderboardTitle}>Leaderboard</Text>
+            <Text style={styles.leaderboardSubtitle}>
+              {myRank ? `You're #${myRank.rnk} by level` : 'See how you rank'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+        </TouchableOpacity>
+
+        {/* Progress preview — mini trend for Body Weight / Strength / Cardio */}
+        <ProgressPreviewCard />
 
         {/* Daily Tasks */}
         <Text style={styles.sectionTitle}>Daily tasks</Text>
@@ -329,7 +365,7 @@ export default function DashboardScreen() {
                   if (task.key === 'calories') setCaloriesOpen(true);
                 }}
               >
-                <Text style={styles.taskEmoji}>{task.emoji}</Text>
+                <Ionicons name={task.icon} size={22} color={task.color} style={styles.taskIcon} />
                 <Text style={[styles.taskLabel, { color: task.color }]}>{task.label}</Text>
               </TouchableOpacity>
             ))}
@@ -501,9 +537,7 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     marginBottom: SPACING.lg,
   },
-  tipEmoji: {
-    fontSize: FONT_SIZES.xxl,
-  },
+  tipIcon: {},
   tipTitle: {
     fontSize: FONT_SIZES.md,
     fontWeight: FONT_WEIGHTS.bold,
@@ -525,29 +559,23 @@ const styles = StyleSheet.create({
   },
   xpHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: SPACING.sm,
     marginBottom: SPACING.md,
+  },
+  xpHeaderText: {
+    flex: 1,
   },
   xpLevelLabel: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textMuted,
     letterSpacing: 0.3,
   },
-  xpLevelNumber: {
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: FONT_WEIGHTS.black,
-  },
-  xpRankBadge: {
-    borderWidth: 1,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-  },
-  xpRankText: {
-    fontSize: FONT_SIZES.xs,
+  xpRankNameText: {
+    fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.black,
     letterSpacing: 0.3,
+    marginTop: 2,
   },
   xpTotalText: {
     fontSize: FONT_SIZES.lg,
@@ -575,6 +603,36 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
+  // Leaderboard teaser
+  leaderboardCard: {
+    ...CARD.default,
+    ...SHADOWS.purple,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  leaderboardIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.neonYellow + '18',
+    borderWidth: 1,
+    borderColor: COLORS.neonYellow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  leaderboardTitle: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.textPrimary,
+  },
+  leaderboardSubtitle: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+
   sectionTitle: {
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
@@ -597,8 +655,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: SPACING.lg,
   },
-  taskEmoji: {
-    fontSize: FONT_SIZES.xl,
+  taskIcon: {
     marginBottom: SPACING.sm,
   },
   taskLabel: {

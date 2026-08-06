@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView, Platform, Animated, PanResponder
 } from 'react-native';
 import Slider from '@react-native-community/slider';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
@@ -17,20 +18,25 @@ import {
 // slide the sheet fully past the bottom edge regardless of device height or sheet content length
 const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
 
+// Same icon across all four quick-amount presets — they're just different
+// volumes of the same action (add water), so the label text carries the
+// distinguishing info, not the icon.
+const WATER_ICON: keyof typeof Ionicons.glyphMap = 'water-outline';
+
 // metric quick amounts in ml
 const QUICK_AMOUNTS_METRIC = [
-  { label: '250ml', value: 250,  emoji: '🥤' },
-  { label: '500ml', value: 500,  emoji: '💧' },
-  { label: '750ml', value: 750,  emoji: '🫗' },
-  { label: '1L',    value: 1000, emoji: '🍶' },
+  { label: '250ml', value: 250 },
+  { label: '500ml', value: 500 },
+  { label: '750ml', value: 750 },
+  { label: '1L',    value: 1000 },
 ];
 
 // imperial quick amounts in fl oz (stored as ml) — small bottle up to a huge 64 fl oz bottle
 const QUICK_AMOUNTS_IMPERIAL = [
-  { label: '8 fl oz',  value: 237,  emoji: '🥤' },
-  { label: '16 fl oz', value: 473,  emoji: '💧' },
-  { label: '24 fl oz', value: 710,  emoji: '🫗' },
-  { label: '64 fl oz', value: 1893, emoji: '🍶' },
+  { label: '8 fl oz',  value: 237 },
+  { label: '16 fl oz', value: 473 },
+  { label: '24 fl oz', value: 710 },
+  { label: '64 fl oz', value: 1893 },
 ];
 
 export const DAILY_GOAL_ML = 2500;
@@ -202,7 +208,12 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
                   onPress={() => setAmountMl(q.value)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.quickEmoji}>{q.emoji}</Text>
+                  <Ionicons
+                    name={WATER_ICON}
+                    size={22}
+                    color={amountMl === q.value ? COLORS.neonBlue : COLORS.textSecondary}
+                    style={styles.quickIcon}
+                  />
                   <Text style={[styles.quickLabel, amountMl === q.value && { color: COLORS.neonBlue }]}>{q.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -288,7 +299,7 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault,
     borderWidth: 1, borderRadius: RADIUS.md, alignItems: 'center', paddingVertical: SPACING.md,
   },
-  quickEmoji: { fontSize: FONT_SIZES.xl, marginBottom: 4 },
+  quickIcon: { marginBottom: 4 },
   quickLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.bold, marginTop: 2 },
   slider: { width: '100%', height: 40 },
   sliderThick: { transform: [{ scaleY: 1.4 }] },
