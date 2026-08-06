@@ -16,6 +16,7 @@ import {
 } from '@/constants/theme'
 import { xpProgress } from '@/lib/xp'
 import { getRank } from '@/constants/ranks'
+import RankMedallion from '@/components/RankMedallion'
 
 function DataRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   return (
@@ -125,13 +126,21 @@ export default function Profile() {
           </View>
         </View>
 
-        {/* Level / XP bar */}
-        <View style={styles.clearanceCard}>
+        {/* Level / XP bar — tap through to the full rank chart */}
+        <TouchableOpacity
+          style={styles.clearanceCard}
+          onPress={() => router.push('/rank-chart')}
+          activeOpacity={0.8}
+        >
           <View style={styles.clearanceHeader}>
-            <Text style={styles.clearanceLabel}>Level {xp.level}</Text>
-            <View style={[styles.rankBadge, { borderColor: rank.color }]}>
-              <Text style={[styles.rankText, { color: rank.color }]}>{rank.name}</Text>
+            <RankMedallion rank={rank} size={40} />
+            <View style={styles.clearanceHeaderText}>
+              <Text style={styles.clearanceLabel}>Level {xp.level}</Text>
+              <View style={[styles.rankBadge, { borderColor: rank.color }]}>
+                <Text style={[styles.rankText, { color: rank.color }]}>{rank.name}</Text>
+              </View>
             </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
           </View>
           <View style={styles.xpTrack}>
             <View style={[styles.xpFill, { width: `${xp.percent}%` as any, backgroundColor: rank.color }]} />
@@ -141,7 +150,7 @@ export default function Profile() {
             <Text style={styles.xpLabel}>{(profile?.total_xp ?? 0).toLocaleString()} total</Text>
             <Text style={styles.xpLabel}>{xp.needed} to next</Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* About me */}
         <View style={styles.sectionHeader}>
@@ -177,6 +186,18 @@ export default function Profile() {
               <Ionicons name="trending-up-outline" size={14} color={COLORS.neonGreen} />
             </View>
             <Text style={styles.systemLabel}>Progress</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.dataRowDivider} />
+          <TouchableOpacity
+            style={styles.systemRow}
+            onPress={() => router.push('/leaderboard')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.sysIcon, { borderColor: COLORS.neonYellow }]}>
+              <Ionicons name="trophy-outline" size={14} color={COLORS.neonYellow} />
+            </View>
+            <Text style={styles.systemLabel}>Leaderboard</Text>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
           </TouchableOpacity>
           <View style={styles.dataRowDivider} />
@@ -325,9 +346,13 @@ const styles = StyleSheet.create({
   },
   clearanceHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: SPACING.md,
     marginBottom: SPACING.md,
+  },
+  clearanceHeaderText: {
+    flex: 1,
+    gap: SPACING.xs,
   },
   clearanceLabel: {
     color: COLORS.textMuted,
@@ -335,6 +360,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   rankBadge: {
+    alignSelf: 'flex-start',
     borderWidth: 1,
     borderRadius: RADIUS.xs,
     paddingHorizontal: SPACING.sm,
