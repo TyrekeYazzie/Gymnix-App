@@ -149,7 +149,11 @@ export default function Workouts() {
                 onLongPress={() => { setLogCategory(cat.name); setModalVisible(true); }}
                 activeOpacity={0.7}
               >
-                <Text style={styles.filterPillEmoji}>{cat.emoji}</Text>
+                <Ionicons
+                  name={cat.icon}
+                  size={14}
+                  color={activeFilter === cat.name ? COLORS.textInverse : cat.color}
+                />
                 <Text style={[
                   styles.filterPillText,
                   activeFilter === cat.name && styles.filterPillTextActive,
@@ -177,7 +181,7 @@ export default function Workouts() {
             return (
               <View key={workout.id ?? i} style={styles.workoutCard}>
                 <View style={[styles.workoutIcon, { borderColor: cat?.color ?? COLORS.primary }]}>
-                  <Text style={styles.workoutIconEmoji}>{cat?.emoji ?? '🏋️'}</Text>
+                  <Ionicons name={cat?.icon ?? 'barbell-outline'} size={18} color={cat?.color ?? COLORS.primary} />
                 </View>
                 <View style={styles.workoutLeft}>
                   <Text style={styles.workoutName}>{workout.name}</Text>
@@ -304,9 +308,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
-  filterPillEmoji: {
-    fontSize: FONT_SIZES.sm,
-  },
   filterPillText: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textSecondary,
@@ -341,9 +342,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  workoutIconEmoji: {
-    fontSize: FONT_SIZES.lg,
   },
   workoutLeft: { flex: 1 },
   workoutName: {

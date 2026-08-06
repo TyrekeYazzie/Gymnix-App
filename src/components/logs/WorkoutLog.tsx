@@ -237,7 +237,9 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
             <View style={[styles.sheetHeader, { borderLeftColor: activeCat.color }]}>
               <View>
                 <Text style={styles.sheetLabel}>New workout</Text>
-                <Text style={styles.sheetTitle}>Log {activeCat.emoji} {activeCat.name}</Text>
+                <Text style={styles.sheetTitle}>
+                  Log <Ionicons name={activeCat.icon} size={18} color={activeCat.color} /> {activeCat.name}
+                </Text>
               </View>
               <View style={styles.headerActions}>
                 <View style={styles.photoBtnWrap}>
@@ -255,7 +257,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
                   )}
                 </View>
                 <TouchableOpacity onPress={animateClose} style={styles.closeBtn} activeOpacity={0.7}>
-                  <Text style={styles.closeBtnText}>✕</Text>
+                  <Ionicons name="close" size={16} color={COLORS.textMuted} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -277,7 +279,11 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
                     onPress={() => handleCategoryChange(c.name)}
                     activeOpacity={0.75}
                   >
-                    <Text style={styles.categoryEmoji}>{c.emoji}</Text>
+                    <Ionicons
+                      name={c.icon}
+                      size={16}
+                      color={category === c.name ? COLORS.textInverse : c.color}
+                    />
                     <Text style={[styles.categoryName, category === c.name && { color: COLORS.textInverse }]}>
                       {c.name}
                     </Text>
@@ -473,7 +479,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closeBtnText: { color: COLORS.textMuted, fontSize: 14, fontWeight: FONT_WEIGHTS.bold },
 
   scrollContent: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.lg },
 
@@ -498,7 +503,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.borderDefault,
   },
-  categoryEmoji: { fontSize: 16 },
   categoryName: {
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,

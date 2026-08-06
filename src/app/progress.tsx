@@ -435,7 +435,11 @@ export default function Progress() {
                     onPress={() => setCardioFilter(t.name)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.filterPillEmoji}>{t.emoji}</Text>
+                    <Ionicons
+                      name={t.icon}
+                      size={14}
+                      color={cardioFilter === t.name ? COLORS.textInverse : t.color}
+                    />
                     <Text style={[styles.filterPillText, cardioFilter === t.name && styles.filterPillTextActive]}>{t.name}</Text>
                   </TouchableOpacity>
                 ))}
@@ -456,7 +460,7 @@ export default function Progress() {
                 return (
                   <View key={entry.id} style={styles.listCard}>
                     <View style={[styles.listIcon, { borderColor: t?.color ?? COLORS.neonGreen }]}>
-                      <Text style={styles.listIconEmoji}>{t?.emoji ?? '🏃'}</Text>
+                      <Ionicons name={t?.icon ?? 'heart-outline'} size={16} color={t?.color ?? COLORS.neonGreen} />
                     </View>
                     <View style={styles.listLeft}>
                       <Text style={styles.listName}>{entry.type}</Text>
@@ -523,7 +527,6 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
   },
   filterPillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  filterPillEmoji: { fontSize: FONT_SIZES.sm },
   filterPillText: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 1 },
   filterPillTextActive: { color: COLORS.textInverse },
 
@@ -534,7 +537,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginBottom: SPACING.sm,
   },
   listIcon: { width: 42, height: 42, borderRadius: RADIUS.full, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  listIconEmoji: { fontSize: FONT_SIZES.lg },
   listLeft: { flex: 1 },
   listName: { color: COLORS.textPrimary, fontSize: FONT_SIZES.md, fontWeight: FONT_WEIGHTS.bold, marginBottom: SPACING.xs },
   listMeta: { color: COLORS.textMuted, fontSize: FONT_SIZES.xs, letterSpacing: 0.5 },

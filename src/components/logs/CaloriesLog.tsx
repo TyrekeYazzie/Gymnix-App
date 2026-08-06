@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView, Platform, Animated, PanResponder
 } from 'react-native';
 import Slider from '@react-native-community/slider';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
@@ -17,11 +18,11 @@ import {
 // slide the sheet fully past the bottom edge regardless of device height or sheet content length
 const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
 
-const MEAL_TYPES = [
-  { name: 'Breakfast', emoji: '🌅', color: COLORS.neonYellow },
-  { name: 'Lunch',     emoji: '☀️', color: COLORS.primary },
-  { name: 'Dinner',    emoji: '🌙', color: COLORS.neonBlue },
-  { name: 'Snack',     emoji: '🍎', color: COLORS.neonGreen },
+const MEAL_TYPES: { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
+  { name: 'Breakfast', icon: 'sunny-outline',      color: COLORS.neonYellow },
+  { name: 'Lunch',     icon: 'restaurant-outline', color: COLORS.primary },
+  { name: 'Dinner',    icon: 'moon-outline',       color: COLORS.neonBlue },
+  { name: 'Snack',     icon: 'fast-food-outline',  color: COLORS.neonGreen },
 ];
 
 const QUICK_MEALS = [
@@ -226,7 +227,12 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
                   onPress={() => setMealType(t.name)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.mealEmoji}>{t.emoji}</Text>
+                  <Ionicons
+                    name={t.icon}
+                    size={20}
+                    color={mealType === t.name ? t.color : COLORS.textSecondary}
+                    style={styles.mealIcon}
+                  />
                   <Text style={[styles.mealTypeName, mealType === t.name && { color: t.color }]}>{t.name}</Text>
                 </TouchableOpacity>
               ))}
@@ -335,7 +341,7 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault,
     borderWidth: 1, borderRadius: RADIUS.md, alignItems: 'center', paddingVertical: SPACING.md,
   },
-  mealEmoji: { fontSize: FONT_SIZES.lg, marginBottom: 4 },
+  mealIcon: { marginBottom: 4 },
   mealTypeName: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.bold },
   input: {
     backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault, borderWidth: 1,

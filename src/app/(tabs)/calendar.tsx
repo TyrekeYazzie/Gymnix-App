@@ -250,7 +250,9 @@ export default function CalendarScreen() {
                   const cat = w.category ? getWorkoutCat(w.category) : null;
                   return (
                     <View key={w.id} style={styles.detailRow}>
-                      <Text style={styles.detailRowText}>{cat?.emoji ?? '🏋️'} {w.name}</Text>
+                      <Text style={styles.detailRowText}>
+                        <Ionicons name={cat?.icon ?? 'barbell-outline'} size={13} color={cat?.color ?? COLORS.primary} /> {w.name}
+                      </Text>
                       <Text style={styles.detailRowMeta}>{w.sets?.length ?? 0} sets</Text>
                     </View>
                   );
@@ -268,7 +270,9 @@ export default function CalendarScreen() {
                   const t = getCardioType(c.type);
                   return (
                     <View key={c.id} style={styles.detailRow}>
-                      <Text style={styles.detailRowText}>{t?.emoji ?? '🏃'} {c.type}</Text>
+                      <Text style={styles.detailRowText}>
+                        <Ionicons name={t?.icon ?? 'heart-outline'} size={13} color={t?.color ?? COLORS.neonGreen} /> {c.type}
+                      </Text>
                       <Text style={styles.detailRowMeta}>{c.duration ?? ''}</Text>
                     </View>
                   );

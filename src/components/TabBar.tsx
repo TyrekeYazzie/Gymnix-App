@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
     // Fallback fill for platforms where BlurView has no real effect (older
     // Android, web) so the button still reads as solid rather than empty.
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: COLORS.primaryDark,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   // "colored glass" instead of a flat frosted circle.
   centerTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.primary + '66',
+    backgroundColor: COLORS.primaryDark + '80',
   },
   centerIcon: {
     color: COLORS.textInverse,

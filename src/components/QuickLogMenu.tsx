@@ -5,16 +5,17 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { COLORS, FONT_SIZES, FONT_WEIGHTS, RADIUS } from '@/constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const ORBS = [
-  { key: 'workout',  label: 'Workout',  emoji: '💪', color: COLORS.primary },
-  { key: 'cardio',   label: 'Cardio',   emoji: '🏃', color: COLORS.neonGreen },
-  { key: 'water',    label: 'Water',    emoji: '💧', color: COLORS.neonBlue },
-  { key: 'weight',   label: 'Weight',   emoji: '⚖️', color: COLORS.accent },
-  { key: 'calories', label: 'Calories', emoji: '🔥', color: COLORS.neonYellow },
+const ORBS: { key: string; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
+  { key: 'workout',  label: 'Workout',  icon: 'barbell-outline',   color: COLORS.primary },
+  { key: 'cardio',   label: 'Cardio',   icon: 'heart-outline',     color: COLORS.neonGreen },
+  { key: 'water',    label: 'Water',    icon: 'water-outline',     color: COLORS.neonBlue },
+  { key: 'weight',   label: 'Weight',   icon: 'body-outline',      color: COLORS.accent },
+  { key: 'calories', label: 'Calories', icon: 'nutrition-outline', color: COLORS.neonYellow },
 ];
 
 const ARC_RADIUS = 145;
@@ -137,19 +138,18 @@ export default function QuickLogMenu({ visible, onClose, onSelect }: Props) {
               ]}
             >
               <TouchableOpacity
-                style={[styles.orb, { borderColor: orb.color, shadowColor: orb.color }]}
+                style={[styles.orb, { borderColor: orb.color }]}
                 onPress={() => handleOrbPress(orb.key)}
                 activeOpacity={0.8}
               >
                 <BlurView intensity={45} tint="light" style={StyleSheet.absoluteFillObject} />
-                <View style={[styles.orbTint, { backgroundColor: orb.color + '33' }]} />
                 <LinearGradient
                   colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
                   start={{ x: 0.2, y: 0.05 }}
                   end={{ x: 0.85, y: 0.9 }}
                   style={StyleSheet.absoluteFillObject}
                 />
-                <Text style={styles.orbEmoji}>{orb.emoji}</Text>
+                <Ionicons name={orb.icon} size={24} color={orb.color} />
               </TouchableOpacity>
               <Text style={styles.orbLabel}>{orb.label}</Text>
             </Animated.View>
@@ -182,22 +182,19 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
     // Fallback fill for platforms where BlurView has no real effect (older
     // Android, web) so the orb still reads as a solid button rather than
-    // looking broken/transparent.
-    backgroundColor: COLORS.bgElevated,
+    // looking broken/transparent. Left uncolored (vs. a tinted wash) so the
+    // circle reads as clear glass — the border + icon carry the category color.
+    backgroundColor: COLORS.bgElevated + 'aa',
     overflow: 'hidden',
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+    // Neutral, minimal lift instead of a colored glow — keeps the glass look flat.
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  orbTint: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  orbEmoji: {
-    fontSize: 24,
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
   },
   orbLabel: {
     fontSize: FONT_SIZES.sm,

@@ -17,11 +17,11 @@ import { DEFAULT_CALORIE_GOAL } from '@/constants/nutrition';
 
 const GOAL = DEFAULT_CALORIE_GOAL;
 
-const MEAL_TYPES = [
-  { name: 'Breakfast', emoji: '🌅', color: COLORS.neonYellow },
-  { name: 'Lunch',     emoji: '☀️', color: COLORS.primary },
-  { name: 'Dinner',    emoji: '🌙', color: COLORS.neonBlue },
-  { name: 'Snack',     emoji: '🍎', color: COLORS.neonGreen },
+const MEAL_TYPES: { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
+  { name: 'Breakfast', icon: 'sunny-outline',      color: COLORS.neonYellow },
+  { name: 'Lunch',     icon: 'restaurant-outline', color: COLORS.primary },
+  { name: 'Dinner',    icon: 'moon-outline',       color: COLORS.neonBlue },
+  { name: 'Snack',     icon: 'fast-food-outline',  color: COLORS.neonGreen },
 ];
 
 interface Meal {
@@ -210,7 +210,11 @@ export default function Calories() {
                 onPress={() => setActiveFilter(type.name)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.filterPillEmoji}>{type.emoji}</Text>
+                <Ionicons
+                  name={type.icon}
+                  size={14}
+                  color={activeFilter === type.name ? COLORS.textInverse : type.color}
+                />
                 <Text style={[
                   styles.filterPillText,
                   activeFilter === type.name && styles.filterPillTextActive,
@@ -238,7 +242,7 @@ export default function Calories() {
             return (
               <View key={meal.id} style={styles.mealCard}>
                 <View style={[styles.mealIcon, { borderColor: type?.color ?? COLORS.primary }]}>
-                  <Text style={styles.mealIconEmoji}>{type?.emoji ?? '🍽️'}</Text>
+                  <Ionicons name={type?.icon ?? 'restaurant-outline'} size={18} color={type?.color ?? COLORS.primary} />
                 </View>
                 <View style={styles.mealLeft}>
                   <Text style={styles.mealName}>{meal.meal_name}</Text>
@@ -434,9 +438,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
-  filterPillEmoji: {
-    fontSize: FONT_SIZES.sm,
-  },
   filterPillText: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textSecondary,
@@ -470,9 +471,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  mealIconEmoji: {
-    fontSize: FONT_SIZES.lg,
   },
   mealLeft: {
     flex: 1,

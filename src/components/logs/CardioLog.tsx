@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView, Platform, Animated, PanResponder
 } from 'react-native';
 import Slider from '@react-native-community/slider';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
@@ -15,13 +16,13 @@ import {
   SPACING, RADIUS, SHADOWS
 } from '@/constants/theme';
 
-export const CARDIO_TYPES = [
-  { name: 'Run',   emoji: '🏃', color: COLORS.neonGreen },
-  { name: 'Bike',  emoji: '🚴', color: COLORS.neonBlue },
-  { name: 'Swim',  emoji: '🏊', color: COLORS.primary },
-  { name: 'Walk',  emoji: '🚶', color: COLORS.neonYellow },
-  { name: 'HIIT',  emoji: '⚡', color: COLORS.accent },
-  { name: 'Row',   emoji: '🚣', color: COLORS.neonOrange },
+export const CARDIO_TYPES: { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
+  { name: 'Run',   icon: 'speedometer-outline', color: COLORS.neonGreen },
+  { name: 'Bike',  icon: 'bicycle-outline',     color: COLORS.neonBlue },
+  { name: 'Swim',  icon: 'water-outline',       color: COLORS.primary },
+  { name: 'Walk',  icon: 'walk-outline',        color: COLORS.neonYellow },
+  { name: 'HIIT',  icon: 'flash-outline',       color: COLORS.accent },
+  { name: 'Row',   icon: 'boat-outline',        color: COLORS.neonOrange },
 ];
 
 const DURATION_MIN = 1;
@@ -188,7 +189,12 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
                   onPress={() => setType(t.name)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.typeEmoji}>{t.emoji}</Text>
+                  <Ionicons
+                    name={t.icon}
+                    size={22}
+                    color={type === t.name ? t.color : COLORS.textSecondary}
+                    style={styles.typeIcon}
+                  />
                   <Text style={[styles.typeName, type === t.name && { color: t.color }]}>
                     {t.name}
                   </Text>
@@ -323,7 +329,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.borderDefault, borderWidth: 1,
     borderRadius: RADIUS.md, alignItems: 'center', paddingVertical: SPACING.md,
   },
-  typeEmoji: { fontSize: FONT_SIZES.xl, marginBottom: 4 },
+  typeIcon: { marginBottom: 4 },
   typeName: {
     fontSize: FONT_SIZES.xs, color: COLORS.textSecondary,
   },
