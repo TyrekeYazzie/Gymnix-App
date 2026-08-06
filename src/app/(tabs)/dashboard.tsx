@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -19,13 +19,11 @@ import WorkoutLog from '@/components/logs/WorkoutLog';
 import CardioLog from '@/components/logs/CardioLog';
 import WaterLog from '@/components/logs/WaterLog';
 import CaloriesLog from '@/components/logs/CaloriesLog';
+import { nutritionTargetsOrDefault } from '@/lib/nutrition';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS, CARD
 } from '@/constants/theme';
-import { DEFAULT_CALORIE_GOAL } from '@/constants/nutrition';
-
-const CALORIE_GOAL = DEFAULT_CALORIE_GOAL;
 
 const HERO_SIZE = 220;
 const HERO_STROKE = 14;
@@ -97,6 +95,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { profile } = useProfile();
+  const CALORIE_GOAL = useMemo(() => nutritionTargetsOrDefault(profile).calorieGoal, [profile]);
 
   const [todayCalories, setTodayCalories] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -179,7 +178,7 @@ export default function DashboardScreen() {
     // Fire-and-forget — the leaderboard teaser is a nice-to-have, not
     // something the rest of the dashboard should wait on.
     getMyLevelRank().then(setMyRank);
-  }, [user]);
+  }, [user, CALORIE_GOAL]);
 
   useFocusEffect(
     useCallback(() => {

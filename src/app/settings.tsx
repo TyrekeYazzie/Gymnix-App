@@ -162,6 +162,18 @@ export default function Settings() {
           />
         </View>
 
+        {/* Nutrition */}
+        <Text style={styles.sectionTitle}>Nutrition</Text>
+        <View style={styles.card}>
+          <SettingsRow
+            icon="restaurant-outline"
+            iconColor={COLORS.accent}
+            label="Nutrition Goals"
+            subtext="Weight goal, pace, and activity level"
+            onPress={() => router.push('/nutrition-goals')}
+          />
+        </View>
+
         {/* Preferences */}
         <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.card}>

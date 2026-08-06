@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Modal, TextInput, Alert, Dimensions,
@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { awardXP, XP_MEAL } from '@/lib/xp';
+import { nutritionTargetsOrDefault } from '@/lib/nutrition';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS
@@ -33,8 +34,6 @@ const QUICK_MEALS = [
   { name: 'Eggs',          meal_type: 'Breakfast', calories: 180, protein: 14, carbs: 1,  fat: 12 },
 ];
 
-const CALORIE_GOAL = 2000;
-
 interface Props {
   visible: boolean;
   onClose: () => void;
@@ -43,7 +42,8 @@ interface Props {
 
 export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
   const { user } = useAuth();
-  const { refreshProfile } = useProfile();
+  const { profile, refreshProfile } = useProfile();
+  const CALORIE_GOAL = useMemo(() => nutritionTargetsOrDefault(profile).calorieGoal, [profile]);
   const [mealType, setMealType] = useState('');
   const [mealName, setMealName] = useState('');
   const [calories, setCalories] = useState(400);

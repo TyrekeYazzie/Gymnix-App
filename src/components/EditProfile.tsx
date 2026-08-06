@@ -18,7 +18,6 @@ export default function EditProfile() {
   const [name, setName] = useState(profile?.full_name ?? '')
   const [age, setAge] = useState(profile?.age?.toString() ?? '')
   const [goal, setGoal] = useState(profile?.goal ?? '')
-  const [activity, setActivity] = useState(profile?.activity_level ?? '')
   const [units, setUnits] = useState<'metric' | 'imperial'>(profile?.units ?? 'metric')
   const [saved, setSaved] = useState(false)
 
@@ -34,6 +33,10 @@ export default function EditProfile() {
   const [heightIn, setHeightIn] = useState(
     initialTotalIn !== null ? (initialTotalIn % 12).toString() : '7'
   )
+  // display buffer for the metric cm field — kept separate from heightCm so
+  // clearing the box to type a new number doesn't snap the real value to 0
+  // (Number('') === 0) and trip the "unrealistic height" check mid-edit
+  const [heightCmDisplay, setHeightCmDisplay] = useState(heightCm.toString())
 
   // weight state — stored internally as kg always
   const [weightKg, setWeightKg] = useState(profile?.weight_kg ?? 70)
@@ -52,6 +55,15 @@ export default function EditProfile() {
       setWeightDisplay((weightKg * 2.2046).toFixed(1))
     } else if (newUnits === 'metric' && weightKg) {
       setWeightDisplay(weightKg.toString())
+    }
+    // convert displayed height — otherwise switching units mid-edit shows
+    // stale ft/in or cm that no longer matches the real heightCm
+    if (newUnits === 'imperial') {
+      const totalIn = Math.round(heightCm / 2.54)
+      setHeightFt(Math.floor(totalIn / 12).toString())
+      setHeightIn((totalIn % 12).toString())
+    } else {
+      setHeightCmDisplay(Math.round(heightCm).toString())
     }
   }
 
@@ -73,6 +85,12 @@ export default function EditProfile() {
     setHeightIn(inches)
     const totalIn = (parseInt(heightFt) || 0) * 12 + (parseInt(inches) || 0)
     setHeightCm(totalIn * 2.54)
+  }
+
+  const handleHeightCmChange = (val: string) => {
+    setHeightCmDisplay(val)
+    const num = parseFloat(val)
+    if (!isNaN(num)) setHeightCm(num)
   }
 
   const saveProfile = async () => {
@@ -97,18 +115,22 @@ export default function EditProfile() {
       .upsert({
         id: user.id,
         full_name: name,
-        age: Number(age),
-        height_cm: units === 'imperial' ? heightCm : Number(heightCm),
+        age: Math.round(ageNum),
+        // height_cm is an integer column — the imperial ft/in -> cm
+        // conversion (totalIn * 2.54) almost always lands on a decimal
+        // (e.g. 5'7" -> 170.18), which Postgres's integer parser rejects
+        // outright ("invalid input syntax for type integer"). Round here
+        // regardless of units so this can never slip through again.
+        height_cm: Math.round(heightCm),
         weight_kg: weightKg,
         goal,
-        activity_level: activity,
         units,
       })
       .select()
       .single()
 
     if (error) {
-      Alert.alert('Error', 'Could not save profile')
+      Alert.alert('Error', `Could not save profile: ${error.message}`)
       return
     }
 
@@ -186,15 +208,6 @@ export default function EditProfile() {
         placeholderTextColor={COLORS.textMuted}
       />
 
-      <Text style={styles.label}>Activity level</Text>
-      <TextInput
-        style={styles.input}
-        value={activity}
-        onChangeText={setActivity}
-        placeholder="e.g. Moderate, Very active"
-        placeholderTextColor={COLORS.textMuted}
-      />
-
       {/* Stats */}
       <Text style={[styles.sectionTitle, { marginTop: SPACING.lg }]}>Body stats</Text>
 
@@ -226,8 +239,8 @@ export default function EditProfile() {
       ) : (
         <TextInput
           style={styles.input}
-          value={heightCm.toString()}
-          onChangeText={(v) => setHeightCm(Number(v))}
+          value={heightCmDisplay}
+          onChangeText={handleHeightCmChange}
           placeholder="175"
           placeholderTextColor={COLORS.textMuted}
           keyboardType="numeric"

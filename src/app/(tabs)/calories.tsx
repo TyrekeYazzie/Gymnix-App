@@ -1,21 +1,21 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/context/ProfileContext';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import CaloriesLog from '@/components/logs/CaloriesLog';
+import { nutritionTargetsOrDefault } from '@/lib/nutrition';
+import { WEIGHT_GOAL_LABELS } from '@/constants/nutrition';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS, CARD
 } from '@/constants/theme';
-import { DEFAULT_CALORIE_GOAL } from '@/constants/nutrition';
-
-const GOAL = DEFAULT_CALORIE_GOAL;
 
 const MEAL_TYPES: { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
   { name: 'Breakfast', icon: 'sunny-outline',      color: COLORS.neonYellow },
@@ -42,11 +42,16 @@ function localMidnight(): Date {
 }
 
 export default function Calories() {
+  const router = useRouter();
   const { user } = useAuth();
+  const { profile } = useProfile();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [search, setSearch] = useState('');
+
+  const targets = useMemo(() => nutritionTargetsOrDefault(profile), [profile]);
+  const GOAL = targets.calorieGoal;
 
   const totalCalories = meals.reduce((sum, m) => sum + m.calories, 0);
   const protein = meals.reduce((sum, m) => sum + (m.protein_g ?? 0), 0);
@@ -54,6 +59,12 @@ export default function Calories() {
   const fat = meals.reduce((sum, m) => sum + (m.fat_g ?? 0), 0);
   const remaining = GOAL - totalCalories;
   const percentage = Math.min((totalCalories / GOAL) * 100, 100);
+
+  const macroRows = [
+    { label: 'Protein', consumed: protein, target: targets.proteinG, color: COLORS.neonBlue },
+    { label: 'Carbs',   consumed: carbs,   target: targets.carbsG,   color: COLORS.neonYellow },
+    { label: 'Fat',     consumed: fat,     target: targets.fatG,     color: COLORS.accent },
+  ];
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -164,19 +175,61 @@ export default function Calories() {
 
         {/* Macros Row */}
         <View style={styles.macrosRow}>
-          {[
-            { label: 'Protein', value: `${protein}g`, color: COLORS.neonBlue },
-            { label: 'Carbs', value: `${carbs}g`, color: COLORS.neonYellow },
-            { label: 'Fat', value: `${fat}g`, color: COLORS.accent },
-          ].map((macro) => (
-            <View key={macro.label} style={styles.macroCard}>
-              <Text style={[styles.macroValue, { color: macro.color }]}>
-                {macro.value}
-              </Text>
-              <Text style={styles.macroLabel}>{macro.label}</Text>
-            </View>
-          ))}
+          {macroRows.map((macro) => {
+            const macroPct = targets.complete
+              ? Math.min((macro.consumed / Math.max(macro.target, 1)) * 100, 100)
+              : 0;
+            return (
+              <View key={macro.label} style={styles.macroCard}>
+                <Text style={[styles.macroValue, { color: macro.color }]}>
+                  {macro.consumed}g
+                </Text>
+                <Text style={styles.macroLabel}>{macro.label}</Text>
+                {targets.complete && (
+                  <>
+                    <View style={styles.macroTrack}>
+                      <View style={[styles.macroFill, { width: `${macroPct}%`, backgroundColor: macro.color }]} />
+                    </View>
+                    <Text style={styles.macroTarget}>of {macro.target}g</Text>
+                  </>
+                )}
+              </View>
+            );
+          })}
         </View>
+
+        {/* Goal insight — tap through to adjust in Settings */}
+        <TouchableOpacity
+          style={styles.insightCard}
+          onPress={() => router.push('/nutrition-goals')}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.insightIcon, { borderColor: targets.complete ? COLORS.neonGreen : COLORS.accent }]}>
+            <Ionicons
+              name={targets.complete ? 'analytics-outline' : 'alert-circle-outline'}
+              size={16}
+              color={targets.complete ? COLORS.neonGreen : COLORS.accent}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            {targets.complete ? (
+              <>
+                <Text style={styles.insightTitle}>
+                  {WEIGHT_GOAL_LABELS[profile?.weight_goal_type ?? 'maintain']}
+                </Text>
+                <Text style={styles.insightSubtext}>
+                  TDEE {targets.tdee.toLocaleString()} kcal · BMR {targets.bmr.toLocaleString()} kcal
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.insightTitle}>Get a personalized calorie goal</Text>
+                <Text style={styles.insightSubtext}>Set up your nutrition goals for accurate targets</Text>
+              </>
+            )}
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+        </TouchableOpacity>
 
         {/* Search */}
         <View style={styles.searchBar}>
@@ -396,6 +449,52 @@ const styles = StyleSheet.create({
   macroLabel: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textMuted,
+    letterSpacing: 0.3,
+  },
+  macroTrack: {
+    width: '100%',
+    height: 4,
+    backgroundColor: COLORS.borderDefault,
+    borderRadius: RADIUS.full,
+    overflow: 'hidden',
+    marginTop: SPACING.sm,
+  },
+  macroFill: {
+    height: '100%',
+    borderRadius: RADIUS.full,
+  },
+  macroTarget: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    marginTop: 4,
+  },
+
+  // Goal insight
+  insightCard: {
+    ...CARD.default,
+    ...SHADOWS.subtle,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  insightIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.full,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  insightTitle: {
+    color: COLORS.textPrimary,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.bold,
+    marginBottom: 2,
+  },
+  insightSubtext: {
+    color: COLORS.textMuted,
+    fontSize: FONT_SIZES.xs,
     letterSpacing: 0.3,
   },
 

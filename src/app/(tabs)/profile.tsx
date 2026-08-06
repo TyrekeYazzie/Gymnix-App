@@ -17,6 +17,7 @@ import {
 import { xpProgress } from '@/lib/xp'
 import { getRank } from '@/constants/ranks'
 import RankMedallion from '@/components/RankMedallion'
+import { ACTIVITY_LEVELS } from '@/constants/nutrition'
 
 function DataRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   return (
@@ -166,7 +167,9 @@ export default function Profile() {
           <View style={styles.dataRowDivider} />
           <DataRow
             label="Activity"
-            value={profile?.activity_level || 'Not set'}
+            value={ACTIVITY_LEVELS.find(a => a.value === profile?.activity_level)?.label
+              || profile?.activity_level
+              || 'Not set'}
             valueColor={COLORS.neonGreen}
           />
         </View>

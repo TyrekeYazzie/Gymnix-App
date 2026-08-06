@@ -4,6 +4,18 @@ export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'frida
 // A missing key or empty array means rest day.
 export type WeeklyRoutine = Partial<Record<DayOfWeek, string[]>>;
 
+// Used by src/lib/nutrition.ts to calculate BMR/TDEE and a calorie/macro
+// goal — see supabase/migrations/20260806000000_nutrition_goals.sql.
+export type Sex = 'male' | 'female';
+// Canonical activity multiplier slugs. `profiles.activity_level` is still a
+// free-text column (some existing rows predate this and hold user-typed
+// text like "Very active") — the app only ever writes these five values
+// going forward, and the calculator falls back to 'moderate' for anything
+// else it finds there.
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+export type WeightGoalType = 'lose' | 'maintain' | 'gain';
+export type GoalPace = 'mild' | 'moderate' | 'aggressive';
+
 // Mirrors the `profiles` table. Row is auto-created by the `handle_new_user`
 // trigger on signup with only id/full_name/units set — everything else
 // starts null until the user fills out EditProfile.
@@ -15,6 +27,9 @@ export interface Profile {
   age: number | null;
   goal: string | null;
   activity_level: string | null;
+  sex: Sex | null;
+  weight_goal_type: WeightGoalType;
+  goal_pace: GoalPace;
   units: 'metric' | 'imperial';
   reminders_enabled: boolean;
   total_xp: number;
