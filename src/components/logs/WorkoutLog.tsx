@@ -13,6 +13,7 @@ import { awardXP, calcWorkoutXP } from '@/lib/xp';
 import { WORKOUT_CATEGORIES as CATEGORIES } from '@/constants/workoutCategories';
 import { getTodayKey, toDayCategories } from '@/utils/routine';
 import { pickWorkoutPhoto, uploadWorkoutPhoto } from '@/utils/workoutPhotos';
+import { Workout } from '@/types';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS
@@ -40,9 +41,12 @@ interface Props {
   onClose: () => void;
   onSaved: (log: any) => void;
   initialCategory?: string;
+  /** When set, the sheet edits this workout in place instead of logging a new one. */
+  editEntry?: Workout | null;
+  onDeleted?: (id: string) => void;
 }
 
-export default function WorkoutLog({ visible, onClose, onSaved, initialCategory }: Props) {
+export default function WorkoutLog({ visible, onClose, onSaved, initialCategory, editEntry, onDeleted }: Props) {
   const { user } = useAuth();
   const { profile, isImperial, refreshProfile } = useProfile();
   const weightUnit = isImperial ? 'lbs' : 'kg';
@@ -54,6 +58,8 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
   const [duration, setDuration] = useState(30);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const isEditing = !!editEntry;
 
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -74,6 +80,29 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
     if (!visible || initialCategory) return;
     if (scheduledCategories.length > 0) setCategory(scheduledCategories[0]);
   }, [visible]);
+
+  // Editing an existing workout overrides whatever the effect above defaulted
+  // to — runs after it so this wins.
+  useEffect(() => {
+    if (!visible) return;
+    if (!editEntry) { reset(); return; }
+    const cat = editEntry.category ?? 'CHEST';
+    setCategory(cat);
+    if ((COMMON_EXERCISES[cat] ?? []).includes(editEntry.name)) {
+      setName(editEntry.name);
+      setCustomName('');
+    } else {
+      setName('');
+      setCustomName(editEntry.name);
+    }
+    setSets(
+      editEntry.sets && editEntry.sets.length > 0
+        ? editEntry.sets.map(s => ({ reps: String(s.reps), weight: String(s.weight) }))
+        : [{ reps: '', weight: '' }]
+    );
+    setDuration(parseInt(editEntry.duration ?? '30', 10) || 30);
+    setPhotoUri(null);
+  }, [visible, editEntry]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -183,6 +212,44 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
     }
 
     setSaving(true);
+
+    if (isEditing && editEntry) {
+      const { data, error } = await supabase
+        .from('workouts')
+        .update({ name: finalName.trim(), category, duration: `${duration} min`, sets: cleanSets })
+        .eq('id', editEntry.id)
+        .select()
+        .single();
+
+      if (error) { setSaving(false); Alert.alert('Error', error.message); return; }
+      if (data) {
+        // Workout XP depends on the sets logged, so an edit can change how much
+        // was earned — reconcile with just the delta instead of a flat award.
+        const delta = calcWorkoutXP(cleanSets) - calcWorkoutXP(editEntry.sets);
+        if (delta !== 0) await awardXP(user.id, delta);
+        await refreshProfile();
+
+        let saved = data;
+        if (photoUri) {
+          const photoPath = await uploadWorkoutPhoto(user.id, data.id, photoUri);
+          if (photoPath) {
+            const { data: updated } = await supabase
+              .from('workouts')
+              .update({ photo_path: photoPath })
+              .eq('id', data.id)
+              .select()
+              .single();
+            if (updated) saved = updated;
+          }
+        }
+        setSaving(false);
+        onSaved(saved); reset(); onClose();
+      } else {
+        setSaving(false);
+      }
+      return;
+    }
+
     const { data, error } = await supabase
       .from('workouts')
       .insert({ user_id: user.id, name: finalName.trim(), category, duration: `${duration} min`, calories: 0, sets: cleanSets })
@@ -216,6 +283,33 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
     }
   };
 
+  const handleDelete = () => {
+    if (!editEntry) return;
+    Alert.alert(
+      'Delete Workout',
+      `Remove "${editEntry.name}" from your log?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!user) return;
+            setDeleting(true);
+            const { error } = await supabase.from('workouts').delete().eq('id', editEntry.id);
+            if (error) { setDeleting(false); Alert.alert('Error', error.message); return; }
+            const xp = calcWorkoutXP(editEntry.sets);
+            if (xp !== 0) await awardXP(user.id, -xp);
+            await refreshProfile();
+            setDeleting(false);
+            onDeleted?.(editEntry.id);
+            reset(); onClose();
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
       <Animated.View style={[styles.overlay, { opacity: overlayAnim }]}>
@@ -236,14 +330,30 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
             {/* Header with active category accent */}
             <View style={[styles.sheetHeader, { borderLeftColor: activeCat.color }]}>
               <View>
-                <Text style={styles.sheetLabel}>New workout</Text>
+                <Text style={styles.sheetLabel}>{isEditing ? 'Edit workout' : 'New workout'}</Text>
                 <Text style={styles.sheetTitle}>
-                  Log <Ionicons name={activeCat.icon} size={18} color={activeCat.color} /> {activeCat.name}
+                  {isEditing ? 'Edit' : 'Log'} <Ionicons name={activeCat.icon} size={18} color={activeCat.color} /> {activeCat.name}
                 </Text>
               </View>
               <View style={styles.headerActions}>
+                {isEditing && (
+                  <TouchableOpacity
+                    onPress={handleDelete}
+                    disabled={deleting}
+                    style={styles.closeBtn}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="trash-outline" size={16} color={COLORS.accent} />
+                  </TouchableOpacity>
+                )}
                 <View style={styles.photoBtnWrap}>
-                  <TouchableOpacity onPress={handleAttachPhoto} activeOpacity={0.7} style={styles.photoBtn}>
+                  <TouchableOpacity
+                    onPress={handleAttachPhoto}
+                    activeOpacity={0.7}
+                    style={styles.photoBtn}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
                     {photoUri ? (
                       <Image source={{ uri: photoUri }} style={styles.photoThumb} />
                     ) : (
@@ -256,7 +366,12 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
                     </TouchableOpacity>
                   )}
                 </View>
-                <TouchableOpacity onPress={animateClose} style={styles.closeBtn} activeOpacity={0.7}>
+                <TouchableOpacity
+                  onPress={animateClose}
+                  style={styles.closeBtn}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
                   <Ionicons name="close" size={16} color={COLORS.textMuted} />
                 </TouchableOpacity>
               </View>
@@ -386,7 +501,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory 
               activeOpacity={0.85}
               disabled={saving}
             >
-              <Text style={styles.saveText}>{saving ? 'Saving…' : 'Save Workout'}</Text>
+              <Text style={styles.saveText}>{saving ? 'Saving…' : isEditing ? 'Save Changes' : 'Save Workout'}</Text>
             </TouchableOpacity>
 
           </ScrollView>

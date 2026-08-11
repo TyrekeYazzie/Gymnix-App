@@ -26,6 +26,7 @@ const MEAL_TYPES: { name: string; icon: keyof typeof Ionicons.glyphMap; color: s
 
 interface Meal {
   id: string;
+  user_id: string;
   meal_name: string;
   meal_type: string;
   calories: number;
@@ -47,6 +48,7 @@ export default function Calories() {
   const { profile } = useProfile();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [search, setSearch] = useState('');
 
@@ -111,10 +113,9 @@ export default function Calories() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']} {...swipeHandlers}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      {/* Fixed top — today's summary, macros, and filters stay put; only the
+          meal list below scrolls, so your progress is always visible. */}
+      <View style={styles.fixedTop}>
 
         {/* Header */}
         <View style={styles.header}>
@@ -124,7 +125,7 @@ export default function Calories() {
           </View>
           <TouchableOpacity
             style={styles.addButton}
-            onPress={() => setModalVisible(true)}
+            onPress={() => { setEditingMeal(null); setModalVisible(true); }}
             activeOpacity={0.8}
           >
             <Text style={styles.addButtonText}>+ Add</Text>
@@ -279,11 +280,13 @@ export default function Calories() {
           </View>
         </ScrollView>
 
-        {/* Meals List */}
+        {/* Meals list section title stays fixed with everything above it */}
         <Text style={styles.sectionTitle}>
           {activeFilter === 'ALL' ? "Today's meals" : activeFilter}
         </Text>
+      </View>
 
+      <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
         {filteredMeals.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No meals found</Text>
@@ -293,7 +296,12 @@ export default function Calories() {
           filteredMeals.map((meal) => {
             const type = getMealType(meal.meal_type);
             return (
-              <View key={meal.id} style={styles.mealCard}>
+              <TouchableOpacity
+                key={meal.id}
+                style={styles.mealCard}
+                onPress={() => { setEditingMeal(meal); setModalVisible(true); }}
+                activeOpacity={0.7}
+              >
                 <View style={[styles.mealIcon, { borderColor: type?.color ?? COLORS.primary }]}>
                   <Ionicons name={type?.icon ?? 'restaurant-outline'} size={18} color={type?.color ?? COLORS.primary} />
                 </View>
@@ -307,7 +315,7 @@ export default function Calories() {
                   </Text>
                   <Text style={styles.mealKcal}>kcal</Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })
         )}
@@ -316,8 +324,10 @@ export default function Calories() {
 
       <CaloriesLog
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSaved={() => { setModalVisible(false); loadMeals(); }}
+        editEntry={editingMeal}
+        onClose={() => { setModalVisible(false); setEditingMeal(null); }}
+        onSaved={loadMeals}
+        onDeleted={loadMeals}
       />
     </SafeAreaView>
   );
@@ -328,8 +338,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.bgPrimary,
   },
-  content: {
-    padding: SPACING.lg,
+  fixedTop: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+  },
+  listScroll: { flex: 1 },
+  listContent: {
+    paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.xxxl,
   },
 

@@ -35,15 +35,30 @@ const CALORIE_CHIPS = [150, 300, 500, 750];
 // slide the sheet fully past the bottom edge regardless of device height or sheet content length
 const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
 
+// Minimal shape needed to edit an existing cardio_logs row — mirrors the
+// local interface progress.tsx already queries (no user_id needed since
+// updates/deletes are scoped by RLS via auth.uid(), not a client-sent id).
+export interface CardioEntry {
+  id: string;
+  type: string;
+  distance_km: number | null;
+  duration: string | null;
+  calories: number | null;
+  created_at: string;
+}
+
 interface Props {
   visible: boolean;
   onClose: () => void;
   onSaved: (log: any) => void;
+  /** When set, the sheet edits this session in place instead of logging a new one. */
+  editEntry?: CardioEntry | null;
+  onDeleted?: (id: string) => void;
 }
 
 export const KM_TO_MI = 0.621371;
 
-export default function CardioLog({ visible, onClose, onSaved }: Props) {
+export default function CardioLog({ visible, onClose, onSaved, editEntry, onDeleted }: Props) {
   const { user } = useAuth();
   const { isImperial, refreshProfile } = useProfile();
   const [type, setType] = useState('');
@@ -53,6 +68,8 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
   const [duration, setDuration] = useState(30);
   const [calories, setCalories] = useState(280);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const isEditing = !!editEntry;
 
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -85,6 +102,20 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
 
   useEffect(() => {
     if (visible) {
+      if (editEntry) {
+        setType(editEntry.type);
+        setDuration(parseInt(editEntry.duration ?? '30', 10) || 30);
+        setCalories(editEntry.calories ?? 280);
+        const distKm = editEntry.distance_km ?? 0;
+        const disp = isImperial ? distKm * KM_TO_MI : distKm;
+        let whole = Math.floor(disp);
+        let tenth = Math.round((disp - whole) * 10);
+        if (tenth >= 10) { whole += 1; tenth = 0; }
+        setDistanceWhole(Math.min(Math.max(whole, 0), distanceMaxWhole));
+        setDistanceTenth(tenth);
+      } else {
+        reset();
+      }
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }),
         Animated.timing(overlayAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
@@ -95,7 +126,7 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
         Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start();
     }
-  }, [visible]);
+  }, [visible, editEntry]);
 
   const reset = () => {
     setType('');
@@ -123,6 +154,28 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
     }
     if (!user) return;
     setSaving(true);
+
+    if (isEditing && editEntry) {
+      const { data, error } = await supabase
+        .from('cardio_logs')
+        .update({ type, distance_km: distanceKm, duration: `${duration} min`, calories })
+        .eq('id', editEntry.id)
+        .select()
+        .single();
+
+      setSaving(false);
+      if (error) { Alert.alert('Error', error.message); return; }
+      if (data) {
+        // Cardio XP depends on duration, so an edit can change how much was
+        // earned — reconcile with just the delta instead of a flat award.
+        const oldDuration = parseInt(editEntry.duration ?? '0', 10) || 0;
+        const delta = calcCardioXP(duration) - calcCardioXP(oldDuration);
+        if (delta !== 0) await awardXP(user.id, delta);
+        await refreshProfile();
+        onSaved(data); reset(); onClose();
+      }
+      return;
+    }
 
     const { data, error } = await supabase
       .from('cardio_logs')
@@ -152,8 +205,33 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
     }
   };
 
-  const getTypeColor = (t: string) =>
-    CARDIO_TYPES.find(c => c.name === t)?.color ?? COLORS.neonGreen;
+  const handleDelete = () => {
+    if (!editEntry) return;
+    Alert.alert(
+      'Delete Cardio',
+      `Remove this ${editEntry.type} session from your log?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!user) return;
+            setDeleting(true);
+            const { error } = await supabase.from('cardio_logs').delete().eq('id', editEntry.id);
+            if (error) { setDeleting(false); Alert.alert('Error', error.message); return; }
+            const oldDuration = parseInt(editEntry.duration ?? '0', 10) || 0;
+            const xp = calcCardioXP(oldDuration);
+            if (xp !== 0) await awardXP(user.id, -xp);
+            await refreshProfile();
+            setDeleting(false);
+            onDeleted?.(editEntry.id);
+            reset(); onClose();
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
@@ -171,7 +249,20 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
             <View style={styles.handleArea}>
               <View style={styles.handleBar} />
             </View>
-            <Text style={styles.title}>Log Cardio</Text>
+            <View style={[styles.titleRow, { justifyContent: isEditing ? 'space-between' : 'center' }]}>
+              <Text style={[styles.title, { marginBottom: 0 }]}>{isEditing ? 'Edit Cardio' : 'Log Cardio'}</Text>
+              {isEditing && (
+                <TouchableOpacity
+                  onPress={handleDelete}
+                  activeOpacity={0.7}
+                  disabled={deleting}
+                  style={styles.deleteIconBtn}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="trash-outline" size={18} color={COLORS.accent} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -283,7 +374,7 @@ export default function CardioLog({ visible, onClose, onSaved }: Props) {
               activeOpacity={0.8}
               disabled={saving}
             >
-              <Text style={styles.saveText}>{saving ? 'Saving…' : 'Save Cardio'}</Text>
+              <Text style={styles.saveText}>{saving ? 'Saving…' : isEditing ? 'Save Changes' : 'Save Cardio'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.cancelButton} onPress={animateClose} activeOpacity={0.7}>
@@ -316,6 +407,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black,
     letterSpacing: 0.5, marginBottom: SPACING.lg, textAlign: 'center',
+  },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.lg },
+  deleteIconBtn: {
+    width: 32, height: 32, borderRadius: RADIUS.full,
+    alignItems: 'center', justifyContent: 'center',
   },
   label: {
     fontSize: FONT_SIZES.xs, color: COLORS.textMuted,

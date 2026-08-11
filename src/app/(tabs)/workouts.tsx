@@ -9,24 +9,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import WorkoutLog from '@/components/logs/WorkoutLog';
 import { WORKOUT_CATEGORIES as categories } from '@/constants/workoutCategories';
+import { Workout } from '@/types';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS, CARD
 } from '@/constants/theme';
 
-interface Workout {
-  id?: string;
-  name: string;
-  category: string;
-  duration: string;
-  sets?: { reps: number; weight: number }[];
-  created_at?: string;
-}
-
 export default function Workouts() {
   const { user } = useAuth();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
   const [logCategory, setLogCategory] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [search, setSearch] = useState('');
@@ -48,10 +41,17 @@ export default function Workouts() {
   };
 
   const handleSaved = (workout: Workout) => {
-    setWorkouts(prev => [workout, ...prev]);
+    setWorkouts(prev => {
+      const exists = prev.some(w => w.id === workout.id);
+      return exists ? prev.map(w => (w.id === workout.id ? workout : w)) : [workout, ...prev];
+    });
   };
 
-  const getCategory = (cat: string) => categories.find(c => c.name === cat);
+  const handleDeleted = (id: string) => {
+    setWorkouts(prev => prev.filter(w => w.id !== id));
+  };
+
+  const getCategory = (cat: string | null) => categories.find(c => c.name === cat);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -79,7 +79,9 @@ export default function Workouts() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']} {...swipeHandlers}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {/* Fixed top — header, summary, search, filters all stay put; only the
+          list below scrolls, so you never lose sight of these while browsing. */}
+      <View style={styles.fixedTop}>
 
         {/* Header */}
         <View style={styles.header}>
@@ -89,7 +91,7 @@ export default function Workouts() {
           </View>
           <TouchableOpacity
             style={styles.addButton}
-            onPress={() => { setLogCategory(''); setModalVisible(true); }}
+            onPress={() => { setLogCategory(''); setEditingWorkout(null); setModalVisible(true); }}
             activeOpacity={0.8}
           >
             <Text style={styles.addButtonText}>+ Log</Text>
@@ -146,7 +148,7 @@ export default function Workouts() {
                   activeFilter === cat.name && { backgroundColor: cat.color, borderColor: cat.color },
                 ]}
                 onPress={() => setActiveFilter(cat.name)}
-                onLongPress={() => { setLogCategory(cat.name); setModalVisible(true); }}
+                onLongPress={() => { setLogCategory(cat.name); setEditingWorkout(null); setModalVisible(true); }}
                 activeOpacity={0.7}
               >
                 <Ionicons
@@ -165,11 +167,13 @@ export default function Workouts() {
           </View>
         </ScrollView>
 
-        {/* Workout list */}
+        {/* Workout list section title stays fixed with everything above it */}
         <Text style={styles.sectionTitle}>
           {activeFilter === 'ALL' ? 'Recent workouts' : activeFilter}
         </Text>
+      </View>
 
+      <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
         {filteredWorkouts.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No workouts found</Text>
@@ -179,7 +183,12 @@ export default function Workouts() {
           filteredWorkouts.map((workout, i) => {
             const cat = getCategory(workout.category);
             return (
-              <View key={workout.id ?? i} style={styles.workoutCard}>
+              <TouchableOpacity
+                key={workout.id ?? i}
+                style={styles.workoutCard}
+                onPress={() => { setEditingWorkout(workout); setModalVisible(true); }}
+                activeOpacity={0.7}
+              >
                 <View style={[styles.workoutIcon, { borderColor: cat?.color ?? COLORS.primary }]}>
                   <Ionicons name={cat?.icon ?? 'barbell-outline'} size={18} color={cat?.color ?? COLORS.primary} />
                 </View>
@@ -195,7 +204,7 @@ export default function Workouts() {
                     <Text style={styles.workoutCalories}>{workout.sets.length} sets</Text>
                   )}
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })
         )}
@@ -203,8 +212,10 @@ export default function Workouts() {
 
       <WorkoutLog
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        editEntry={editingWorkout}
+        onClose={() => { setModalVisible(false); setEditingWorkout(null); }}
         onSaved={handleSaved}
+        onDeleted={handleDeleted}
         initialCategory={logCategory}
       />
     </SafeAreaView>
@@ -213,7 +224,9 @@ export default function Workouts() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bgPrimary },
-  content: { padding: SPACING.lg, paddingBottom: SPACING.xxxl },
+  fixedTop: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg },
+  listScroll: { flex: 1 },
+  listContent: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxxl },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -4,6 +4,7 @@ import {
   StyleSheet, Modal, TextInput, Alert, Dimensions,
   KeyboardAvoidingView, Platform, Animated, PanResponder
 } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
@@ -17,7 +18,7 @@ import {
 // slide the sheet fully past the bottom edge regardless of device height or sheet content length
 const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
 
-interface WeightEntry { id?: string; weight_kg: number; created_at: string; }
+interface WeightEntry { id?: string; weight_kg: number; notes?: string | null; created_at: string; }
 
 interface Props {
   visible: boolean;
@@ -36,6 +37,8 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
   const [lastEntry, setLastEntry] = useState<WeightEntry | null>(null);
   const [recentEntries, setRecentEntries] = useState<WeightEntry[]>([]);
   const [saving, setSaving] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<WeightEntry | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -50,7 +53,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
   // metric bounds are just that range converted, so switching units never
   // changes what the ruler can actually represent.
   const ruler = isImperial
-    ? { min: 50, max: 500, step: 1, minorStep: 10, majorStep: 50 }
+    ? { min: 50, max: 500, step: 1, minorStep: 5, majorStep: 50 }
     : { min: Math.round(50 / 2.2046), max: Math.round(500 / 2.2046), step: 0.5, minorStep: 5, majorStep: 25 };
 
   const panResponder = useRef(
@@ -87,15 +90,23 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
     if (!user) return;
     const { data, error } = await supabase
       .from('weight_logs')
-      .select('id, weight_kg, created_at')
+      .select('id, weight_kg, notes, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(5);
     if (error) { console.error('Failed to load weight history:', error.message); return; }
-    if (data && data.length > 0) {
+    if (!data) return;
+    // Always sync fully (not just on a non-empty result) — this now also runs
+    // after a delete, and if that delete removed someone's only entry, the
+    // stale lastEntry/recentEntries from before would otherwise stick around
+    // pointing at a row that no longer exists.
+    setRecentEntries(data);
+    if (data.length > 0) {
       setLastEntry(data[0]);
       setWeightKg(data[0].weight_kg);
-      setRecentEntries(data);
+    } else {
+      setLastEntry(null);
+      setWeightKg(startKg);
     }
   };
 
@@ -111,7 +122,45 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
   const diffSign = diffKg !== null && diffKg > 0 ? '+' : '-';
   const diffColor = diffKg === null ? COLORS.textMuted : diffKg < 0 ? COLORS.neonGreen : diffKg > 0 ? COLORS.accent : COLORS.textMuted;
 
-  const handleClose = () => { setNotes(''); onClose(); };
+  const startEditingEntry = (entry: WeightEntry) => {
+    setEditingEntry(entry);
+    setWeightKg(entry.weight_kg);
+    setNotes(entry.notes ?? '');
+  };
+
+  const cancelEditingEntry = () => {
+    setEditingEntry(null);
+    setWeightKg(lastEntry?.weight_kg ?? startKg);
+    setNotes('');
+  };
+
+  const handleDeleteEntry = (entry: WeightEntry) => {
+    if (!entry.id) return;
+    Alert.alert(
+      'Delete Entry',
+      `Remove this entry from ${formatDate(entry.created_at)}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!user) return;
+            setDeletingId(entry.id!);
+            const { error } = await supabase.from('weight_logs').delete().eq('id', entry.id);
+            setDeletingId(null);
+            if (error) { Alert.alert('Error', error.message); return; }
+            await awardXP(user.id, -XP_WEIGHT);
+            await refreshProfile();
+            if (editingEntry?.id === entry.id) cancelEditingEntry();
+            await loadLastEntry();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleClose = () => { setNotes(''); setEditingEntry(null); onClose(); };
 
   // plays the slide-down/fade-out first, then closes — used for backdrop taps and Cancel,
   // since Modal's `visible` prop hides the native modal instantly otherwise, cutting the animation short
@@ -125,6 +174,27 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
+
+    if (editingEntry) {
+      const { data, error } = await supabase
+        .from('weight_logs')
+        .update({ weight_kg: weightKg, notes })
+        .eq('id', editingEntry.id)
+        .select()
+        .single();
+
+      setSaving(false);
+      if (error) { Alert.alert('Error', error.message); return; }
+      if (data) {
+        // Flat XP_WEIGHT doesn't depend on the value, so editing never
+        // changes how much was already earned — no award here.
+        onSaved(data);
+        setEditingEntry(null);
+        setNotes('');
+        onClose();
+      }
+      return;
+    }
 
     const { data, error } = await supabase
       .from('weight_logs')
@@ -160,17 +230,43 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
             <View style={styles.handleArea}>
               <View style={styles.handleBar} />
             </View>
-            <Text style={styles.title}>Log Weight</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>{editingEntry ? 'Edit Weight' : 'Log Weight'}</Text>
+              {editingEntry && (
+                <TouchableOpacity
+                  onPress={cancelEditingEntry}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.cancelEditLink}>Cancel edit</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {lastEntry && (
-              <View style={styles.lastEntry}>
-                <Text style={styles.lastLabel}>Last logged</Text>
-                <Text style={styles.lastValue}>
-                  {toDisplay(lastEntry.weight_kg).toFixed(1)} {displayUnit} — {formatDate(lastEntry.created_at)}
-                </Text>
-              </View>
+              <TouchableOpacity
+                style={[styles.lastEntry, editingEntry?.id === lastEntry.id && styles.lastEntryActive]}
+                onPress={() => startEditingEntry(lastEntry)}
+                activeOpacity={0.7}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.lastLabel}>Last logged — tap to edit</Text>
+                  <Text style={styles.lastValue}>
+                    {toDisplay(lastEntry.weight_kg).toFixed(1)} {displayUnit} — {formatDate(lastEntry.created_at)}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => handleDeleteEntry(lastEntry)}
+                  disabled={deletingId === lastEntry.id}
+                  style={styles.historyDeleteBtn}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="trash-outline" size={16} color={COLORS.accent} />
+                </TouchableOpacity>
+              </TouchableOpacity>
             )}
 
             <View style={styles.weightDisplay}>
@@ -198,12 +294,28 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
 
             {recentEntries.length > 1 && (
               <View style={{ marginBottom: SPACING.lg }}>
-                <Text style={styles.label}>Recent entries</Text>
+                <Text style={styles.label}>Recent entries — tap to edit</Text>
                 {recentEntries.slice(1).map((entry, i) => (
-                  <View key={entry.id ?? i} style={styles.historyRow}>
+                  <TouchableOpacity
+                    key={entry.id ?? i}
+                    style={[styles.historyRow, editingEntry?.id === entry.id && styles.historyRowActive]}
+                    onPress={() => startEditingEntry(entry)}
+                    activeOpacity={0.7}
+                  >
                     <Text style={styles.historyAmount}>{toDisplay(entry.weight_kg).toFixed(1)} {displayUnit}</Text>
-                    <Text style={styles.historyTime}>{formatDate(entry.created_at)}</Text>
-                  </View>
+                    <View style={styles.historyRightGroup}>
+                      <Text style={styles.historyTime}>{formatDate(entry.created_at)}</Text>
+                      <TouchableOpacity
+                        onPress={() => handleDeleteEntry(entry)}
+                        disabled={deletingId === entry.id}
+                        style={styles.historyDeleteBtn}
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="trash-outline" size={16} color={COLORS.accent} />
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
@@ -223,7 +335,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
               activeOpacity={0.8}
               disabled={saving}
             >
-              <Text style={styles.saveText}>{saving ? 'Saving…' : 'Log Weight'}</Text>
+              <Text style={styles.saveText}>{saving ? 'Saving…' : editingEntry ? 'Save Changes' : 'Log Weight'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.cancelButton} onPress={animateClose} activeOpacity={0.7}>
@@ -248,11 +360,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary,
   },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cancelEditLink: { fontSize: FONT_SIZES.xs, color: COLORS.primary, fontWeight: FONT_WEIGHTS.bold },
   lastEntry: {
     backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
     marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDefault,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
+  lastEntryActive: { borderColor: COLORS.accent },
   lastLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, letterSpacing: 1 },
   lastValue: { fontSize: FONT_SIZES.sm, color: COLORS.textPrimary, fontWeight: FONT_WEIGHTS.bold },
   weightDisplay: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', marginBottom: SPACING.sm },
@@ -266,6 +381,12 @@ const styles = StyleSheet.create({
   historyRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.borderDefault,
+  },
+  historyRowActive: { backgroundColor: COLORS.accentGlow },
+  historyRightGroup: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  historyDeleteBtn: {
+    width: 32, height: 32, borderRadius: RADIUS.full,
+    alignItems: 'center', justifyContent: 'center',
   },
   historyAmount: { fontSize: FONT_SIZES.sm, color: COLORS.textPrimary, fontWeight: FONT_WEIGHTS.medium },
   historyTime: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted },

@@ -59,6 +59,8 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
   const [todayTotalMl, setTodayTotalMl] = useState(0);
   const [todayEntries, setTodayEntries] = useState<WaterEntry[]>([]);
   const [saving, setSaving] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<WaterEntry | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -66,9 +68,6 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
   // display conversions
   const toDisplay = (ml: number) => isImperial ? ml * 0.033814 : ml;
   const fromDisplay = (val: number) => isImperial ? val / 0.033814 : val;
-  const displayUnit = isImperial ? 'FL OZ' : 'ML';
-  const dailyGoal = isImperial ? DAILY_GOAL_FLOZ : DAILY_GOAL_ML;
-  const displayToday = toDisplay(todayTotalMl);
   const displayAmount = toDisplay(amountMl);
   const quickAmounts = isImperial ? QUICK_AMOUNTS_IMPERIAL : QUICK_AMOUNTS_METRIC;
 
@@ -122,7 +121,42 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
     }
   };
 
-  const handleClose = () => { setAmountMl(250); onClose(); };
+  const startEditingEntry = (entry: WaterEntry) => {
+    setEditingEntry(entry);
+    setAmountMl(entry.amount_ml);
+  };
+
+  const cancelEditingEntry = () => {
+    setEditingEntry(null);
+    setAmountMl(250);
+  };
+
+  const handleDeleteEntry = (entry: WaterEntry) => {
+    Alert.alert(
+      'Delete Entry',
+      `Remove this ${formatDisplay(entry.amount_ml)} entry?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!user) return;
+            setDeletingId(entry.id);
+            const { error } = await supabase.from('water_logs').delete().eq('id', entry.id);
+            setDeletingId(null);
+            if (error) { Alert.alert('Error', error.message); return; }
+            await awardXP(user.id, -XP_WATER);
+            await refreshProfile();
+            if (editingEntry?.id === entry.id) cancelEditingEntry();
+            await loadTodayTotal();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleClose = () => { setAmountMl(250); setEditingEntry(null); onClose(); };
 
   // plays the slide-down/fade-out first, then closes — used for backdrop taps and Cancel,
   // since Modal's `visible` prop hides the native modal instantly otherwise, cutting the animation short
@@ -141,6 +175,27 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
+
+    if (editingEntry) {
+      const { data, error } = await supabase
+        .from('water_logs')
+        .update({ amount_ml: amountMl })
+        .eq('id', editingEntry.id)
+        .select()
+        .single();
+
+      setSaving(false);
+      if (error) { Alert.alert('Error', error.message); return; }
+      if (data) {
+        // Flat XP_WATER doesn't depend on the amount, so editing never
+        // changes how much was already earned — no award here.
+        onSaved(data);
+        setEditingEntry(null);
+        setAmountMl(250);
+        onClose();
+      }
+      return;
+    }
 
     const { data, error } = await supabase
       .from('water_logs')
@@ -180,7 +235,18 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
             <View style={styles.handleArea}>
               <View style={styles.handleBar} />
             </View>
-            <Text style={styles.title}>Log Water</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>{editingEntry ? 'Edit Water' : 'Log Water'}</Text>
+              {editingEntry && (
+                <TouchableOpacity
+                  onPress={cancelEditingEntry}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.cancelEditLink}>Cancel edit</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -239,12 +305,28 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
 
             {todayEntries.length > 0 && (
               <View style={{ marginBottom: SPACING.lg }}>
-                <Text style={[styles.label, { marginTop: SPACING.sm }]}>Today's log</Text>
+                <Text style={[styles.label, { marginTop: SPACING.sm }]}>Today's log — tap to edit</Text>
                 {todayEntries.slice(0, 5).map((entry) => (
-                  <View key={entry.id} style={styles.historyRow}>
+                  <TouchableOpacity
+                    key={entry.id}
+                    style={[styles.historyRow, editingEntry?.id === entry.id && styles.historyRowActive]}
+                    onPress={() => startEditingEntry(entry)}
+                    activeOpacity={0.7}
+                  >
                     <Text style={styles.historyAmount}>{formatDisplay(entry.amount_ml)}</Text>
-                    <Text style={styles.historyTime}>{formatTime(entry.created_at)}</Text>
-                  </View>
+                    <View style={styles.historyRightGroup}>
+                      <Text style={styles.historyTime}>{formatTime(entry.created_at)}</Text>
+                      <TouchableOpacity
+                        onPress={() => handleDeleteEntry(entry)}
+                        disabled={deletingId === entry.id}
+                        style={styles.historyDeleteBtn}
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="trash-outline" size={16} color={COLORS.accent} />
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
@@ -255,7 +337,7 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
               activeOpacity={0.8}
               disabled={saving}
             >
-              <Text style={styles.saveText}>{saving ? 'Saving…' : 'Log Water'}</Text>
+              <Text style={styles.saveText}>{saving ? 'Saving…' : editingEntry ? 'Save Changes' : 'Log Water'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.cancelButton} onPress={animateClose} activeOpacity={0.7}>
@@ -280,6 +362,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary,
   },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cancelEditLink: { fontSize: FONT_SIZES.xs, color: COLORS.neonBlue, fontWeight: FONT_WEIGHTS.bold },
   progressCard: {
     backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
     marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDefault,
@@ -311,6 +395,12 @@ const styles = StyleSheet.create({
   historyRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.borderDefault,
+  },
+  historyRowActive: { backgroundColor: COLORS.glowBlue },
+  historyRightGroup: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  historyDeleteBtn: {
+    width: 32, height: 32, borderRadius: RADIUS.full,
+    alignItems: 'center', justifyContent: 'center',
   },
   historyAmount: { fontSize: FONT_SIZES.sm, color: COLORS.textPrimary, fontWeight: FONT_WEIGHTS.medium },
   historyTime: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted },

@@ -10,7 +10,7 @@ import Svg, { Polyline, Circle, Line, Rect } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
-import { CARDIO_TYPES, KM_TO_MI } from '@/components/logs/CardioLog';
+import CardioLog, { CARDIO_TYPES, KM_TO_MI, CardioEntry as CardioEditEntry } from '@/components/logs/CardioLog';
 import { DAILY_GOAL_ML } from '@/components/logs/WaterLog';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
@@ -65,6 +65,8 @@ export default function Progress() {
   const [workoutEntries, setWorkoutEntries] = useState<WorkoutEntry[]>([]);
   const [cardioFilter, setCardioFilter] = useState('ALL');
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
+  const [cardioLogOpen, setCardioLogOpen] = useState(false);
+  const [editingCardio, setEditingCardio] = useState<CardioEditEntry | null>(null);
 
   const loadAll = useCallback(async () => {
     if (!user) return;
@@ -458,7 +460,12 @@ export default function Progress() {
               filteredCardio.map((entry) => {
                 const t = getCardioType(entry.type);
                 return (
-                  <View key={entry.id} style={styles.listCard}>
+                  <TouchableOpacity
+                    key={entry.id}
+                    style={styles.listCard}
+                    onPress={() => { setEditingCardio(entry); setCardioLogOpen(true); }}
+                    activeOpacity={0.7}
+                  >
                     <View style={[styles.listIcon, { borderColor: t?.color ?? COLORS.neonGreen }]}>
                       <Ionicons name={t?.icon ?? 'heart-outline'} size={16} color={t?.color ?? COLORS.neonGreen} />
                     </View>
@@ -473,7 +480,7 @@ export default function Progress() {
                       <Text style={styles.listDate}>{formatDate(entry.created_at)}</Text>
                       {entry.calories != null && <Text style={styles.listCalories}>{entry.calories} kcal</Text>}
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })
             )}
@@ -481,6 +488,14 @@ export default function Progress() {
         )}
 
       </ScrollView>
+
+      <CardioLog
+        visible={cardioLogOpen}
+        editEntry={editingCardio}
+        onClose={() => { setCardioLogOpen(false); setEditingCardio(null); }}
+        onSaved={() => { setCardioLogOpen(false); setEditingCardio(null); loadAll(); }}
+        onDeleted={() => { setCardioLogOpen(false); setEditingCardio(null); loadAll(); }}
+      />
     </SafeAreaView>
   );
 }

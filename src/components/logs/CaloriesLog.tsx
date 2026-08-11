@@ -6,11 +6,13 @@ import {
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { awardXP, XP_MEAL } from '@/lib/xp';
 import { nutritionTargetsOrDefault } from '@/lib/nutrition';
+import { CustomMeal, Meal } from '@/types';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS
@@ -18,6 +20,11 @@ import {
 
 // slide the sheet fully past the bottom edge regardless of device height or sheet content length
 const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
+
+// Kept in sync with the Slider's minimumValue/maximumValue below so typed
+// entry (tap the calorie value to edit) and the drag control agree on range.
+const CALORIE_MIN = 50;
+const CALORIE_MAX = 1500;
 
 const MEAL_TYPES: { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
   { name: 'Breakfast', icon: 'sunny-outline',      color: COLORS.neonYellow },
@@ -38,9 +45,13 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   onSaved: (log: any) => void;
+  /** When set, the sheet edits this meal in place instead of logging a new one. */
+  editEntry?: Meal | null;
+  onDeleted?: (id: string) => void;
 }
 
-export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
+export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDeleted }: Props) {
+  const router = useRouter();
   const { user } = useAuth();
   const { profile, refreshProfile } = useProfile();
   const CALORIE_GOAL = useMemo(() => nutritionTargetsOrDefault(profile).calorieGoal, [profile]);
@@ -53,6 +64,11 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
   const [showMacros, setShowMacros] = useState(false);
   const [todayCalories, setTodayCalories] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [customMeals, setCustomMeals] = useState<CustomMeal[]>([]);
+  const [editingCalories, setEditingCalories] = useState(false);
+  const [calorieDraft, setCalorieDraft] = useState(String(400));
+  const [deleting, setDeleting] = useState(false);
+  const isEditing = !!editEntry;
 
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -79,6 +95,18 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
   useEffect(() => {
     if (visible) {
       loadTodayCalories();
+      loadCustomMeals();
+      if (editEntry) {
+        setMealName(editEntry.meal_name);
+        setMealType(editEntry.meal_type ?? '');
+        setCalories(editEntry.calories ?? 0);
+        setProtein(editEntry.protein_g ?? 0);
+        setCarbs(editEntry.carbs_g ?? 0);
+        setFat(editEntry.fat_g ?? 0);
+        setShowMacros(!!(editEntry.protein_g || editEntry.carbs_g || editEntry.fat_g));
+      } else {
+        reset();
+      }
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }),
         Animated.timing(overlayAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
@@ -104,21 +132,36 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
     if (data) setTodayCalories(data.reduce((sum, r) => sum + r.calories, 0));
   };
 
+  const loadCustomMeals = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('custom_meals')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true });
+    if (error) { console.error('Failed to load custom meals:', error.message); return; }
+    if (data) setCustomMeals(data);
+  };
+
   const reset = () => {
     setMealType(''); setMealName(''); setCalories(400);
     setProtein(20); setCarbs(40); setFat(10); setShowMacros(false);
+    setEditingCalories(false);
   };
 
   const handleClose = () => { reset(); onClose(); };
 
   // plays the slide-down/fade-out first, then closes — used for backdrop taps and Cancel,
-  // since Modal's `visible` prop hides the native modal instantly otherwise, cutting the animation short
-  const animateClose = () => {
+  // since Modal's `visible` prop hides the native modal instantly otherwise, cutting the animation short.
+  // Accepts an optional callback (e.g. navigating away) that runs after the sheet has fully closed.
+  const animateClose = (after?: () => void) => {
     Animated.parallel([
       Animated.spring(slideAnim, { toValue: SLIDE_DISTANCE, useNativeDriver: true, damping: 20, stiffness: 200 }),
       Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-    ]).start(() => handleClose());
+    ]).start(() => { handleClose(); after?.(); });
   };
+
+  const goToCustomMeals = () => animateClose(() => router.push('/custom-meals'));
 
   const getMealColor = (m: string) => MEAL_TYPES.find(t => t.name === m)?.color ?? COLORS.neonYellow;
 
@@ -128,6 +171,43 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
     setCarbs(m.carbs); setFat(m.fat);
   };
 
+  // Custom meals only carry a name + calorie count (see Settings > Nutrition >
+  // Custom Meals) — meal type and macros are left for the user to fill in.
+  const applyCustomMeal = (m: CustomMeal) => {
+    setMealName(m.name); setCalories(m.calories);
+    setProtein(0); setCarbs(0); setFat(0);
+  };
+
+  const startEditingCalories = () => {
+    setCalorieDraft(String(calories));
+    setEditingCalories(true);
+  };
+
+  const commitCalorieEdit = () => {
+    const num = parseInt(calorieDraft, 10);
+    if (!isNaN(num)) setCalories(Math.min(Math.max(num, CALORIE_MIN), CALORIE_MAX));
+    setEditingCalories(false);
+  };
+
+  // Quick-add chips: once the user has saved any custom meals, those fully
+  // replace the hardcoded presets below (which only exist as a starting
+  // point for a brand-new profile with nothing saved yet).
+  const quickChips = customMeals.length > 0
+    ? customMeals.map(m => ({
+        key: m.id,
+        label: m.name,
+        color: COLORS.neonYellow,
+        selected: mealName === m.name,
+        onPress: () => applyCustomMeal(m),
+      }))
+    : QUICK_MEALS.map(m => ({
+        key: m.name,
+        label: m.name,
+        color: getMealColor(m.meal_type),
+        selected: mealName === m.name,
+        onPress: () => applyQuickMeal(m),
+      }));
+
   const handleSave = async () => {
     if (!mealName || !mealType) {
       Alert.alert('Missing Info', 'Please enter a meal name and type');
@@ -135,6 +215,32 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
     }
     if (!user) return;
     setSaving(true);
+
+    if (isEditing && editEntry) {
+      const { data, error } = await supabase
+        .from('calorie_logs')
+        .update({
+          meal_name: mealName,
+          meal_type: mealType,
+          calories,
+          protein_g: protein,
+          carbs_g: carbs,
+          fat_g: fat,
+        })
+        .eq('id', editEntry.id)
+        .select()
+        .single();
+
+      setSaving(false);
+      if (error) { Alert.alert('Error', error.message); return; }
+      if (data) {
+        // Flat XP-per-meal (XP_MEAL) doesn't depend on the calorie value, so
+        // an edit never changes how much XP was already earned — no award here.
+        setTodayCalories(p => p - (editEntry.calories ?? 0) + calories);
+        onSaved(data); reset(); onClose();
+      }
+      return;
+    }
 
     const { data, error } = await supabase
       .from('calorie_logs')
@@ -159,10 +265,37 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
     }
   };
 
+  const handleDelete = () => {
+    if (!editEntry) return;
+    Alert.alert(
+      'Delete Meal',
+      `Remove "${editEntry.meal_name}" from today's log?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!user) return;
+            setDeleting(true);
+            const { error } = await supabase.from('calorie_logs').delete().eq('id', editEntry.id);
+            if (error) { setDeleting(false); Alert.alert('Error', error.message); return; }
+            await awardXP(user.id, -XP_MEAL);
+            await refreshProfile();
+            setDeleting(false);
+            setTodayCalories(p => p - (editEntry.calories ?? 0));
+            onDeleted?.(editEntry.id);
+            reset(); onClose();
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
       <Animated.View style={[styles.overlay, { opacity: overlayAnim }]}>
-        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={animateClose} />
+        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => animateClose()} />
       </Animated.View>
 
       <KeyboardAvoidingView
@@ -175,7 +308,20 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
             <View style={styles.handleArea}>
               <View style={styles.handleBar} />
             </View>
-            <Text style={styles.title}>Log Meal</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>{isEditing ? 'Edit Meal' : 'Log Meal'}</Text>
+              {isEditing && (
+                <TouchableOpacity
+                  onPress={handleDelete}
+                  activeOpacity={0.7}
+                  disabled={deleting}
+                  style={styles.deleteIconBtn}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="trash-outline" size={18} color={COLORS.accent} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -196,21 +342,30 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
             </View>
 
             {/* Quick meals */}
-            <Text style={styles.label}>Quick add</Text>
+            <View style={styles.quickAddHeader}>
+              <Text style={styles.label}>Quick add</Text>
+              <TouchableOpacity
+                onPress={goToCustomMeals}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.manageLink}>{customMeals.length > 0 ? 'Manage' : 'Add your own'}</Text>
+              </TouchableOpacity>
+            </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.lg }}>
               <View style={styles.chipRow}>
-                {QUICK_MEALS.map((m) => (
+                {quickChips.map((c) => (
                   <TouchableOpacity
-                    key={m.name}
-                    style={[styles.chip, mealName === m.name && {
-                      borderColor: getMealColor(m.meal_type),
-                      backgroundColor: getMealColor(m.meal_type) + '22',
+                    key={c.key}
+                    style={[styles.chip, c.selected && {
+                      borderColor: c.color,
+                      backgroundColor: c.color + '22',
                     }]}
-                    onPress={() => applyQuickMeal(m)}
+                    onPress={c.onPress}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.chipText, mealName === m.name && { color: getMealColor(m.meal_type) }]}>
-                      {m.name}
+                    <Text style={[styles.chipText, c.selected && { color: c.color }]}>
+                      {c.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -250,10 +405,33 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
             />
 
             {/* Calories slider */}
-            <Text style={styles.label}>Calories — {calories} kcal</Text>
+            <View style={styles.calorieLabelRow}>
+              <Text style={styles.label}>Calories</Text>
+              {editingCalories ? (
+                <TextInput
+                  style={styles.calorieInput}
+                  value={calorieDraft}
+                  onChangeText={(t) => setCalorieDraft(t.replace(/[^0-9]/g, ''))}
+                  onBlur={commitCalorieEdit}
+                  onSubmitEditing={commitCalorieEdit}
+                  keyboardType="number-pad"
+                  autoFocus
+                  selectTextOnFocus
+                  maxLength={4}
+                />
+              ) : (
+                <TouchableOpacity
+                  onPress={startEditingCalories}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.calorieValue}>{calories} kcal · tap to edit</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <Slider
               style={styles.slider}
-              minimumValue={50} maximumValue={1500} step={10}
+              minimumValue={CALORIE_MIN} maximumValue={CALORIE_MAX} step={10}
               value={calories} onValueChange={setCalories}
               minimumTrackTintColor={COLORS.neonYellow}
               maximumTrackTintColor={COLORS.borderDefault}
@@ -294,10 +472,10 @@ export default function CaloriesLog({ visible, onClose, onSaved }: Props) {
               style={[styles.saveButton, saving && { opacity: 0.6 }]}
               onPress={handleSave} activeOpacity={0.8} disabled={saving}
             >
-              <Text style={styles.saveText}>{saving ? 'Saving…' : 'Log Meal'}</Text>
+              <Text style={styles.saveText}>{saving ? 'Saving…' : isEditing ? 'Save Changes' : 'Log Meal'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.cancelButton} onPress={animateClose} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => animateClose()} activeOpacity={0.7}>
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -319,6 +497,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary,
   },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  deleteIconBtn: {
+    width: 32, height: 32, borderRadius: RADIUS.full,
+    alignItems: 'center', justifyContent: 'center',
+  },
   progressCard: {
     backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
     marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDefault,
@@ -333,6 +516,8 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted,
     letterSpacing: 1.5, marginBottom: SPACING.sm,
   },
+  quickAddHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  manageLink: { fontSize: FONT_SIZES.xs, color: COLORS.primary, fontWeight: FONT_WEIGHTS.bold, marginBottom: SPACING.sm },
   chipRow: { flexDirection: 'row', gap: SPACING.sm, paddingBottom: SPACING.xs },
   chip: { borderColor: COLORS.borderDefault, borderWidth: 1, borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs },
   chipText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.medium },
@@ -348,6 +533,14 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm, padding: SPACING.md, color: COLORS.textPrimary,
   },
   slider: { width: '100%', height: 40 },
+  calorieLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  calorieValue: { fontSize: FONT_SIZES.sm, color: COLORS.neonYellow, fontWeight: FONT_WEIGHTS.bold, marginBottom: SPACING.sm },
+  calorieInput: {
+    backgroundColor: COLORS.bgTertiary, borderColor: COLORS.neonYellow, borderWidth: 1,
+    borderRadius: RADIUS.sm, paddingHorizontal: SPACING.sm, paddingVertical: 4,
+    color: COLORS.textPrimary, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold,
+    minWidth: 70, textAlign: 'right', marginBottom: SPACING.xs,
+  },
   macroToggle: { marginBottom: SPACING.lg, paddingVertical: SPACING.sm },
   macroToggleText: { fontSize: FONT_SIZES.sm, color: COLORS.primary, fontWeight: FONT_WEIGHTS.bold },
   saveButton: { backgroundColor: COLORS.neonYellow + 'dd', borderRadius: RADIUS.md, padding: SPACING.lg, alignItems: 'center', marginBottom: SPACING.sm },
