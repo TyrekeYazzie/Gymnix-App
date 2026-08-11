@@ -171,7 +171,7 @@ export default function DashboardScreen() {
       .select('id, name, category, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(3);
+      .limit(8);
     if (recentError) console.error('Failed to load recent workouts:', recentError.message);
     else setRecentWorkouts(recent ?? []);
 
@@ -372,7 +372,9 @@ export default function DashboardScreen() {
           </View>
         </ScrollView>
 
-        {/* Recent Workouts */}
+        {/* Recent Workouts — bounded height with its own inner scroll, so a
+            growing list never pushes the rest of the dashboard down further;
+            everything else on this page keeps scrolling normally as one page. */}
         <Text style={styles.sectionTitle}>Recent workouts</Text>
 
         {recentWorkouts.length === 0 ? (
@@ -380,15 +382,19 @@ export default function DashboardScreen() {
             <Text style={styles.workoutCategory}>No workouts logged yet</Text>
           </BlurView>
         ) : (
-          recentWorkouts.map((workout) => (
-            <BlurView key={workout.id} intensity={25} tint="light" style={styles.workoutCard}>
-              <View style={styles.workoutLeft}>
-                <Text style={styles.workoutName}>{workout.name}</Text>
-                <Text style={styles.workoutCategory}>{workout.category}</Text>
-              </View>
-              <Text style={styles.workoutDate}>{formatRelativeDate(workout.created_at)}</Text>
-            </BlurView>
-          ))
+          <View style={styles.recentWorkoutsBox}>
+            <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
+              {recentWorkouts.map((workout) => (
+                <BlurView key={workout.id} intensity={25} tint="light" style={styles.workoutCard}>
+                  <View style={styles.workoutLeft}>
+                    <Text style={styles.workoutName}>{workout.name}</Text>
+                    <Text style={styles.workoutCategory}>{workout.category}</Text>
+                  </View>
+                  <Text style={styles.workoutDate}>{formatRelativeDate(workout.created_at)}</Text>
+                </BlurView>
+              ))}
+            </ScrollView>
+          </View>
         )}
 
       </ScrollView>
@@ -665,7 +671,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  // Recent workouts
+  // Recent workouts — fixed height shows ~3 cards with a peek of the next
+  // one, so it visually reads as scrollable rather than just short.
+  recentWorkoutsBox: {
+    height: 240,
+  },
   workoutCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',

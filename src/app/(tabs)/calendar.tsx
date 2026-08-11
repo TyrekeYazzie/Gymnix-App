@@ -168,7 +168,9 @@ export default function CalendarScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']} {...swipeHandlers}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {/* Fixed top — the month grid stays put so you can always jump to a
+          different day; only the selected day's details below it scroll. */}
+      <View style={styles.fixedTop}>
 
         <Text style={styles.screenTitle}>Calendar</Text>
         <View style={styles.dividerLine} />
@@ -229,11 +231,13 @@ export default function CalendarScreen() {
           </View>
         </View>
 
-        {/* Selected day detail */}
+        {/* Selected day detail section title stays fixed with the grid above it */}
         <Text style={styles.sectionTitle}>
           {selected.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </Text>
+      </View>
 
+      <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
         {!hasAnyLogs ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No logs for this day</Text>
@@ -350,7 +354,9 @@ export default function CalendarScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bgPrimary },
-  content: { padding: SPACING.lg, paddingBottom: SPACING.xxxl },
+  fixedTop: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg },
+  listScroll: { flex: 1 },
+  listContent: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxxl },
 
   screenTitle: {
     fontSize: FONT_SIZES.xxl,
