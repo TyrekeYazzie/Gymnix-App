@@ -172,6 +172,14 @@ export default function Settings() {
             subtext="Weight goal, pace, and activity level"
             onPress={() => router.push('/nutrition-goals')}
           />
+          <View style={styles.rowDivider} />
+          <SettingsRow
+            icon="fast-food-outline"
+            iconColor={COLORS.neonYellow}
+            label="Custom Meals"
+            subtext="Save your own meals for one-tap logging"
+            onPress={() => router.push('/custom-meals')}
+          />
         </View>
 
         {/* Preferences */}

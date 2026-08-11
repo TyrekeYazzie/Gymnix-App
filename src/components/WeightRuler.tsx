@@ -71,6 +71,14 @@ export default function WeightRuler({
     commitFromOffset(e.nativeEvent.contentOffset.x);
   };
 
+  // Fires continuously while the finger is down (and through momentum) so the
+  // pointer's value — and anything reading it, like the number readout above
+  // the ruler — tracks the ruler live instead of only snapping once on release.
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!dragging.current) return;
+    commitFromOffset(e.nativeEvent.contentOffset.x);
+  };
+
   // Measure first so we know how much side padding centers the pointer —
   // rendering ticks before that would put them in the wrong place for a frame.
   if (!wrapWidth) {
@@ -90,6 +98,7 @@ export default function WeightRuler({
         decelerationRate="fast"
         contentContainerStyle={{ paddingHorizontal: sidePad }}
         onScrollBeginDrag={() => { dragging.current = true; }}
+        onScroll={handleScroll}
         onMomentumScrollEnd={handleMomentumEnd}
         onScrollEndDrag={handleScrollEndDrag}
         scrollEventThrottle={16}

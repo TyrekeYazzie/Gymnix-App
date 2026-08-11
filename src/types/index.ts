@@ -88,6 +88,17 @@ export interface Meal {
   created_at: string;
 }
 
+// Mirrors the `custom_meals` table (Settings > Nutrition > Custom Meals) —
+// user-defined presets that show up as quick-add chips in the Log Meal
+// sheet. See supabase/migrations/20260810000000_custom_meals.sql.
+export interface CustomMeal {
+  id: string;
+  user_id: string;
+  name: string;
+  calories: number;
+  created_at: string;
+}
+
 // Row shape returned by the get_level_leaderboard / get_my_level_rank RPCs
 // (see supabase/migrations/20260805000000_leaderboards.sql). user_id/rnk are
 // absent from the "my rank" variant, which is always for the caller.
