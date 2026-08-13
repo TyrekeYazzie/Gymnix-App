@@ -36,10 +36,18 @@
         "expo-image-picker",
         {
           "cameraPermission": "Allow FitnessApp to access your camera to take a photo of your gym session.",
-          "photosPermission": "Allow FitnessApp to access your photos to attach one to a workout."
+          "photosPermission": "Allow FitnessApp to access your photos to attach one to a workout.",
+          "microphonePermission": false
         }
       ],
       "@sentry/react-native"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "33080e7b-194e-4f5f-bb70-aa407ad9fce1"
+      }
+    },
+    "owner": "littlechief"
   }
 }
