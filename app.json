@@ -14,9 +14,11 @@
       "backgroundColor": "#0a0a0a"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tyrekeyazzie.fitnessapp"
     },
     "android": {
+      "package": "com.tyrekeyazzie.fitnessapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0a0a0a"
