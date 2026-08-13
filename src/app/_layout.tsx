@@ -8,8 +8,10 @@ import { COLORS, SPACING } from '@/constants/theme';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ProfileProvider } from '@/context/ProfileContext';
 import { useAuth } from '@/hooks/useAuth';
+import { Sentry } from '@/lib/sentry';
+import ErrorFallback from '@/components/ErrorFallback';
 
-export default function Layout() {
+function Layout() {
   const router = useRouter();
   const segments = useSegments();
   const { session, loading: authLoading } = useAuth();
@@ -56,3 +58,18 @@ export default function Layout() {
     </ProfileProvider>
   );
 }
+
+// Catches render/lifecycle errors anywhere below it (auth state, fonts, and
+// the entire routed app) that would otherwise crash to a blank screen or
+// the native red-box, shows ErrorFallback instead, and reports the error to
+// Sentry when EXPO_PUBLIC_SENTRY_DSN is configured (see src/lib/sentry.ts).
+// Sentry.wrap also adds automatic touch/navigation breadcrumbs.
+function RootLayout() {
+  return (
+    <Sentry.ErrorBoundary fallback={({ resetError }) => <ErrorFallback resetError={resetError} />}>
+      <Layout />
+    </Sentry.ErrorBoundary>
+  );
+}
+
+export default Sentry.wrap(RootLayout);

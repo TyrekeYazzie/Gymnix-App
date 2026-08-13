@@ -38,7 +38,8 @@
           "cameraPermission": "Allow FitnessApp to access your camera to take a photo of your gym session.",
           "photosPermission": "Allow FitnessApp to access your photos to attach one to a workout."
         }
-      ]
+      ],
+      "@sentry/react-native"
     ]
   }
 }
