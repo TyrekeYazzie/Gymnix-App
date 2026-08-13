@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Alert, Linking
+  StyleSheet, Alert, Linking, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -10,12 +10,13 @@ import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
+import { deleteAllWorkoutPhotos } from '@/utils/workoutPhotos';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS, CARD
 } from '@/constants/theme';
 
-const SUPPORT_EMAIL = 'support@fitnessapp.example';
+const SUPPORT_EMAIL = 'ifitsupportcenter@gmail.com';
 
 function Toggle({ value, onValueChange, disabled }: { value: boolean; onValueChange: (v: boolean) => void; disabled?: boolean }) {
   return (
@@ -65,6 +66,7 @@ export default function Settings() {
   const { profile, setProfile } = useProfile();
   const [savingUnits, setSavingUnits] = useState(false);
   const [savingReminders, setSavingReminders] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const isImperial = profile?.units === 'imperial';
 
@@ -97,16 +99,31 @@ export default function Settings() {
     if (data) setProfile(data);
   };
 
+  const performAccountDeletion = async () => {
+    if (!user) return;
+    setDeletingAccount(true);
+    // Best-effort: storage objects aren't covered by the cascade the RPC
+    // below relies on, so clean those up first (see deleteAllWorkoutPhotos).
+    await deleteAllWorkoutPhotos(user.id);
+    const { error } = await supabase.rpc('delete_user');
+    if (error) {
+      setDeletingAccount(false);
+      Alert.alert('Error', 'Could not delete your account. Please try again, or contact support if this keeps happening.');
+      return;
+    }
+    // The row behind this session is gone; clear the local session too and
+    // drop back to the login screen rather than leaving a dead session hanging.
+    await supabase.auth.signOut();
+    router.replace('/(auth)/login');
+  };
+
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account',
-      'Account deletion requires manual confirmation for security. Email support and we\'ll process it within 48 hours.',
+      'This permanently deletes your account and all your data — workouts, logs, photos, and progress. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Email Support',
-          onPress: () => Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Delete My Account&body=Please delete my account (${user?.email}).`),
-        },
+        { text: 'Delete', style: 'destructive', onPress: performAccountDeletion },
       ]
     );
   };
@@ -221,7 +238,8 @@ export default function Settings() {
             iconColor={COLORS.accent}
             label="Delete Account"
             labelColor={COLORS.accent}
-            onPress={handleDeleteAccount}
+            onPress={deletingAccount ? undefined : handleDeleteAccount}
+            control={deletingAccount ? <ActivityIndicator color={COLORS.accent} /> : undefined}
           />
         </View>
 

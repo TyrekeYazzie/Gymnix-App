@@ -79,6 +79,27 @@ export async function uploadWorkoutPhoto(
   }
 }
 
+// Deletes every workout photo this user has stored. Called right before
+// account deletion — Storage objects aren't covered by the auth.users
+// cascade that cleans up the rest of a deleted account's data (see
+// supabase/migrations/20260812000000_delete_own_account.sql), so they'd
+// otherwise be orphaned (unreachable, but still taking up storage).
+// Best-effort: failures are logged, not thrown, so a storage hiccup never
+// blocks the user from actually deleting their account.
+export async function deleteAllWorkoutPhotos(userId: string): Promise<void> {
+  const { data, error } = await supabase.storage.from(BUCKET).list(userId);
+  if (error) {
+    console.error('Failed to list workout photos for deletion:', error.message);
+    return;
+  }
+  if (!data || data.length === 0) return;
+  const paths = data.map((file) => `${userId}/${file.name}`);
+  const { error: removeError } = await supabase.storage.from(BUCKET).remove(paths);
+  if (removeError) {
+    console.error('Failed to delete workout photos:', removeError.message);
+  }
+}
+
 // Batch-resolves storage paths to short-lived signed URLs for display.
 export async function getSignedPhotoUrls(paths: string[]): Promise<Record<string, string>> {
   if (paths.length === 0) return {};
