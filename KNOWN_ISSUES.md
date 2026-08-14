@@ -1,5 +1,33 @@
 # Known Issues
 
+## Login lockout is client-side only (accepted risk, 2026-08-14)
+
+`src/utils/rateLimiter.ts` locks an account out after repeated failed
+logins, but it only runs on-device — anyone calling Supabase's password
+sign-in endpoint directly (curl, Postman, a script) skips it entirely and
+can attempt passwords without limit as far as this app's own code is
+concerned.
+
+The intended real fix — a Supabase Auth Hook
+(`supabase/migrations/20260814000000_password_verification_rate_limit.sql`,
+which creates the table/function for it) — is written but **not active**:
+enabling Auth Hooks in the dashboard requires the Team or Enterprise
+Supabase plan, and this project is not on one. Also unconfirmed: Supabase's
+own [documented rate limits](https://supabase.com/docs/guides/auth/rate-limits)
+don't list a specific limit for password sign-in itself (unlike signup,
+password-recovery emails, OTP, etc.), so there may be little to no
+platform-level backstop today beyond generic abuse protection — worth
+checking Dashboard > Authentication > Rate Limits directly to confirm what,
+if anything, applies.
+
+**Decision:** accept this risk for now rather than block on a plan upgrade
+or build a CAPTCHA-based alternative (Supabase supports hCaptcha/Turnstile
+on all plans, but it's web-widget-first — no official React Native/Expo
+guidance, so it'd mean a custom WebView integration). Revisit if the
+Supabase plan is ever upgraded (the hook migration is already written and
+just needs wiring in the dashboard — see the migration file) or if login
+abuse actually shows up in practice.
+
 ## Dependency vulnerabilities in build tooling (tracked 2026-08-14)
 
 `npm audit` reports **24 vulnerabilities (12 high, 12 moderate, 0 critical)**.

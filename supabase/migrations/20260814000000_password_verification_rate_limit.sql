@@ -12,13 +12,22 @@
 -- sees in the app matches what the server actually enforces:
 --   5 attempts -> 1 min, 6 -> 2 min, 7 -> 4 min, 8+ -> 30 min.
 --
--- IMPORTANT -- this migration alone does not turn the hook on. Wiring a
--- Postgres-function hook to an auth event is a project-level setting, not
--- something a SQL migration can flip: in the Supabase Dashboard, go to
--- Authentication > Hooks > Password Verification Attempt, choose
--- "Postgres Function", and select public.hook_password_verification_attempt.
--- (If this project later adopts the Supabase CLI/config.toml workflow
--- instead of dashboard-applied migrations, the equivalent is:
+-- STATUS (2026-08-14): NOT ACTIVE. Wiring a Postgres-function hook to an
+-- auth event happens in Supabase Dashboard > Authentication > Hooks >
+-- Password Verification Attempt > Postgres Function, but that page is
+-- gated behind the Team/Enterprise plan -- confirmed by hitting a "Team or
+-- Enterprise Plan required" wall trying to enable it on this project's
+-- current plan. Decision: leave the client-side lockout in
+-- src/utils/rateLimiter.ts as the only protection for now (accepted risk --
+-- see KNOWN_ISSUES.md) rather than block on a plan upgrade or build a
+-- CAPTCHA-based alternative. This table/function are left in place, inert,
+-- so upgrading the plan later is a pure dashboard toggle with zero new code.
+--
+-- If the plan is ever upgraded, wiring instructions are: Supabase Dashboard
+-- > Authentication > Hooks > Password Verification Attempt > Postgres
+-- Function > public.hook_password_verification_attempt. (If this project
+-- later adopts the Supabase CLI/config.toml workflow instead of
+-- dashboard-applied migrations, the equivalent is:
 --   [auth.hook.password_verification_attempt]
 --   enabled = true
 --   uri = "pg-functions://postgres/public/hook_password_verification_attempt"
