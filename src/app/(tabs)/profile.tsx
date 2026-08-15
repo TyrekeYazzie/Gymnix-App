@@ -206,6 +206,18 @@ export default function Profile() {
           <View style={styles.dataRowDivider} />
           <TouchableOpacity
             style={styles.systemRow}
+            onPress={() => router.push('/achievements')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.sysIcon, { borderColor: COLORS.neonOrange }]}>
+              <Ionicons name="ribbon-outline" size={14} color={COLORS.neonOrange} />
+            </View>
+            <Text style={styles.systemLabel}>Achievements</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.dataRowDivider} />
+          <TouchableOpacity
+            style={styles.systemRow}
             onPress={() => setEditing(true)}
             activeOpacity={0.7}
           >
