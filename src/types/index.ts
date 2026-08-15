@@ -35,6 +35,7 @@ export interface Profile {
   total_xp: number;
   weekly_routine: WeeklyRoutine;
   created_at: string;
+  onboarding_completed_at: string | null;
 }
 
 export interface Workout {
