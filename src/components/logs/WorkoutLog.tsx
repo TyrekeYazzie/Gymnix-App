@@ -389,6 +389,8 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                     style={styles.closeBtn}
                     activeOpacity={0.7}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete workout"
                   >
                     <Ionicons name="trash-outline" size={16} color={COLORS.accent} />
                   </TouchableOpacity>
@@ -399,6 +401,8 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                     activeOpacity={0.7}
                     style={styles.photoBtn}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={photoUri ? 'Change attached photo' : 'Attach a photo'}
                   >
                     {photoUri ? (
                       <Image source={{ uri: photoUri }} style={styles.photoThumb} />
@@ -407,7 +411,13 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                     )}
                   </TouchableOpacity>
                   {photoUri && (
-                    <TouchableOpacity onPress={() => setPhotoUri(null)} activeOpacity={0.7} style={styles.photoRemoveBadge}>
+                    <TouchableOpacity
+                      onPress={() => setPhotoUri(null)}
+                      activeOpacity={0.7}
+                      style={styles.photoRemoveBadge}
+                      accessibilityRole="button"
+                      accessibilityLabel="Remove attached photo"
+                    >
                       <Ionicons name="close" size={10} color={COLORS.textInverse} />
                     </TouchableOpacity>
                   )}
@@ -417,6 +427,8 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                   style={styles.closeBtn}
                   activeOpacity={0.7}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close"
                 >
                   <Ionicons name="close" size={16} color={COLORS.textMuted} />
                 </TouchableOpacity>

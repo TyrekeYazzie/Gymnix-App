@@ -347,6 +347,8 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
                         style={styles.historyDeleteBtn}
                         activeOpacity={0.7}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Delete ${formatDisplay(entry.amount_ml)} water entry`}
                       >
                         <Ionicons name="trash-outline" size={16} color={COLORS.accent} />
                       </TouchableOpacity>

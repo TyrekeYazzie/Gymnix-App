@@ -341,6 +341,8 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
                   disabled={deleting}
                   style={styles.deleteIconBtn}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete meal"
                 >
                   <Ionicons name="trash-outline" size={18} color={COLORS.accent} />
                 </TouchableOpacity>

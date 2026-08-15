@@ -288,6 +288,8 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
                   style={styles.historyDeleteBtn}
                   activeOpacity={0.7}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete last logged weight entry"
                 >
                   <Ionicons name="trash-outline" size={16} color={COLORS.accent} />
                 </TouchableOpacity>
@@ -336,6 +338,8 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
                         style={styles.historyDeleteBtn}
                         activeOpacity={0.7}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Delete ${toDisplay(entry.weight_kg).toFixed(1)} ${displayUnit} weight entry`}
                       >
                         <Ionicons name="trash-outline" size={16} color={COLORS.accent} />
                       </TouchableOpacity>

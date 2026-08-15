@@ -75,6 +75,9 @@ export default function TabBar({ state, descriptors, navigation, onPressCenter }
         style={styles.tab}
         onPress={onPress}
         activeOpacity={0.7}
+        accessibilityRole="tab"
+        accessibilityLabel={String(label)}
+        accessibilityState={{ selected: isFocused }}
       >
         {options.tabBarIcon?.({
           color: isFocused ? COLORS.primary : COLORS.textMuted,
@@ -101,6 +104,9 @@ export default function TabBar({ state, descriptors, navigation, onPressCenter }
             style={styles.centerButton}
             onPress={handleCenterPress}
             activeOpacity={0.9}
+            accessibilityRole="button"
+            accessibilityLabel="Log new entry"
+            accessibilityHint="Opens the menu to log a workout, cardio, meal, water, or weight entry"
           >
             <BlurView intensity={50} tint="light" style={StyleSheet.absoluteFillObject} />
             <View style={styles.centerTint} />
