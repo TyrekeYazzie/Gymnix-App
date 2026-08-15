@@ -10,7 +10,13 @@
 -- earned. The only writer is the SECURITY DEFINER function below, which
 -- computes eligibility itself rather than trusting client input.
 
-create table public.achievements (
+-- Every statement below is written to be safe to paste and run more than
+-- once (`if not exists` / `drop ... if exists` / `on conflict do nothing`),
+-- since there's no local Supabase CLI or migration tracker in this project
+-- — this file only ever gets applied by hand-pasting into the SQL editor,
+-- so there's no automatic guard against accidentally running it twice.
+
+create table if not exists public.achievements (
   key          text primary key,
   name         text not null,
   description  text not null,
@@ -23,13 +29,14 @@ alter table public.achievements enable row level security;
 
 -- Public reference data — every user needs to see the full catalog
 -- (including locked entries) to render a browsing screen.
+drop policy if exists "Authenticated users can read the achievement catalog" on public.achievements;
 create policy "Authenticated users can read the achievement catalog"
   on public.achievements
   for select
   to authenticated
   using (true);
 
-create table public.user_achievements (
+create table if not exists public.user_achievements (
   user_id          uuid not null references auth.users (id) on delete cascade,
   achievement_key  text not null references public.achievements (key) on delete cascade,
   unlocked_at      timestamptz not null default now(),
@@ -38,6 +45,7 @@ create table public.user_achievements (
 
 alter table public.user_achievements enable row level security;
 
+drop policy if exists "Users can view their own unlocked achievements" on public.user_achievements;
 create policy "Users can view their own unlocked achievements"
   on public.user_achievements
   for select
@@ -56,7 +64,8 @@ insert into public.achievements (key, name, description, icon, category, sort_or
   ('streak_7',       'Week One',         'Reach a 7-day workout streak.',      'flame-outline',      'consistency', 100),
   ('streak_30',      'Locked In',        'Reach a 30-day workout streak.',     'flame',               'consistency', 110),
   ('level_5',        'Leveling Up',      'Reach Level 5.',                     'trophy-outline',     'level',       120),
-  ('level_10',       'Veteran',          'Reach Level 10.',                    'trophy',             'level',       130);
+  ('level_10',       'Veteran',          'Reach Level 10.',                    'trophy',             'level',       130)
+on conflict (key) do nothing;
 
 -- Computes the caller's stats, inserts any newly-qualified achievement
 -- (idempotent via on conflict do nothing), and returns only the rows this
