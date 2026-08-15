@@ -138,6 +138,34 @@ export interface StreakLeaderboardEntry {
   rnk: number;
 }
 
+// Row shape from public.achievements (the full catalog — see
+// supabase/migrations/20260815010000_achievements.sql). `icon` is an
+// Ionicons glyph name.
+export interface AchievementDef {
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  sort_order: number;
+}
+
+// getMyAchievements() merges AchievementDef with the caller's
+// user_achievements row (if any) — unlocked_at is null for locked entries,
+// which is what the browsing screen keys its locked/unlocked styling off.
+export interface MyAchievement extends AchievementDef {
+  unlocked_at: string | null;
+}
+
+// Row shape returned by check_and_unlock_achievements() — only the
+// achievements newly unlocked by that specific call, for banner display.
+export interface UnlockedAchievement {
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+}
+
 export interface ValidationResult {
   isValid: boolean;
   error: string | null;
