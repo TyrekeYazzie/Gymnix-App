@@ -128,6 +128,16 @@ export interface WorkoutStreak {
   longest_streak: number;
 }
 
+// Row shape returned by get_streak_leaderboard / get_my_streak_rank (see
+// supabase/migrations/20260815000000_streak_leaderboard.sql). Ranked by
+// current streak, not longest — matches the "day streak" shown on Dashboard.
+export interface StreakLeaderboardEntry {
+  user_id: string;
+  full_name: string | null;
+  current_streak: number;
+  rnk: number;
+}
+
 export interface ValidationResult {
   isValid: boolean;
   error: string | null;

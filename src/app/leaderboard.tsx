@@ -12,21 +12,23 @@ import {
   getLevelLeaderboard, getMyLevelRank,
   getStrengthLeaderboard, getMyStrengthRank,
   getCardioLeaderboard, getMyCardioRank,
-  MyLevelRank, MyLogCountRank,
+  getStreakLeaderboard, getMyStreakRank,
+  MyLevelRank, MyLogCountRank, MyStreakRank,
 } from '@/lib/leaderboard';
-import { LevelLeaderboardEntry, LogCountLeaderboardEntry } from '@/types';
+import { LevelLeaderboardEntry, LogCountLeaderboardEntry, StreakLeaderboardEntry } from '@/types';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS, CARD
 } from '@/constants/theme';
 
-type TabKey = 'level' | 'strength' | 'cardio';
-type Row = LevelLeaderboardEntry | LogCountLeaderboardEntry;
+type TabKey = 'level' | 'strength' | 'cardio' | 'streak';
+type Row = LevelLeaderboardEntry | LogCountLeaderboardEntry | StreakLeaderboardEntry;
 
 const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
   { key: 'level',    label: 'Level',    icon: 'trophy-outline',  color: COLORS.primary },
   { key: 'strength', label: 'Strength', icon: 'barbell-outline', color: COLORS.accent },
   { key: 'cardio',   label: 'Cardio',   icon: 'heart-outline',   color: COLORS.neonGreen },
+  { key: 'streak',   label: 'Streak',   icon: 'flame-outline',   color: COLORS.neonOrange },
 ];
 
 function getInitials(name: string | null | undefined): string {
@@ -54,10 +56,12 @@ export default function LeaderboardScreen() {
   const [levelEntries, setLevelEntries] = useState<LevelLeaderboardEntry[]>([]);
   const [strengthEntries, setStrengthEntries] = useState<LogCountLeaderboardEntry[]>([]);
   const [cardioEntries, setCardioEntries] = useState<LogCountLeaderboardEntry[]>([]);
+  const [streakEntries, setStreakEntries] = useState<StreakLeaderboardEntry[]>([]);
 
   const [myLevelRank, setMyLevelRank] = useState<MyLevelRank | null>(null);
   const [myStrengthRank, setMyStrengthRank] = useState<MyLogCountRank | null>(null);
   const [myCardioRank, setMyCardioRank] = useState<MyLogCountRank | null>(null);
+  const [myStreakRank, setMyStreakRank] = useState<MyStreakRank | null>(null);
 
   const load = useCallback(async (which: TabKey) => {
     setLoading(true);
@@ -69,10 +73,14 @@ export default function LeaderboardScreen() {
       const [entries, mine] = await Promise.all([getStrengthLeaderboard(50), getMyStrengthRank()]);
       setStrengthEntries(entries);
       setMyStrengthRank(mine);
-    } else {
+    } else if (which === 'cardio') {
       const [entries, mine] = await Promise.all([getCardioLeaderboard(50), getMyCardioRank()]);
       setCardioEntries(entries);
       setMyCardioRank(mine);
+    } else {
+      const [entries, mine] = await Promise.all([getStreakLeaderboard(50), getMyStreakRank()]);
+      setStreakEntries(entries);
+      setMyStreakRank(mine);
     }
     setLoading(false);
   }, []);
@@ -80,14 +88,24 @@ export default function LeaderboardScreen() {
   useFocusEffect(useCallback(() => { load(tab); }, [tab, load]));
 
   const activeTabDef = TABS.find(t => t.key === tab)!;
-  const rows: Row[] = tab === 'level' ? levelEntries : tab === 'strength' ? strengthEntries : cardioEntries;
-  const myRank = tab === 'level' ? myLevelRank : tab === 'strength' ? myStrengthRank : myCardioRank;
+  const rows: Row[] =
+    tab === 'level' ? levelEntries :
+    tab === 'strength' ? strengthEntries :
+    tab === 'cardio' ? cardioEntries : streakEntries;
+  const myRank =
+    tab === 'level' ? myLevelRank :
+    tab === 'strength' ? myStrengthRank :
+    tab === 'cardio' ? myCardioRank : myStreakRank;
   const myRankInList = rows.some(r => r.user_id === user?.id);
 
   const renderValue = (row: Row) => {
     if (tab === 'level') {
       const r = row as LevelLeaderboardEntry;
       return `Lv ${r.level} · ${r.total_xp.toLocaleString()} XP`;
+    }
+    if (tab === 'streak') {
+      const r = row as StreakLeaderboardEntry;
+      return `${r.current_streak} day${r.current_streak === 1 ? '' : 's'}`;
     }
     const r = row as LogCountLeaderboardEntry;
     return `${r.log_count.toLocaleString()} ${r.log_count === 1 ? 'session' : 'sessions'}`;
@@ -98,6 +116,10 @@ export default function LeaderboardScreen() {
     if (tab === 'level') {
       const r = myRank as MyLevelRank;
       return `Lv ${r.level} · ${r.total_xp.toLocaleString()} XP`;
+    }
+    if (tab === 'streak') {
+      const r = myRank as MyStreakRank;
+      return `${r.current_streak} day${r.current_streak === 1 ? '' : 's'}`;
     }
     const r = myRank as MyLogCountRank;
     return `${r.log_count.toLocaleString()} ${r.log_count === 1 ? 'session' : 'sessions'}`;
@@ -137,9 +159,14 @@ export default function LeaderboardScreen() {
           })}
         </View>
 
-        {tab !== 'level' && (
+        {(tab === 'strength' || tab === 'cardio') && (
           <Text style={styles.explainer}>
             Ranked by sessions logged, not weight lifted or pace — consistency wins.
+          </Text>
+        )}
+        {tab === 'streak' && (
+          <Text style={styles.explainer}>
+            Ranked by current streak, not longest ever — miss a day and you're back at 0.
           </Text>
         )}
 
