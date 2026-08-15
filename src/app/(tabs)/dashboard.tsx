@@ -12,6 +12,7 @@ import { useProfile } from '@/context/ProfileContext';
 import { xpProgress } from '@/lib/xp';
 import { getRank } from '@/constants/ranks';
 import { getMyLevelRank, MyLevelRank } from '@/lib/leaderboard';
+import { getMyWorkoutStreak } from '@/lib/streaks';
 import ProgressPreviewCard from '@/components/ProgressPreviewCard';
 import DailyQuote from '@/components/DailyQuote';
 import RankMedallion from '@/components/RankMedallion';
@@ -147,24 +148,10 @@ export default function DashboardScreen() {
       setWeekDays(days);
     }
 
-    const { data: weekRows, error: weekError } = await supabase
-      .from('workouts')
-      .select('created_at')
-      .eq('user_id', user.id)
-      .gte('created_at', localMidnight(7).toISOString());
-    if (weekError) {
-      console.error('Failed to load weekly workouts:', weekError.message);
-    } else {
-      const loggedDays = new Set(
-        (weekRows ?? []).map(r => new Date(r.created_at).toDateString())
-      );
-      let streakCount = 0;
-      for (let i = 0; i < 7; i++) {
-        if (!loggedDays.has(localMidnight(i).toDateString())) break;
-        streakCount++;
-      }
-      setStreak(streakCount);
-    }
+    // Server-side, unbounded (see supabase/migrations/20260814010000_workout_streak.sql) —
+    // the old version here only ever queried the last 7 days, so it could
+    // never report a streak longer than 7.
+    getMyWorkoutStreak().then(s => setStreak(s?.current_streak ?? 0));
 
     const { data: recent, error: recentError } = await supabase
       .from('workouts')

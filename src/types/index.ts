@@ -120,6 +120,14 @@ export interface LogCountLeaderboardEntry {
   rnk: number;
 }
 
+// Row shape returned by get_my_workout_streak (see
+// supabase/migrations/20260814010000_workout_streak.sql). Both counts are
+// in UTC calendar days and scoped to the caller only.
+export interface WorkoutStreak {
+  current_streak: number;
+  longest_streak: number;
+}
+
 export interface ValidationResult {
   isValid: boolean;
   error: string | null;
