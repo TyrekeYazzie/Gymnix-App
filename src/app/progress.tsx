@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Dimensions
@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import CardioLog, { CARDIO_TYPES, KM_TO_MI, CardioEntry as CardioEditEntry } from '@/components/logs/CardioLog';
 import { DAILY_GOAL_ML } from '@/components/logs/WaterLog';
+import { topSetWeight } from '@/lib/workouts';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS, CARD
@@ -67,6 +68,7 @@ export default function Progress() {
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
   const [cardioLogOpen, setCardioLogOpen] = useState(false);
   const [editingCardio, setEditingCardio] = useState<CardioEditEntry | null>(null);
+  const [strengthHistory, setStrengthHistory] = useState<WorkoutEntry[]>([]);
 
   const loadAll = useCallback(async () => {
     if (!user) return;
@@ -107,15 +109,50 @@ export default function Progress() {
   // selected when logged, same assumption WorkoutLog's input already makes.
   const exerciseNames = Array.from(new Set(workoutEntries.map(w => w.name)));
   const activeExercise = selectedExercise && exerciseNames.includes(selectedExercise) ? selectedExercise : exerciseNames[0];
-  const exerciseDesc = workoutEntries.filter(w => w.name === activeExercise);
+
+  useEffect(() => {
+    if (tab !== 'Strength' || !activeExercise || !user) return;
+    let cancelled = false;
+    // loadAll() above caps at 200 workouts combined across every exercise,
+    // so a prolific user's true all-time best for one exercise could sit
+    // outside that window — this dedicated, unlimited-per-exercise fetch is
+    // what the PR detection below relies on, so a "New PR" claim in the
+    // chart is never based on a partial history.
+    supabase
+      .from('workouts')
+      .select('id,name,sets,created_at')
+      .eq('user_id', user.id)
+      .eq('name', activeExercise)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) { console.error('Failed to load exercise history:', error.message); return; }
+        setStrengthHistory(data ?? []);
+      });
+    return () => { cancelled = true; };
+  }, [tab, activeExercise, user]);
+
+  const exerciseDesc = strengthHistory;
   const exerciseChrono = [...exerciseDesc].reverse();
-  const topSetWeight = (w: WorkoutEntry) => w.sets.length ? Math.max(...w.sets.map(s => s.weight)) : 0;
-  const exerciseValues = exerciseChrono.map(topSetWeight);
+  const exerciseValues = exerciseChrono.map(w => topSetWeight(w.sets));
   const exercisePoints = linePoints(exerciseValues, CHART_WIDTH, CHART_HEIGHT);
   const exercisePolyline = exercisePoints.map(p => `${p.x},${p.y}`).join(' ');
   const currentTop = exerciseValues[exerciseValues.length - 1];
   const startTop = exerciseValues[0];
   const exerciseDelta = currentTop !== undefined && startTop !== undefined ? currentTop - startTop : null;
+  // PR = the point where a session's top-set weight first exceeds every
+  // prior session's for this exact exercise — a running max walked in
+  // chronological order, so only the session that actually set the record
+  // is flagged (not every later session that ties it). A session with 0
+  // (no sets logged) can never be a PR; the first-ever logged session for
+  // an exercise is trivially a PR as long as it has weight on it.
+  let runningMax = 0;
+  const exercisePRFlags = exerciseValues.map((v) => {
+    const isPR = v > 0 && v > runningMax;
+    runningMax = Math.max(runningMax, v);
+    return isPR;
+  });
+  const prSessionIds = new Set(exerciseChrono.filter((_, i) => exercisePRFlags[i]).map(w => w.id));
 
   // ── Water ───────────────────────────────────────────────
   const toFlOz = (ml: number) => ml * 0.033814;
@@ -297,8 +334,8 @@ export default function Progress() {
                       key={i}
                       cx={p.x}
                       cy={p.y}
-                      r={i === exercisePoints.length - 1 ? 4 : 3}
-                      fill={i === exercisePoints.length - 1 ? COLORS.graphDotToday : COLORS.graphDot}
+                      r={exercisePRFlags[i] ? 5 : i === exercisePoints.length - 1 ? 4 : 3}
+                      fill={exercisePRFlags[i] ? COLORS.neonYellow : i === exercisePoints.length - 1 ? COLORS.graphDotToday : COLORS.graphDot}
                     />
                   ))}
                 </Svg>
@@ -311,10 +348,18 @@ export default function Progress() {
                     <Ionicons name="barbell-outline" size={16} color={COLORS.primary} />
                   </View>
                   <View style={styles.listLeft}>
-                    <Text style={styles.listName}>{topSetWeight(entry)} top set</Text>
+                    <Text style={styles.listName}>{topSetWeight(entry.sets)} top set</Text>
                     <Text style={styles.listMeta}>{entry.sets.length} set{entry.sets.length === 1 ? '' : 's'}</Text>
                   </View>
-                  <Text style={styles.listDate}>{formatDate(entry.created_at)}</Text>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.listDate}>{formatDate(entry.created_at)}</Text>
+                    {prSessionIds.has(entry.id) && (
+                      <View style={styles.prTag}>
+                        <Ionicons name="trophy" size={10} color={COLORS.neonYellow} />
+                        <Text style={styles.prTagText}>PR</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               ))}
             </>
@@ -557,6 +602,8 @@ const styles = StyleSheet.create({
   listMeta: { color: COLORS.textMuted, fontSize: FONT_SIZES.xs, letterSpacing: 0.5 },
   listDate: { color: COLORS.textSecondary, fontSize: FONT_SIZES.xs, letterSpacing: 1 },
   listCalories: { color: COLORS.neonGreen, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, marginTop: SPACING.xs },
+  prTag: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: SPACING.xs },
+  prTagText: { color: COLORS.neonYellow, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 0.5 },
 
   emptyState: { ...CARD.default, alignItems: 'center', paddingVertical: SPACING.xxxl },
   emptyText: { color: COLORS.textMuted, fontSize: FONT_SIZES.sm, letterSpacing: 0.3, marginBottom: SPACING.sm },

@@ -13,6 +13,7 @@ import { awardXP, calcWorkoutXP } from '@/lib/xp';
 import { WORKOUT_CATEGORIES as CATEGORIES } from '@/constants/workoutCategories';
 import { getTodayKey, toDayCategories } from '@/utils/routine';
 import { pickWorkoutPhoto, uploadWorkoutPhoto } from '@/utils/workoutPhotos';
+import { topSetWeight } from '@/lib/workouts';
 import { Workout } from '@/types';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
@@ -59,10 +60,16 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [prBanner, setPrBanner] = useState<{ weight: number; name: string } | null>(null);
   const isEditing = !!editEntry;
 
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
+  const prTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (prTimeoutRef.current) clearTimeout(prTimeoutRef.current); };
+  }, []);
 
   useEffect(() => {
     if (initialCategory) setCategory(initialCategory);
@@ -139,6 +146,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
     setSets([{ reps: '', weight: '' }]);
     setDuration(30);
     setPhotoUri(null);
+    setPrBanner(null);
   };
 
   const handleAttachPhoto = async () => {
@@ -279,6 +287,30 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
         // block the workout itself from being saved — the sets are the point.
       }
 
+      // PR check is scoped to new logs only, not edits — v1. Fetches every
+      // prior row for this exact exercise name (no limit — a partial
+      // history could produce a false "New PR!" claim, which would be a
+      // trust-eroding bug) and compares against the session just saved.
+      const currentTop = topSetWeight(cleanSets);
+      if (currentTop > 0) {
+        const { data: priorRows } = await supabase
+          .from('workouts')
+          .select('sets')
+          .eq('user_id', user.id)
+          .eq('name', finalName.trim())
+          .neq('id', data.id);
+        const previousBest = (priorRows ?? []).reduce((max, w) => Math.max(max, topSetWeight(w.sets)), 0);
+        if (currentTop > previousBest) {
+          setPrBanner({ weight: currentTop, name: finalName.trim() });
+          setSaving(true);
+          prTimeoutRef.current = setTimeout(() => {
+            setSaving(false);
+            onSaved(saved); reset(); onClose();
+          }, 1400);
+          return;
+        }
+      }
+
       onSaved(saved); reset(); onClose();
     }
   };
@@ -377,6 +409,13 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
               </View>
             </View>
           </View>
+
+          {prBanner && (
+            <View style={styles.prBanner}>
+              <Ionicons name="trophy" size={16} color={COLORS.neonYellow} />
+              <Text style={styles.prBannerText}>New PR! {prBanner.weight} {weightUnit} on {prBanner.name}</Text>
+            </View>
+          )}
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
@@ -596,6 +635,16 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.lg },
+
+  prBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
+    marginHorizontal: SPACING.lg, marginBottom: SPACING.md,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.neonYellow + '18',
+    borderWidth: 1, borderColor: COLORS.neonYellow,
+  },
+  prBannerText: { color: COLORS.textPrimary, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
 
   sectionLabel: {
     fontSize: FONT_SIZES.xs,
