@@ -11,8 +11,10 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { awardXP, XP_MEAL } from '@/lib/xp';
+import { checkAndUnlockAchievements } from '@/lib/achievements';
+import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
 import { nutritionTargetsOrDefault } from '@/lib/nutrition';
-import { CustomMeal, Meal } from '@/types';
+import { CustomMeal, Meal, UnlockedAchievement } from '@/types';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS
@@ -64,6 +66,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
   const [showMacros, setShowMacros] = useState(false);
   const [todayCalories, setTodayCalories] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
   const [customMeals, setCustomMeals] = useState<CustomMeal[]>([]);
   const [editingCalories, setEditingCalories] = useState(false);
   const [calorieDraft, setCalorieDraft] = useState(String(400));
@@ -72,6 +75,11 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
 
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
+  const unlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (unlockTimeoutRef.current) clearTimeout(unlockTimeoutRef.current); };
+  }, []);
 
   const remaining = CALORIE_GOAL - todayCalories;
   const progressPercent = Math.min((todayCalories / CALORIE_GOAL) * 100, 100);
@@ -147,6 +155,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
     setMealType(''); setMealName(''); setCalories(400);
     setProtein(20); setCarbs(40); setFat(10); setShowMacros(false);
     setEditingCalories(false);
+    setUnlockedAchievements([]);
   };
 
   const handleClose = () => { reset(); onClose(); };
@@ -261,7 +270,22 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
     if (data) {
       await awardXP(user.id, XP_MEAL);
       await refreshProfile();
-      setTodayCalories(p => p + calories); onSaved(data); reset(); onClose();
+      setTodayCalories(p => p + calories);
+
+      // Achievement check is new-logs-only, matching the same reasoning as
+      // WorkoutLog's PR check — see supabase/migrations/20260815010000_achievements.sql.
+      const newlyUnlocked = await checkAndUnlockAchievements();
+      if (newlyUnlocked.length > 0) {
+        setUnlockedAchievements(newlyUnlocked);
+        setSaving(true);
+        unlockTimeoutRef.current = setTimeout(() => {
+          setSaving(false);
+          onSaved(data); reset(); onClose();
+        }, 1400);
+        return;
+      }
+
+      onSaved(data); reset(); onClose();
     }
   };
 
@@ -323,6 +347,8 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
               )}
             </View>
           </View>
+
+          <AchievementUnlockBanner achievements={unlockedAchievements} />
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Progress */}

@@ -10,6 +10,9 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { awardXP, calcCardioXP } from '@/lib/xp';
+import { checkAndUnlockAchievements } from '@/lib/achievements';
+import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
+import { UnlockedAchievement } from '@/types';
 import NumberWheel from '@/components/NumberWheel';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
@@ -68,11 +71,17 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
   const [duration, setDuration] = useState(30);
   const [calories, setCalories] = useState(280);
   const [saving, setSaving] = useState(false);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
   const [deleting, setDeleting] = useState(false);
   const isEditing = !!editEntry;
 
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
+  const unlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (unlockTimeoutRef.current) clearTimeout(unlockTimeoutRef.current); };
+  }, []);
 
   const distanceUnit = isImperial ? 'mi' : 'km';
   const distanceMaxWhole = isImperial ? 26 : 42;
@@ -134,6 +143,7 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
     setDistanceTenth(0);
     setDuration(30);
     setCalories(280);
+    setUnlockedAchievements([]);
   };
 
   const handleClose = () => { reset(); onClose(); };
@@ -201,6 +211,20 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
       const xp = calcCardioXP(duration);
       await awardXP(user.id, xp);
       await refreshProfile();
+
+      // Achievement check is new-logs-only, matching the same reasoning as
+      // WorkoutLog's PR check — see supabase/migrations/20260815010000_achievements.sql.
+      const newlyUnlocked = await checkAndUnlockAchievements();
+      if (newlyUnlocked.length > 0) {
+        setUnlockedAchievements(newlyUnlocked);
+        setSaving(true);
+        unlockTimeoutRef.current = setTimeout(() => {
+          setSaving(false);
+          onSaved(data); reset(); onClose();
+        }, 1400);
+        return;
+      }
+
       onSaved(data); reset(); onClose();
     }
   };
@@ -264,6 +288,8 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
               )}
             </View>
           </View>
+
+          <AchievementUnlockBanner achievements={unlockedAchievements} />
 
           <ScrollView showsVerticalScrollIndicator={false}>
 

@@ -10,6 +10,9 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { awardXP, XP_WATER } from '@/lib/xp';
+import { checkAndUnlockAchievements } from '@/lib/achievements';
+import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
+import { UnlockedAchievement } from '@/types';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS
@@ -61,9 +64,15 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
   const [editingEntry, setEditingEntry] = useState<WaterEntry | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
 
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
+  const unlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (unlockTimeoutRef.current) clearTimeout(unlockTimeoutRef.current); };
+  }, []);
 
   // display conversions
   const toDisplay = (ml: number) => isImperial ? ml * 0.033814 : ml;
@@ -156,7 +165,7 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
     );
   };
 
-  const handleClose = () => { setAmountMl(250); setEditingEntry(null); onClose(); };
+  const handleClose = () => { setAmountMl(250); setEditingEntry(null); setUnlockedAchievements([]); onClose(); };
 
   // plays the slide-down/fade-out first, then closes — used for backdrop taps and Cancel,
   // since Modal's `visible` prop hides the native modal instantly otherwise, cutting the animation short
@@ -210,6 +219,20 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
       await refreshProfile();
       setTodayTotalMl(p => p + amountMl);
       setTodayEntries(p => [data, ...p]);
+
+      // Achievement check is new-logs-only, matching the same reasoning as
+      // WorkoutLog's PR check — see supabase/migrations/20260815010000_achievements.sql.
+      const newlyUnlocked = await checkAndUnlockAchievements();
+      if (newlyUnlocked.length > 0) {
+        setUnlockedAchievements(newlyUnlocked);
+        setSaving(true);
+        unlockTimeoutRef.current = setTimeout(() => {
+          setSaving(false);
+          onSaved(data); setAmountMl(250); onClose();
+        }, 1400);
+        return;
+      }
+
       onSaved(data);
       setAmountMl(250);
       onClose();
@@ -248,6 +271,8 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
               )}
             </View>
           </View>
+
+          <AchievementUnlockBanner achievements={unlockedAchievements} />
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Progress */}

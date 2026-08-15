@@ -10,11 +10,13 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { awardXP, calcWorkoutXP } from '@/lib/xp';
+import { checkAndUnlockAchievements } from '@/lib/achievements';
+import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
 import { WORKOUT_CATEGORIES as CATEGORIES } from '@/constants/workoutCategories';
 import { getTodayKey, toDayCategories } from '@/utils/routine';
 import { pickWorkoutPhoto, uploadWorkoutPhoto } from '@/utils/workoutPhotos';
 import { topSetWeight } from '@/lib/workouts';
-import { Workout } from '@/types';
+import { Workout, UnlockedAchievement } from '@/types';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS
@@ -61,6 +63,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [prBanner, setPrBanner] = useState<{ weight: number; name: string } | null>(null);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
   const isEditing = !!editEntry;
 
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
@@ -147,6 +150,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
     setDuration(30);
     setPhotoUri(null);
     setPrBanner(null);
+    setUnlockedAchievements([]);
   };
 
   const handleAttachPhoto = async () => {
@@ -292,6 +296,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
       // history could produce a false "New PR!" claim, which would be a
       // trust-eroding bug) and compares against the session just saved.
       const currentTop = topSetWeight(cleanSets);
+      let isPR = false;
       if (currentTop > 0) {
         const { data: priorRows } = await supabase
           .from('workouts')
@@ -301,14 +306,23 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
           .neq('id', data.id);
         const previousBest = (priorRows ?? []).reduce((max, w) => Math.max(max, topSetWeight(w.sets)), 0);
         if (currentTop > previousBest) {
+          isPR = true;
           setPrBanner({ weight: currentTop, name: finalName.trim() });
-          setSaving(true);
-          prTimeoutRef.current = setTimeout(() => {
-            setSaving(false);
-            onSaved(saved); reset(); onClose();
-          }, 1400);
-          return;
         }
+      }
+
+      // Achievement check is also new-logs-only, same reasoning as the PR
+      // check above. Runs regardless of whether this save was a PR.
+      const newlyUnlocked = await checkAndUnlockAchievements();
+
+      if (isPR || newlyUnlocked.length > 0) {
+        setUnlockedAchievements(newlyUnlocked);
+        setSaving(true);
+        prTimeoutRef.current = setTimeout(() => {
+          setSaving(false);
+          onSaved(saved); reset(); onClose();
+        }, 1400);
+        return;
       }
 
       onSaved(saved); reset(); onClose();
@@ -416,6 +430,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
               <Text style={styles.prBannerText}>New PR! {prBanner.weight} {weightUnit} on {prBanner.name}</Text>
             </View>
           )}
+          <AchievementUnlockBanner achievements={unlockedAchievements} />
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
