@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,7 +21,16 @@ export default function Templates() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => { loadTemplates(); }, [user]);
+  // A plain mount-only effect left this list stale after creating/editing/
+  // deleting in /template-editor and coming back — the Stack keeps this
+  // screen mounted underneath rather than remounting it, so nothing re-fetched.
+  // Tapping a card that had since been deleted elsewhere then failed with
+  // "Could not load that template." useFocusEffect re-syncs every time this
+  // screen regains focus, including the very first time (no separate mount
+  // effect needed).
+  useFocusEffect(
+    useCallback(() => { loadTemplates(); }, [user])
+  );
 
   const loadTemplates = async () => {
     if (!user) { setLoading(false); return; }

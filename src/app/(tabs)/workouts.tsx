@@ -59,15 +59,21 @@ export default function Workouts() {
 
   const loadAndStartTemplate = async (id: string) => {
     const { data, error } = await supabase.from('workout_templates').select('*').eq('id', id).maybeSingle();
-    if (error || !data || !data.exercises?.length) {
-      Alert.alert('Error', 'Could not load that template.');
-      return;
-    }
+    // Clear the param as soon as it's been read, whichever way this goes, so
+    // it can't get re-consumed by a later focus/remount of this screen.
+    router.setParams({ startTemplateId: undefined });
+
+    if (error) { Alert.alert('Error', 'Could not load that template.'); return; }
+    // No row (or an empty one) most likely means the template was deleted —
+    // in another tab, or by a race with this exact fetch — between the Start
+    // tap and this resolving. That's not a surprising error worth alarming
+    // over, just a no-op: nothing to start.
+    if (!data || !data.exercises?.length) { console.warn(`Template ${id} not found or empty — skipping start.`); return; }
+
     setEditingWorkout(null);
     setLogCategory('');
     setActiveTemplate({ name: data.name, exercises: data.exercises, index: 0 });
     setModalVisible(true);
-    router.setParams({ startTemplateId: undefined });
   };
 
   const loadWorkouts = async () => {
