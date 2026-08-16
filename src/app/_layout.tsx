@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { useFonts } from 'expo-font';
 import { CormorantGaramond_500Medium_Italic } from '@expo-google-fonts/cormorant-garamond';
@@ -64,7 +64,12 @@ function Layout() {
           </Text>
         </View>
       ) : (
-        <Slot />
+        // A real Stack (rather than a bare Slot) keeps (tabs) — and whichever
+        // tab was active — mounted underneath pushed screens like /templates
+        // or /achievements, so router.back() restores it instead of
+        // recreating the tabs group fresh on its first tab (Dashboard).
+        // Matches the pattern (auth)/_layout.tsx already uses one level down.
+        <Stack screenOptions={{ headerShown: false }} />
       )}
     </SafeAreaProvider>
   );
