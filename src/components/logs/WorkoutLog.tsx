@@ -17,7 +17,7 @@ import { COMMON_EXERCISES } from '@/constants/exercises';
 import { getTodayKey, toDayCategories } from '@/utils/routine';
 import { pickWorkoutPhoto, uploadWorkoutPhoto } from '@/utils/workoutPhotos';
 import { topSetWeight } from '@/lib/workouts';
-import { Workout, UnlockedAchievement } from '@/types';
+import { Workout, UnlockedAchievement, TemplateExercise } from '@/types';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS
@@ -39,9 +39,13 @@ interface Props {
   /** When set, the sheet edits this workout in place instead of logging a new one. */
   editEntry?: Workout | null;
   onDeleted?: (id: string) => void;
+  /** When set, pre-fills the sheet for one step of a workout template's exercise
+   * sequence (see the startTemplateId handling in (tabs)/workouts.tsx). Mutually
+   * exclusive with editEntry — editing always wins if both are somehow set. */
+  templateStep?: { exercise: TemplateExercise; index: number; total: number; templateName: string } | null;
 }
 
-export default function WorkoutLog({ visible, onClose, onSaved, initialCategory, editEntry, onDeleted }: Props) {
+export default function WorkoutLog({ visible, onClose, onSaved, initialCategory, editEntry, onDeleted, templateStep }: Props) {
   const { user } = useAuth();
   const { profile, isImperial, refreshProfile } = useProfile();
   const weightUnit = isImperial ? 'lbs' : 'kg';
@@ -106,6 +110,24 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
     setPhotoUri(null);
   }, [visible, editEntry]);
 
+  // Workout-template "start" flow (src/app/templates.tsx -> the Workouts tab)
+  // pre-fills the sheet for one template exercise at a time. Declared after
+  // the editEntry effect above so it wins if both fired on the same open,
+  // though callers are expected to pass editEntry XOR templateStep, never both.
+  useEffect(() => {
+    if (!visible || editEntry || !templateStep) return;
+    const { exercise } = templateStep;
+    setCategory(exercise.category);
+    if ((COMMON_EXERCISES[exercise.category] ?? []).includes(exercise.name)) {
+      setName(exercise.name);
+      setCustomName('');
+    } else {
+      setName('');
+      setCustomName(exercise.name);
+    }
+    loadPreviousSets(exercise.name, { sets: exercise.targetSets, reps: exercise.targetReps });
+  }, [visible, templateStep]);
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
@@ -169,7 +191,10 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
 
   // Pulls the most recent logged sets for this exact exercise name so the user
   // can just confirm/adjust numbers instead of retyping last week's workout.
-  const loadPreviousSets = async (exerciseName: string) => {
+  // `fallback` (only passed by the template pre-fill effect above) seeds that
+  // many blank rows at the target rep count when there's no prior history for
+  // this exercise, instead of leaving a single empty row.
+  const loadPreviousSets = async (exerciseName: string, fallback?: { sets: number; reps: number }) => {
     if (!user) return;
     const { data } = await supabase
       .from('workouts')
@@ -182,6 +207,8 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
 
     if (data?.sets?.length) {
       setSets(data.sets.map((s: { reps: number; weight: number }) => ({ reps: String(s.reps), weight: String(s.weight) })));
+    } else if (fallback) {
+      setSets(Array.from({ length: fallback.sets }, () => ({ reps: String(fallback.reps), weight: '' })));
     } else {
       setSets([{ reps: '', weight: '' }]);
     }
@@ -368,7 +395,11 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
             {/* Header with active category accent */}
             <View style={[styles.sheetHeader, { borderLeftColor: activeCat.color }]}>
               <View>
-                <Text style={styles.sheetLabel}>{isEditing ? 'Edit workout' : 'New workout'}</Text>
+                <Text style={styles.sheetLabel}>
+                  {templateStep
+                    ? `${templateStep.templateName} · Exercise ${templateStep.index + 1} of ${templateStep.total}`
+                    : isEditing ? 'Edit workout' : 'New workout'}
+                </Text>
                 <Text style={styles.sheetTitle}>
                   {isEditing ? 'Edit' : 'Log'} <Ionicons name={activeCat.icon} size={18} color={activeCat.color} /> {activeCat.name}
                 </Text>
@@ -559,7 +590,13 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
               activeOpacity={0.85}
               disabled={saving}
             >
-              <Text style={styles.saveText}>{saving ? 'Saving…' : isEditing ? 'Save Changes' : 'Save Workout'}</Text>
+              <Text style={styles.saveText}>
+                {saving
+                  ? 'Saving…'
+                  : templateStep
+                    ? (templateStep.index + 1 >= templateStep.total ? 'Save & Finish' : 'Save & Next')
+                    : isEditing ? 'Save Changes' : 'Save Workout'}
+              </Text>
             </TouchableOpacity>
 
           </ScrollView>

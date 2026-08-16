@@ -1,21 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet
+  View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import WorkoutLog from '@/components/logs/WorkoutLog';
 import { WORKOUT_CATEGORIES as categories } from '@/constants/workoutCategories';
-import { Workout } from '@/types';
+import { Workout, TemplateExercise } from '@/types';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS, CARD
 } from '@/constants/theme';
 
+// Sequencing state for an in-progress "Start Template" run — see the
+// startTemplateId handling below and the pendingAdvanceRef dance in
+// handleSaved/handleModalClose that steps through it.
+interface ActiveTemplate {
+  name: string;
+  exercises: TemplateExercise[];
+  index: number;
+}
+
 export default function Workouts() {
+  const router = useRouter();
+  const { startTemplateId } = useLocalSearchParams<{ startTemplateId?: string }>();
   const { user } = useAuth();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -23,11 +35,40 @@ export default function Workouts() {
   const [logCategory, setLogCategory] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [search, setSearch] = useState('');
+  const [activeTemplate, setActiveTemplate] = useState<ActiveTemplate | null>(null);
+  // Set by handleSaved (synchronously, before WorkoutLog calls onClose) so
+  // handleModalClose can tell "saved, advance to the next exercise" apart
+  // from "user backed out mid-sequence" without racing React's setState
+  // batching — a ref reads back immediately, state wouldn't.
+  const pendingAdvanceRef = useRef<{ index: number } | 'done' | null>(null);
 
   useEffect(() => {
     if (!user) return;
     loadWorkouts();
   }, [user]);
+
+  // Deep-linked in from src/app/templates.tsx's Start button. Loads the
+  // template and opens WorkoutLog on its first exercise; startedIdRef guards
+  // against re-triggering on every re-render once that's done.
+  const startedIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!startTemplateId || startTemplateId === startedIdRef.current) return;
+    startedIdRef.current = startTemplateId;
+    loadAndStartTemplate(startTemplateId);
+  }, [startTemplateId]);
+
+  const loadAndStartTemplate = async (id: string) => {
+    const { data, error } = await supabase.from('workout_templates').select('*').eq('id', id).maybeSingle();
+    if (error || !data || !data.exercises?.length) {
+      Alert.alert('Error', 'Could not load that template.');
+      return;
+    }
+    setEditingWorkout(null);
+    setLogCategory('');
+    setActiveTemplate({ name: data.name, exercises: data.exercises, index: 0 });
+    setModalVisible(true);
+    router.setParams({ startTemplateId: undefined });
+  };
 
   const loadWorkouts = async () => {
     const { data, error } = await supabase
@@ -45,6 +86,31 @@ export default function Workouts() {
       const exists = prev.some(w => w.id === workout.id);
       return exists ? prev.map(w => (w.id === workout.id ? workout : w)) : [workout, ...prev];
     });
+    if (activeTemplate) {
+      const nextIndex = activeTemplate.index + 1;
+      pendingAdvanceRef.current = nextIndex < activeTemplate.exercises.length ? { index: nextIndex } : 'done';
+    }
+  };
+
+  // WorkoutLog calls onSaved (above) then onClose on every successful save,
+  // but only onClose when the user backs out without saving — pendingAdvanceRef
+  // is how this tells those two cases apart for an in-progress template run.
+  const handleModalClose = () => {
+    if (activeTemplate) {
+      const pending = pendingAdvanceRef.current;
+      pendingAdvanceRef.current = null;
+      if (pending && pending !== 'done') {
+        setActiveTemplate({ ...activeTemplate, index: pending.index });
+        return; // keep the sheet open — it re-fills itself for the next exercise
+      }
+      setActiveTemplate(null);
+      setModalVisible(false);
+      setEditingWorkout(null);
+      if (pending === 'done') Alert.alert('Nice work! 💪', `Finished "${activeTemplate.name}".`);
+      return;
+    }
+    setModalVisible(false);
+    setEditingWorkout(null);
   };
 
   const handleDeleted = (id: string) => {
@@ -89,13 +155,24 @@ export default function Workouts() {
             <Text style={styles.screenTitle}>Workouts</Text>
             <Text style={styles.subtitle}>{totalThisWeek} sessions this week</Text>
           </View>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => { setLogCategory(''); setEditingWorkout(null); setModalVisible(true); }}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.addButtonText}>+ Log</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.templatesButton}
+              onPress={() => router.push('/templates')}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Workout templates"
+            >
+              <Ionicons name="list-outline" size={16} color={COLORS.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => { setActiveTemplate(null); setLogCategory(''); setEditingWorkout(null); setModalVisible(true); }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.addButtonText}>+ Log</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Summary */}
@@ -148,7 +225,7 @@ export default function Workouts() {
                   activeFilter === cat.name && { backgroundColor: cat.color, borderColor: cat.color },
                 ]}
                 onPress={() => setActiveFilter(cat.name)}
-                onLongPress={() => { setLogCategory(cat.name); setEditingWorkout(null); setModalVisible(true); }}
+                onLongPress={() => { setActiveTemplate(null); setLogCategory(cat.name); setEditingWorkout(null); setModalVisible(true); }}
                 activeOpacity={0.7}
               >
                 <Ionicons
@@ -186,7 +263,7 @@ export default function Workouts() {
               <TouchableOpacity
                 key={workout.id ?? i}
                 style={styles.workoutCard}
-                onPress={() => { setEditingWorkout(workout); setModalVisible(true); }}
+                onPress={() => { setActiveTemplate(null); setEditingWorkout(workout); setModalVisible(true); }}
                 activeOpacity={0.7}
               >
                 <View style={[styles.workoutIcon, { borderColor: cat?.color ?? COLORS.primary }]}>
@@ -213,10 +290,16 @@ export default function Workouts() {
       <WorkoutLog
         visible={modalVisible}
         editEntry={editingWorkout}
-        onClose={() => { setModalVisible(false); setEditingWorkout(null); }}
+        onClose={handleModalClose}
         onSaved={handleSaved}
         onDeleted={handleDeleted}
         initialCategory={logCategory}
+        templateStep={activeTemplate ? {
+          exercise: activeTemplate.exercises[activeTemplate.index],
+          index: activeTemplate.index,
+          total: activeTemplate.exercises.length,
+          templateName: activeTemplate.name,
+        } : null}
       />
     </SafeAreaView>
   );
@@ -244,6 +327,21 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: SPACING.xs,
     letterSpacing: 1,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  templatesButton: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.full,
+    borderColor: COLORS.primaryLight,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.purple,
   },
   addButton: {
     borderColor: COLORS.primaryLight,
