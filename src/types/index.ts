@@ -167,6 +167,27 @@ export interface UnlockedAchievement {
   icon: string;
 }
 
+// One exercise's prescription within a workout_templates.exercises array.
+// category matches Workout['category'] / WORKOUT_CATEGORIES; targetSets/
+// targetReps seed WorkoutLog's set rows when the user hasn't logged this
+// exact exercise before (see the templateStep prop on WorkoutLog).
+export interface TemplateExercise {
+  name: string;
+  category: string;
+  targetSets: number;
+  targetReps: number;
+}
+
+// Mirrors the `workout_templates` table (see
+// supabase/migrations/20260816000000_workout_templates.sql).
+export interface WorkoutTemplate {
+  id: string;
+  user_id: string;
+  name: string;
+  exercises: TemplateExercise[];
+  created_at: string;
+}
+
 export interface ValidationResult {
   isValid: boolean;
   error: string | null;
