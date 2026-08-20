@@ -220,6 +220,8 @@ export default function Workouts() {
               style={[styles.filterPill, activeFilter === 'ALL' && styles.filterPillActive]}
               onPress={() => setActiveFilter('ALL')}
               activeOpacity={0.7}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: activeFilter === 'ALL' }}
             >
               <Text style={[styles.filterPillText, activeFilter === 'ALL' && styles.filterPillTextActive]}>All</Text>
             </TouchableOpacity>
@@ -233,6 +235,9 @@ export default function Workouts() {
                 onPress={() => setActiveFilter(cat.name)}
                 onLongPress={() => { setActiveTemplate(null); setLogCategory(cat.name); setEditingWorkout(null); setModalVisible(true); }}
                 activeOpacity={0.7}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeFilter === cat.name }}
+                accessibilityHint="Double tap and hold to log a workout directly in this category"
               >
                 <Ionicons
                   name={cat.icon}
