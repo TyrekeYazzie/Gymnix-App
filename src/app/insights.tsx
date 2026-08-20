@@ -32,25 +32,48 @@ function formatRange(start: Date, end: Date): string {
   return `${start.toLocaleDateString('en-US', opts)} – ${end.toLocaleDateString('en-US', opts)}`;
 }
 
-function CompareRow({
-  icon, iconColor, label, thisValue, lastValue,
+// A signed, colored "+2 vs last wk" line. goodWhenUp controls color:
+// true = more is better (green up), false = less is better (green down),
+// null = direction doesn't imply better/worse (e.g. body weight) so it
+// always renders muted regardless of sign.
+function Delta({ diff, suffix, goodWhenUp }: { diff: number; suffix: string; goodWhenUp: boolean | null }) {
+  if (diff === 0) {
+    return <Text style={styles.tileDeltaFlat}>Same as last wk</Text>;
+  }
+  const up = diff > 0;
+  const color = goodWhenUp === null ? COLORS.textMuted : (up === goodWhenUp ? COLORS.neonGreen : COLORS.accent);
+  return (
+    <View style={styles.tileDeltaRow}>
+      <Ionicons name={up ? 'arrow-up' : 'arrow-down'} size={11} color={color} />
+      <Text style={[styles.tileDeltaText, { color }]}>{Math.abs(diff)}{suffix} vs last wk</Text>
+    </View>
+  );
+}
+
+function StatTile({
+  icon, iconColor, label, value, unit, caption, delta,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   iconColor: string;
   label: string;
-  thisValue: string;
-  lastValue: string;
+  value: string;
+  unit?: string;
+  caption?: string;
+  delta?: React.ReactNode;
 }) {
   return (
-    <View style={styles.compareRow}>
-      <View style={[styles.compareIcon, { borderColor: iconColor }]}>
-        <Ionicons name={icon} size={14} color={iconColor} />
+    <View style={styles.statTile}>
+      <View style={styles.tileHeader}>
+        <View style={[styles.tileIcon, { borderColor: iconColor }]}>
+          <Ionicons name={icon} size={13} color={iconColor} />
+        </View>
+        <Text style={styles.tileLabel} numberOfLines={1}>{label}</Text>
       </View>
-      <Text style={styles.compareLabel}>{label}</Text>
-      <View style={styles.compareValues}>
-        <Text style={styles.compareThis}>{thisValue}</Text>
-        <Text style={styles.compareLast}>last: {lastValue}</Text>
-      </View>
+      <Text style={styles.tileValue}>
+        {value}{unit ? <Text style={styles.tileUnit}> {unit}</Text> : null}
+      </Text>
+      {caption && <Text style={styles.tileCaption}>{caption}</Text>}
+      {delta}
     </View>
   );
 }
@@ -99,8 +122,6 @@ export default function InsightsScreen() {
   const toDisplayWeight = (kg: number) => isImperial ? kg * 2.2046 : kg;
   const distanceUnit = isImperial ? 'mi' : 'km';
   const toDisplayDistance = (km: number) => isImperial ? km * 0.6213712 : km;
-  const waterUnit = isImperial ? 'fl oz' : 'ml';
-  const toDisplayWater = (ml: number) => isImperial ? ml * 0.033814 : ml;
 
   const insights = thisWeek && lastWeek
     ? generateInsights(thisWeek, lastWeek, {
@@ -130,67 +151,72 @@ export default function InsightsScreen() {
           </View>
         ) : (
           <>
-            {/* Insight callouts */}
-            <Text style={styles.sectionTitle}>THIS WEEK</Text>
+            {/* Highlights */}
+            <Text style={styles.sectionTitle}>Highlights</Text>
             {insights.length === 0 ? (
               <View style={[CARD.default, styles.emptyState]}>
                 <Text style={styles.emptyText}>Log a bit more this week to see insights here.</Text>
               </View>
             ) : (
-              <View style={[CARD.default, SHADOWS.subtle, styles.insightsCard]}>
+              <View style={styles.insightsList}>
                 {insights.map((insight, i) => (
-                  <View key={i}>
-                    {i > 0 && <View style={styles.rowDivider} />}
-                    <View style={styles.insightRow}>
-                      <View style={[styles.insightIcon, { borderColor: TONE_COLOR[insight.tone] }]}>
-                        <Ionicons name={insight.icon} size={16} color={TONE_COLOR[insight.tone]} />
-                      </View>
-                      <Text style={styles.insightText}>{insight.text}</Text>
+                  <View key={i} style={[styles.insightCard, SHADOWS.subtle]}>
+                    <View style={[styles.insightIcon, { borderColor: TONE_COLOR[insight.tone] }]}>
+                      <Ionicons name={insight.icon} size={17} color={TONE_COLOR[insight.tone]} />
                     </View>
+                    <Text style={styles.insightText}>{insight.text}</Text>
                   </View>
                 ))}
               </View>
             )}
 
             {/* This week vs last week */}
-            <Text style={styles.sectionTitle}>THIS WEEK VS LAST WEEK</Text>
-            <Text style={styles.rangeSubtext}>Last week: {formatRange(lastWindow.start, new Date(lastWindow.end.getTime() - 1))}</Text>
-            <View style={[CARD.default, SHADOWS.subtle, styles.compareCard]}>
-              <CompareRow
-                icon="barbell-outline" iconColor={COLORS.primary} label="Workouts"
-                thisValue={`${thisWeek.workoutCount}`} lastValue={`${lastWeek.workoutCount}`}
+            <Text style={styles.sectionTitle}>This week vs last week</Text>
+            <Text style={styles.rangeSubtext}>
+              {formatRange(thisWindow.start, new Date())} compared to {formatRange(lastWindow.start, new Date(lastWindow.end.getTime() - 1))}
+            </Text>
+
+            <View style={styles.statsGrid}>
+              <StatTile
+                icon="barbell-outline" iconColor={COLORS.primary} label="WORKOUTS"
+                value={`${thisWeek.workoutCount}`}
+                delta={<Delta diff={thisWeek.workoutCount - lastWeek.workoutCount} suffix="" goodWhenUp={true} />}
               />
-              <View style={styles.rowDivider} />
-              <CompareRow
-                icon="trending-up-outline" iconColor={COLORS.primaryLight} label={`Volume (${weightUnit})`}
-                thisValue={thisWeek.workoutVolume.toLocaleString()} lastValue={lastWeek.workoutVolume.toLocaleString()}
+              <StatTile
+                icon="trending-up-outline" iconColor={COLORS.primaryLight} label="VOLUME"
+                value={thisWeek.workoutVolume.toLocaleString()} unit={weightUnit}
+                delta={
+                  lastWeek.workoutVolume > 0 && thisWeek.workoutVolume > 0
+                    ? <Delta diff={Math.round(((thisWeek.workoutVolume - lastWeek.workoutVolume) / lastWeek.workoutVolume) * 100)} suffix="%" goodWhenUp={true} />
+                    : undefined
+                }
               />
-              <View style={styles.rowDivider} />
-              <CompareRow
-                icon="heart-outline" iconColor={COLORS.neonGreen} label={`Cardio (min)`}
-                thisValue={`${thisWeek.cardioMinutes}`} lastValue={`${lastWeek.cardioMinutes}`}
+              <StatTile
+                icon="heart-outline" iconColor={COLORS.neonGreen} label="CARDIO"
+                value={`${thisWeek.cardioMinutes}`} unit="min"
+                caption={thisWeek.cardioDistanceKm > 0 ? `${toDisplayDistance(thisWeek.cardioDistanceKm).toFixed(1)} ${distanceUnit}` : undefined}
+                delta={<Delta diff={thisWeek.cardioMinutes - lastWeek.cardioMinutes} suffix=" min" goodWhenUp={true} />}
               />
-              <View style={styles.rowDivider} />
-              <CompareRow
-                icon="navigate-outline" iconColor={COLORS.neonGreen} label={`Distance (${distanceUnit})`}
-                thisValue={toDisplayDistance(thisWeek.cardioDistanceKm).toFixed(1)} lastValue={toDisplayDistance(lastWeek.cardioDistanceKm).toFixed(1)}
+              <StatTile
+                icon="water-outline" iconColor={COLORS.neonBlue} label="WATER GOAL"
+                value={`${thisWeek.waterGoalDays}/7`} caption="days met"
+                delta={<Delta diff={thisWeek.waterGoalDays - lastWeek.waterGoalDays} suffix=" days" goodWhenUp={true} />}
               />
-              <View style={styles.rowDivider} />
-              <CompareRow
-                icon="water-outline" iconColor={COLORS.neonBlue} label="Water goal days"
-                thisValue={`${thisWeek.waterGoalDays}/7`} lastValue={`${lastWeek.waterGoalDays}/7`}
+              <StatTile
+                icon="nutrition-outline" iconColor={COLORS.neonYellow} label="CALORIES"
+                value={thisWeek.caloriesLoggedDays > 0 ? Math.round(thisWeek.caloriesAvgPerLoggedDay).toLocaleString() : '—'}
+                unit={thisWeek.caloriesLoggedDays > 0 ? 'kcal/day' : undefined}
+                caption={thisWeek.caloriesLoggedDays > 0 && targets.calorieGoal > 0 ? `${Math.round((thisWeek.caloriesAvgPerLoggedDay / targets.calorieGoal) * 100)}% of ${targets.calorieGoal.toLocaleString()} goal` : 'No meals logged'}
               />
-              <View style={styles.rowDivider} />
-              <CompareRow
-                icon="nutrition-outline" iconColor={COLORS.neonYellow} label="Avg kcal/day logged"
-                thisValue={thisWeek.caloriesLoggedDays > 0 ? Math.round(thisWeek.caloriesAvgPerLoggedDay).toLocaleString() : '—'}
-                lastValue={lastWeek.caloriesLoggedDays > 0 ? Math.round(lastWeek.caloriesAvgPerLoggedDay).toLocaleString() : '—'}
-              />
-              <View style={styles.rowDivider} />
-              <CompareRow
-                icon="body-outline" iconColor={COLORS.neonOrange} label={`Weight (${weightUnit})`}
-                thisValue={thisWeek.weightLast !== null ? toDisplayWeight(thisWeek.weightLast).toFixed(1) : '—'}
-                lastValue={lastWeek.weightLast !== null ? toDisplayWeight(lastWeek.weightLast).toFixed(1) : '—'}
+              <StatTile
+                icon="body-outline" iconColor={COLORS.neonOrange} label="WEIGHT"
+                value={thisWeek.weightLast !== null ? toDisplayWeight(thisWeek.weightLast).toFixed(1) : '—'}
+                unit={thisWeek.weightLast !== null ? weightUnit : undefined}
+                delta={
+                  thisWeek.weightLast !== null && lastWeek.weightLast !== null
+                    ? <Delta diff={Math.round((toDisplayWeight(thisWeek.weightLast) - toDisplayWeight(lastWeek.weightLast)) * 10) / 10} suffix={` ${weightUnit}`} goodWhenUp={null} />
+                    : undefined
+                }
               />
             </View>
           </>
@@ -208,28 +234,46 @@ const styles = StyleSheet.create({
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: SPACING.sm, alignSelf: 'flex-start' },
   backText: { color: COLORS.primary, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 1 },
   screenTitle: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary, letterSpacing: 0.5 },
-  rangeText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: SPACING.xs },
+  rangeText: { fontSize: FONT_SIZES.md, color: COLORS.textSecondary, marginTop: SPACING.xs },
   dividerLine: { height: 1, backgroundColor: COLORS.primary, width: 40, marginTop: SPACING.md, marginBottom: SPACING.xl },
 
   loadingWrap: { paddingVertical: SPACING.xxxl, alignItems: 'center' },
 
-  sectionTitle: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted, letterSpacing: 1, marginBottom: SPACING.sm },
-  rangeSubtext: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: -SPACING.xs, marginBottom: SPACING.sm },
+  sectionTitle: { fontSize: FONT_SIZES.md, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textPrimary, marginBottom: SPACING.xs },
+  rangeSubtext: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted, marginBottom: SPACING.lg },
 
   emptyState: { alignItems: 'center', paddingVertical: SPACING.xl, marginBottom: SPACING.xl },
   emptyText: { color: COLORS.textMuted, fontSize: FONT_SIZES.sm, textAlign: 'center' },
 
-  insightsCard: { padding: SPACING.sm, marginBottom: SPACING.xl },
-  insightRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.sm },
-  insightIcon: { width: 32, height: 32, borderRadius: RADIUS.full, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  insightText: { flex: 1, fontSize: FONT_SIZES.sm, color: COLORS.textPrimary, lineHeight: 18 },
-  rowDivider: { height: 1, backgroundColor: COLORS.borderDefault },
+  // Highlights — each insight is its own card with real breathing room,
+  // rather than tightly divided rows packed into one block.
+  insightsList: { gap: SPACING.sm, marginBottom: SPACING.xl },
+  insightCard: {
+    ...CARD.default,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  insightIcon: { width: 40, height: 40, borderRadius: RADIUS.full, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  insightText: { flex: 1, fontSize: FONT_SIZES.md, color: COLORS.textPrimary, lineHeight: 22 },
 
-  compareCard: { padding: SPACING.sm },
-  compareRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.sm },
-  compareIcon: { width: 28, height: 28, borderRadius: RADIUS.full, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  compareLabel: { flex: 1, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
-  compareValues: { alignItems: 'flex-end' },
-  compareThis: { fontSize: FONT_SIZES.md, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textPrimary },
-  compareLast: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
+  // This-week-vs-last-week — a 2-column grid of stat tiles instead of a
+  // dense list, so each number gets its own space and a big, legible type
+  // size instead of two tiers of small text crammed into one row.
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  statTile: {
+    ...CARD.default,
+    ...SHADOWS.subtle,
+    flexBasis: '47%',
+    flexGrow: 1,
+  },
+  tileHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginBottom: SPACING.sm },
+  tileIcon: { width: 24, height: 24, borderRadius: RADIUS.full, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  tileLabel: { flex: 1, fontSize: 10, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted, letterSpacing: 0.5 },
+  tileValue: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary },
+  tileUnit: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.medium, color: COLORS.textMuted },
+  tileCaption: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 2 },
+  tileDeltaRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: SPACING.sm },
+  tileDeltaText: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold },
+  tileDeltaFlat: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: SPACING.sm },
 });
