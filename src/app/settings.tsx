@@ -18,13 +18,16 @@ import {
 
 const SUPPORT_EMAIL = 'ifitsupportcenter@gmail.com';
 
-function Toggle({ value, onValueChange, disabled }: { value: boolean; onValueChange: (v: boolean) => void; disabled?: boolean }) {
+function Toggle({ value, onValueChange, disabled, label }: { value: boolean; onValueChange: (v: boolean) => void; disabled?: boolean; label: string }) {
   return (
     <TouchableOpacity
       style={[styles.toggleTrack, value && styles.toggleTrackActive]}
       onPress={() => !disabled && onValueChange(!value)}
       activeOpacity={0.8}
       disabled={disabled}
+      accessibilityRole="switch"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: value, disabled }}
     >
       <View style={[styles.toggleThumb, value && styles.toggleThumbActive]} />
     </TouchableOpacity>
@@ -161,7 +164,7 @@ export default function Settings() {
             control={
               <View style={styles.toggleGroup}>
                 <Text style={styles.toggleGroupLabel}>{isImperial ? 'Imperial' : 'Metric'}</Text>
-                <Toggle value={isImperial} onValueChange={handleUnitsToggle} disabled={savingUnits} />
+                <Toggle value={isImperial} onValueChange={handleUnitsToggle} disabled={savingUnits} label="Use imperial units" />
               </View>
             }
           />
@@ -212,6 +215,7 @@ export default function Settings() {
                 value={profile?.reminders_enabled ?? true}
                 onValueChange={handleRemindersToggle}
                 disabled={savingReminders}
+                label="Daily reminders"
               />
             }
           />
