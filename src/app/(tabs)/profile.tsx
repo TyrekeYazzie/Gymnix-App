@@ -194,6 +194,18 @@ export default function Profile() {
           <View style={styles.dataRowDivider} />
           <TouchableOpacity
             style={styles.systemRow}
+            onPress={() => router.push('/insights')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.sysIcon, { borderColor: COLORS.neonBlue }]}>
+              <Ionicons name="bar-chart-outline" size={14} color={COLORS.neonBlue} />
+            </View>
+            <Text style={styles.systemLabel}>Weekly Recap</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.dataRowDivider} />
+          <TouchableOpacity
+            style={styles.systemRow}
             onPress={() => router.push('/leaderboard')}
             activeOpacity={0.7}
           >
