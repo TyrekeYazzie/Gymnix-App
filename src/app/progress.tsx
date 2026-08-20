@@ -202,6 +202,8 @@ export default function Progress() {
               style={[styles.tabButton, tab === t && styles.tabButtonActive]}
               onPress={() => setTab(t)}
               activeOpacity={0.8}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: tab === t }}
             >
               <Text style={[styles.tabButtonText, tab === t && styles.tabButtonTextActive]}>{t}</Text>
             </TouchableOpacity>
@@ -292,6 +294,8 @@ export default function Progress() {
                       style={[styles.filterPill, activeExercise === name && styles.filterPillActive]}
                       onPress={() => setSelectedExercise(name)}
                       activeOpacity={0.7}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: activeExercise === name }}
                     >
                       <Text style={[styles.filterPillText, activeExercise === name && styles.filterPillTextActive]}>{name}</Text>
                     </TouchableOpacity>
@@ -469,6 +473,8 @@ export default function Progress() {
                   style={[styles.filterPill, cardioFilter === 'ALL' && styles.filterPillActive]}
                   onPress={() => setCardioFilter('ALL')}
                   activeOpacity={0.7}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: cardioFilter === 'ALL' }}
                 >
                   <Text style={[styles.filterPillText, cardioFilter === 'ALL' && styles.filterPillTextActive]}>All</Text>
                 </TouchableOpacity>
@@ -481,6 +487,8 @@ export default function Progress() {
                     ]}
                     onPress={() => setCardioFilter(t.name)}
                     activeOpacity={0.7}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: cardioFilter === t.name }}
                   >
                     <Ionicons
                       name={t.icon}
