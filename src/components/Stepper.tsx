@@ -36,10 +36,15 @@ export default function Stepper({
 }: Props) {
   const color = accentColor ?? COLORS.primary;
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value.toFixed(decimals));
+  const [draft, setDraft] = useState('0');
 
+  // Starts the draft at 0 rather than pre-filling the current value, so the
+  // user can just start typing digits immediately instead of deleting the
+  // existing number first. Leading zeros from typing after it (e.g. "05")
+  // parse fine either way, so this is safe even if a keyboard doesn't honor
+  // selectTextOnFocus.
   const startEditing = () => {
-    setDraft(value.toFixed(decimals));
+    setDraft('0');
     setEditing(true);
   };
 

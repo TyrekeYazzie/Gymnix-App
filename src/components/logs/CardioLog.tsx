@@ -28,7 +28,7 @@ export const CARDIO_TYPES: { name: string; icon: keyof typeof Ionicons.glyphMap;
   { name: 'Row',   icon: 'boat-outline',        color: COLORS.neonOrange },
 ];
 
-const DURATION_MIN = 1;
+const DURATION_MIN = 0;
 const DURATION_MAX = 120;
 
 // slide the sheet fully past the bottom edge regardless of device height or sheet content length
@@ -61,9 +61,10 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
   const { user } = useAuth();
   const { profile, isImperial, refreshProfile } = useProfile();
   const [type, setType] = useState('');
-  // captured in whichever unit is currently displayed (mi or km)
-  const [distance, setDistance] = useState(5);
-  const [duration, setDuration] = useState(30);
+  // captured in whichever unit is currently displayed (mi or km) — both
+  // start at 0 (not a guessed default) so a new log opens ready to type.
+  const [distance, setDistance] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [calories, setCalories] = useState(0);
   // Once true, `calories` is a manual override and stops auto-recomputing
   // from type/distance/duration — set whenever the user directly edits it
@@ -145,8 +146,8 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
 
   const reset = () => {
     setType('');
-    setDistance(5);
-    setDuration(30);
+    setDistance(0);
+    setDuration(0);
     setCaloriesOverridden(false);
     setUnlockedAchievements([]);
   };
@@ -165,6 +166,13 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
   const handleSave = async () => {
     if (!type) {
       Alert.alert('Missing Info', 'Please select a cardio type');
+      return;
+    }
+    // Duration now starts at 0 (see reset()), so this is the one thing
+    // every cardio type genuinely needs before a session means anything —
+    // unlike distance, which HIIT legitimately has none of.
+    if (duration <= 0) {
+      Alert.alert('Missing Info', 'Please enter a duration');
       return;
     }
     if (!user) return;
