@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Modal, TextInput, Alert, Dimensions,
-  KeyboardAvoidingView, Platform, Animated, PanResponder
+  KeyboardAvoidingView, Platform, Animated, PanResponder, Keyboard
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
@@ -269,7 +269,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
 
           <AchievementUnlockBanner achievements={unlockedAchievements} />
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {lastEntry && (
               <TouchableOpacity
                 style={[styles.lastEntry, editingEntry?.id === lastEntry.id && styles.lastEntryActive]}
@@ -356,6 +356,8 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
               placeholderTextColor={COLORS.textMuted}
               value={notes}
               onChangeText={setNotes}
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
 
             <TouchableOpacity

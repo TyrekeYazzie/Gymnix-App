@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Modal, TextInput, Alert, Dimensions,
-  KeyboardAvoidingView, Platform, Animated, PanResponder
+  KeyboardAvoidingView, Platform, Animated, PanResponder, Keyboard
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -196,6 +196,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
     const num = parseInt(calorieDraft, 10);
     if (!isNaN(num)) setCalories(Math.min(Math.max(num, CALORIE_MIN), CALORIE_MAX));
     setEditingCalories(false);
+    Keyboard.dismiss();
   };
 
   // Quick-add chips: once the user has saved any custom meals, those fully
@@ -352,7 +353,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
 
           <AchievementUnlockBanner achievements={unlockedAchievements} />
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {/* Progress */}
             <View style={styles.progressCard}>
               <View style={styles.progressHeader}>
@@ -430,6 +431,8 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
               value={mealName}
               onChangeText={setMealName}
               autoCapitalize="words"
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
 
             {/* Calories slider */}

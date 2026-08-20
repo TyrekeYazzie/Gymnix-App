@@ -4,7 +4,6 @@ import {
   StyleSheet, Modal, Alert, Dimensions,
   KeyboardAvoidingView, Platform, Animated, PanResponder
 } from 'react-native';
-import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,7 +12,8 @@ import { awardXP, calcCardioXP } from '@/lib/xp';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
 import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
 import { UnlockedAchievement } from '@/types';
-import NumberWheel from '@/components/NumberWheel';
+import Stepper from '@/components/Stepper';
+import { estimateCardioCalories } from '@/lib/cardioCalories';
 import {
   COLORS, FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, SHADOWS
@@ -30,10 +30,6 @@ export const CARDIO_TYPES: { name: string; icon: keyof typeof Ionicons.glyphMap;
 
 const DURATION_MIN = 1;
 const DURATION_MAX = 120;
-const DURATION_OPTIONS = Array.from({ length: DURATION_MAX - DURATION_MIN + 1 }, (_, i) => DURATION_MIN + i);
-const TENTH_OPTIONS = Array.from({ length: 10 }, (_, i) => i);
-
-const CALORIE_CHIPS = [150, 300, 500, 750];
 
 // slide the sheet fully past the bottom edge regardless of device height or sheet content length
 const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
@@ -63,13 +59,17 @@ export const KM_TO_MI = 0.621371;
 
 export default function CardioLog({ visible, onClose, onSaved, editEntry, onDeleted }: Props) {
   const { user } = useAuth();
-  const { isImperial, refreshProfile } = useProfile();
+  const { profile, isImperial, refreshProfile } = useProfile();
   const [type, setType] = useState('');
-  // distance is captured in whichever unit is currently displayed (mi or km), split into whole + tenth wheels
-  const [distanceWhole, setDistanceWhole] = useState(5);
-  const [distanceTenth, setDistanceTenth] = useState(0);
+  // captured in whichever unit is currently displayed (mi or km)
+  const [distance, setDistance] = useState(5);
   const [duration, setDuration] = useState(30);
-  const [calories, setCalories] = useState(280);
+  const [calories, setCalories] = useState(0);
+  // Once true, `calories` is a manual override and stops auto-recomputing
+  // from type/distance/duration — set whenever the user directly edits it
+  // (via the Stepper) or when opening an existing entry (its saved value
+  // should be respected as-is, not silently replaced by a fresh estimate).
+  const [caloriesOverridden, setCaloriesOverridden] = useState(false);
   const [saving, setSaving] = useState(false);
   const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
   const [deleting, setDeleting] = useState(false);
@@ -84,11 +84,20 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
   }, []);
 
   const distanceUnit = isImperial ? 'mi' : 'km';
-  const distanceMaxWhole = isImperial ? 26 : 42;
-  const WHOLE_OPTIONS = Array.from({ length: distanceMaxWhole + 1 }, (_, i) => i);
-  const displayDistance = distanceWhole + distanceTenth / 10;
+  const distanceMax = isImperial ? 26.9 : 42.9;
+  const displayDistance = distance;
   // always stored to the database as km
   const distanceKm = isImperial ? displayDistance / KM_TO_MI : displayDistance;
+
+  // Live-recomputes the calorie estimate as type/distance/duration change,
+  // unless the user has taken manual control via the Stepper (see
+  // caloriesOverridden above) — mirrors the auto-recomputing pace box
+  // below, just with an escape hatch since calories can't be derived with
+  // full confidence the way pace can.
+  useEffect(() => {
+    if (caloriesOverridden) return;
+    setCalories(estimateCardioCalories(type, distanceKm, duration, profile?.weight_kg));
+  }, [type, distanceKm, duration, profile?.weight_kg, caloriesOverridden]);
 
   const pace = type === 'Swim'
     ? `${Math.floor(duration / distanceKm)}:${String(Math.round(((duration / distanceKm) % 1) * 60)).padStart(2, '0')} /100m`
@@ -114,14 +123,11 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
       if (editEntry) {
         setType(editEntry.type);
         setDuration(parseInt(editEntry.duration ?? '30', 10) || 30);
-        setCalories(editEntry.calories ?? 280);
+        setCalories(editEntry.calories ?? 0);
+        setCaloriesOverridden(true); // respect the saved value, don't silently re-estimate over it
         const distKm = editEntry.distance_km ?? 0;
         const disp = isImperial ? distKm * KM_TO_MI : distKm;
-        let whole = Math.floor(disp);
-        let tenth = Math.round((disp - whole) * 10);
-        if (tenth >= 10) { whole += 1; tenth = 0; }
-        setDistanceWhole(Math.min(Math.max(whole, 0), distanceMaxWhole));
-        setDistanceTenth(tenth);
+        setDistance(Math.min(Math.max(Math.round(disp * 10) / 10, 0), distanceMax));
       } else {
         reset();
       }
@@ -139,10 +145,9 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
 
   const reset = () => {
     setType('');
-    setDistanceWhole(5);
-    setDistanceTenth(0);
+    setDistance(5);
     setDuration(30);
-    setCalories(280);
+    setCaloriesOverridden(false);
     setUnlockedAchievements([]);
   };
 
@@ -293,7 +298,7 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
 
           <AchievementUnlockBanner achievements={unlockedAchievements} />
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
             {/* Type selector */}
             <Text style={styles.label}>Type</Text>
@@ -321,43 +326,31 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
               ))}
             </View>
 
-            {/* Distance + Duration wheels, side by side */}
-            <View style={styles.metricsRow}>
-              <View style={styles.metricCol}>
-                <Text style={[styles.label, { textAlign: 'center' }]}>Distance — {displayDistance.toFixed(1)} {distanceUnit}</Text>
-                <View style={styles.distanceWheelsRow}>
-                  <NumberWheel
-                    options={WHOLE_OPTIONS}
-                    value={distanceWhole}
-                    onChange={setDistanceWhole}
-                    width={60}
-                    accentColor={COLORS.neonGreen}
-                  />
-                  <Text style={styles.distanceDot}>.</Text>
-                  <NumberWheel
-                    options={TENTH_OPTIONS}
-                    value={distanceTenth}
-                    onChange={setDistanceTenth}
-                    width={50}
-                    accentColor={COLORS.neonGreen}
-                  />
-                </View>
-                <Text style={styles.wheelUnit}>{distanceUnit}</Text>
-              </View>
+            {/* Distance + Duration steppers */}
+            <Text style={styles.label}>Distance</Text>
+            <Stepper
+              value={distance}
+              onChange={setDistance}
+              min={0}
+              max={distanceMax}
+              step={0.1}
+              decimals={1}
+              suffix={distanceUnit}
+              accentColor={COLORS.neonGreen}
+              width={220}
+            />
 
-              <View style={styles.metricCol}>
-                <Text style={[styles.label, { textAlign: 'center' }]}>Duration</Text>
-                <NumberWheel
-                  options={DURATION_OPTIONS}
-                  value={duration}
-                  onChange={setDuration}
-                  width={90}
-                  accentColor={COLORS.primary}
-                />
-                <Text style={styles.wheelUnit}>minutes</Text>
-              </View>
-            </View>
-            <Text style={styles.wheelHint}>Tap a number to type it directly</Text>
+            <Text style={[styles.label, { marginTop: SPACING.lg }]}>Duration</Text>
+            <Stepper
+              value={duration}
+              onChange={setDuration}
+              min={DURATION_MIN}
+              max={DURATION_MAX}
+              step={1}
+              suffix="min"
+              accentColor={COLORS.primary}
+              width={220}
+            />
 
             {/* Auto pace */}
             {displayDistance > 0 && duration > 0 && (
@@ -367,33 +360,27 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
               </View>
             )}
 
-            {/* Calories quick-picks */}
-            <Text style={[styles.label, { marginTop: SPACING.md }]}>Calories — {calories} kcal</Text>
-            <View style={styles.chipRow}>
-              {CALORIE_CHIPS.map((c) => {
-                const selected = calories === c;
-                return (
-                  <TouchableOpacity
-                    key={c}
-                    style={[styles.chip, selected && { borderColor: COLORS.accent, backgroundColor: COLORS.accent + '22' }]}
-                    onPress={() => setCalories(c)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.chipText, selected && { color: COLORS.accentLight }]}>{c}</Text>
-                  </TouchableOpacity>
-                );
-              })}
+            {/* Calories — live-estimated from type/distance/duration/body
+                weight (see lib/cardioCalories.ts), editable via the same
+                tap-to-type Stepper pattern; editing it switches to a manual
+                override until "Reset to estimate" is tapped. */}
+            <View style={[styles.calorieLabelRow, { marginTop: SPACING.lg }]}>
+              <Text style={styles.label}>{caloriesOverridden ? 'Calories' : 'Estimated calories'}</Text>
+              {caloriesOverridden && (
+                <TouchableOpacity onPress={() => setCaloriesOverridden(false)} activeOpacity={0.7}>
+                  <Text style={styles.resetEstimateText}>Reset to estimate</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <Slider
-              style={[styles.slider, { marginBottom: SPACING.lg }]}
-              minimumValue={50}
-              maximumValue={1500}
-              step={10}
+            <Stepper
               value={calories}
-              onValueChange={setCalories}
-              minimumTrackTintColor={COLORS.accent}
-              maximumTrackTintColor={COLORS.borderDefault}
-              thumbTintColor={COLORS.accent}
+              onChange={(v) => { setCalories(v); setCaloriesOverridden(true); }}
+              min={0}
+              max={4000}
+              step={10}
+              suffix="kcal"
+              accentColor={COLORS.accent}
+              width={220}
             />
 
             <TouchableOpacity
@@ -457,39 +444,12 @@ const styles = StyleSheet.create({
   typeName: {
     fontSize: FONT_SIZES.xs, color: COLORS.textSecondary,
   },
-  slider: { width: '100%', height: 40 },
-  chipRow: {
-    flexDirection: 'row', gap: SPACING.sm,
-    marginTop: SPACING.xs, marginBottom: SPACING.sm,
+  calorieLabelRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: SPACING.sm,
   },
-  chip: {
-    flex: 1, backgroundColor: COLORS.bgTertiary,
-    borderColor: COLORS.borderDefault, borderWidth: 1,
-    borderRadius: RADIUS.sm, alignItems: 'center', paddingVertical: SPACING.sm,
-  },
-  chipText: {
-    fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textSecondary,
-  },
-  metricsRow: {
-    flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'flex-start',
-    marginTop: SPACING.md,
-  },
-  metricCol: { alignItems: 'center' },
-  distanceWheelsRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 2, marginTop: SPACING.xs,
-  },
-  distanceDot: {
-    fontSize: FONT_SIZES.xl, fontWeight: FONT_WEIGHTS.black, color: COLORS.textMuted,
-    marginHorizontal: 2,
-  },
-  wheelUnit: {
-    fontSize: FONT_SIZES.xs, color: COLORS.textMuted, textAlign: 'center',
-    letterSpacing: 1, marginTop: 2,
-  },
-  wheelHint: {
-    fontSize: FONT_SIZES.xs, color: COLORS.textMuted, textAlign: 'center',
-    marginTop: SPACING.xs, fontStyle: 'italic',
+  resetEstimateText: {
+    fontSize: FONT_SIZES.xs, color: COLORS.primary, fontWeight: FONT_WEIGHTS.bold,
   },
   paceBox: {
     backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.md,

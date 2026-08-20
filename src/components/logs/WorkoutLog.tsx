@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   StyleSheet, Modal, Alert, Dimensions, Image,
-  KeyboardAvoidingView, Platform, Animated, PanResponder
+  KeyboardAvoidingView, Platform, Animated, PanResponder, Keyboard
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -467,7 +467,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
           )}
           <AchievementUnlockBanner achievements={unlockedAchievements} />
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
 
             {/* Category selector — horizontal scroll, narrowed to today's routine when scheduled */}
             <Text style={styles.sectionLabel}>Muscle group</Text>
@@ -523,6 +523,8 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
               onChangeText={setCustomName}
               placeholder="Or type a custom exercise name…"
               placeholderTextColor={COLORS.textMuted}
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
 
             {/* Sets */}
@@ -553,6 +555,8 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                   placeholder="0"
                   placeholderTextColor={COLORS.textMuted}
                   keyboardType="numeric"
+                  returnKeyType="done"
+                  onSubmitEditing={() => Keyboard.dismiss()}
                 />
                 <TextInput
                   style={styles.setInput}
@@ -561,6 +565,8 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                   placeholder="0"
                   placeholderTextColor={COLORS.textMuted}
                   keyboardType="numeric"
+                  returnKeyType="done"
+                  onSubmitEditing={() => Keyboard.dismiss()}
                 />
                 <TouchableOpacity
                   onPress={() => sets.length > 1 && removeSet(i)}
