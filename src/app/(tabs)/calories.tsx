@@ -251,6 +251,8 @@ export default function Calories() {
               style={[styles.filterPill, activeFilter === 'ALL' && styles.filterPillActive]}
               onPress={() => setActiveFilter('ALL')}
               activeOpacity={0.7}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: activeFilter === 'ALL' }}
             >
               <Text style={[styles.filterPillText, activeFilter === 'ALL' && styles.filterPillTextActive]}>All</Text>
             </TouchableOpacity>
@@ -263,6 +265,8 @@ export default function Calories() {
                 ]}
                 onPress={() => setActiveFilter(type.name)}
                 activeOpacity={0.7}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeFilter === type.name }}
               >
                 <Ionicons
                   name={type.icon}
