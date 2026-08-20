@@ -36,15 +36,15 @@ export default function Stepper({
 }: Props) {
   const color = accentColor ?? COLORS.primary;
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('0');
+  const [draft, setDraft] = useState('');
 
-  // Starts the draft at 0 rather than pre-filling the current value, so the
-  // user can just start typing digits immediately instead of deleting the
-  // existing number first. Leading zeros from typing after it (e.g. "05")
-  // parse fine either way, so this is safe even if a keyboard doesn't honor
-  // selectTextOnFocus.
+  // Starts the draft genuinely empty (not a literal "0" character) so
+  // there's nothing to delete before typing — a faint "0" placeholder
+  // hints at it instead. Blurring/submitting without typing anything
+  // leaves the value unchanged (empty parses to NaN, which commitEdit
+  // ignores) rather than zeroing it out.
   const startEditing = () => {
-    setDraft('0');
+    setDraft('');
     setEditing(true);
   };
 
@@ -84,8 +84,9 @@ export default function Stepper({
             onSubmitEditing={commitEdit}
             keyboardType={decimals > 0 ? 'decimal-pad' : 'number-pad'}
             returnKeyType="done"
+            placeholder="0"
+            placeholderTextColor={COLORS.textMuted}
             autoFocus
-            selectTextOnFocus
             maxLength={6}
           />
         ) : (
