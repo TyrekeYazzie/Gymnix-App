@@ -177,13 +177,25 @@ export default function CalendarScreen() {
 
         {/* Month header */}
         <View style={styles.monthHeader}>
-          <TouchableOpacity onPress={() => goMonth(-1)} style={styles.monthArrow} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={() => goMonth(-1)}
+            style={styles.monthArrow}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Previous month"
+          >
             <Ionicons name="chevron-back" size={18} color={COLORS.primary} />
           </TouchableOpacity>
           <Text style={styles.monthLabel}>
             {monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </Text>
-          <TouchableOpacity onPress={() => goMonth(1)} style={styles.monthArrow} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={() => goMonth(1)}
+            style={styles.monthArrow}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Next month"
+          >
             <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
@@ -202,8 +214,18 @@ export default function CalendarScreen() {
               const dayPaths = dayPhotos.get(date.toDateString());
               const photoPath = dayPaths?.[dayPaths.length - 1];
               const photoUrl = photoPath ? photoUrls[photoPath] : undefined;
+              const dayLabel = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+              const logsLabel = types.length > 0 ? `, ${types.join(', ')} logged` : ', no logs';
               return (
-                <TouchableOpacity key={i} style={styles.cell} onPress={() => openDay(date)} activeOpacity={0.7}>
+                <TouchableOpacity
+                  key={i}
+                  style={styles.cell}
+                  onPress={() => openDay(date)}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${dayLabel}${logsLabel}`}
+                  accessibilityState={{ selected: isSelected }}
+                >
                   <View style={styles.cellCircleWrap}>
                     <View style={[
                       styles.cellCircle,
@@ -329,13 +351,29 @@ export default function CalendarScreen() {
 
       {/* Photo viewer — dark backdrop closes, tapping the photo advances to the next one */}
       <Modal visible={!!viewerDay} transparent animationType="fade" onRequestClose={closeViewer}>
-        <TouchableOpacity style={styles.viewerBackdrop} activeOpacity={1} onPress={closeViewer} />
+        <TouchableOpacity
+          style={styles.viewerBackdrop}
+          activeOpacity={1}
+          onPress={closeViewer}
+          accessibilityRole="button"
+          accessibilityLabel="Close photo viewer"
+        />
         {viewerDay && (
           <View style={styles.viewerCenter} pointerEvents="box-none">
             <Text style={styles.viewerDate}>
               {viewerDay.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </Text>
-            <TouchableOpacity activeOpacity={0.9} onPress={advanceViewer} style={styles.viewerImageWrap}>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={advanceViewer}
+              style={styles.viewerImageWrap}
+              accessibilityRole="button"
+              accessibilityLabel={
+                viewerDay.paths.length > 1
+                  ? `Photo ${viewerIndex + 1} of ${viewerDay.paths.length}, tap for next photo`
+                  : 'Workout photo'
+              }
+            >
               {viewerUrl && <Image source={{ uri: viewerUrl }} style={styles.viewerImage} resizeMode="cover" />}
             </TouchableOpacity>
             {viewerDay.paths.length > 1 && (
