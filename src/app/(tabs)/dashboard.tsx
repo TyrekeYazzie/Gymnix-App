@@ -202,6 +202,8 @@ export default function DashboardScreen() {
             style={styles.avatar}
             onPress={() => router.push('/(tabs)/profile')}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile"
           >
             <Text style={styles.avatarText}>{getInitials(profile?.full_name)}</Text>
           </TouchableOpacity>
