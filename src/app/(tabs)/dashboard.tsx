@@ -9,6 +9,7 @@ import { BlurView } from 'expo-blur';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
+import { useTheme } from '@/context/ThemeContext';
 import { xpProgress } from '@/lib/xp';
 import { getRank } from '@/constants/ranks';
 import { getMyLevelRank, MyLevelRank } from '@/lib/leaderboard';
@@ -22,8 +23,8 @@ import WaterLog from '@/components/logs/WaterLog';
 import CaloriesLog from '@/components/logs/CaloriesLog';
 import { nutritionTargetsOrDefault } from '@/lib/nutrition';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme, Colors
 } from '@/constants/theme';
 
 const HERO_SIZE = 220;
@@ -33,12 +34,14 @@ const HERO_CIRCUMFERENCE = 2 * Math.PI * HERO_RADIUS;
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-const TASKS: { key: string; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
-  { key: 'workout',  label: 'Log Workout',  icon: 'barbell-outline',   color: COLORS.primary },
-  { key: 'cardio',   label: 'Log Cardio',   icon: 'heart-outline',     color: COLORS.neonGreen },
-  { key: 'water',    label: 'Log Water',    icon: 'water-outline',     color: COLORS.neonBlue },
-  { key: 'calories', label: 'Log Meal',     icon: 'nutrition-outline', color: COLORS.neonYellow },
-];
+function getTasks(colors: Colors): { key: string; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
+  return [
+    { key: 'workout',  label: 'Log Workout',  icon: 'barbell-outline',   color: colors.primary },
+    { key: 'cardio',   label: 'Log Cardio',   icon: 'heart-outline',     color: colors.neonGreen },
+    { key: 'water',    label: 'Log Water',    icon: 'water-outline',     color: colors.neonBlue },
+    { key: 'calories', label: 'Log Meal',     icon: 'nutrition-outline', color: colors.neonYellow },
+  ];
+}
 
 interface RecentWorkout {
   id: string;
@@ -96,6 +99,10 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const TASKS = useMemo(() => getTasks(colors), [colors]);
   const CALORIE_GOAL = useMemo(() => nutritionTargetsOrDefault(profile).calorieGoal, [profile]);
 
   const [todayCalories, setTodayCalories] = useState(0);
@@ -209,7 +216,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        <DailyQuote />
+        {(profile?.daily_quotes_enabled ?? true) && <DailyQuote />}
 
         {/* Hero circle */}
         <View style={styles.heroWrapper}>
@@ -218,7 +225,7 @@ export default function DashboardScreen() {
               cx={HERO_SIZE / 2}
               cy={HERO_SIZE / 2}
               r={HERO_RADIUS}
-              stroke={COLORS.circleTrack}
+              stroke={colors.circleTrack}
               strokeWidth={HERO_STROKE}
               fill="none"
             />
@@ -226,7 +233,7 @@ export default function DashboardScreen() {
               cx={HERO_SIZE / 2}
               cy={HERO_SIZE / 2}
               r={HERO_RADIUS}
-              stroke={COLORS.primary}
+              stroke={colors.primary}
               strokeWidth={HERO_STROKE}
               strokeDasharray={`${HERO_CIRCUMFERENCE} ${HERO_CIRCUMFERENCE}`}
               strokeDashoffset={heroDashOffset}
@@ -271,7 +278,7 @@ export default function DashboardScreen() {
 
         {/* Streak card */}
         <View style={styles.tipCard}>
-          <Ionicons name="flame" size={26} color={COLORS.neonOrange} style={styles.tipIcon} />
+          <Ionicons name="flame" size={26} color={colors.neonOrange} style={styles.tipIcon} />
           <View style={{ flex: 1 }}>
             <Text style={styles.tipTitle}>{streak} day streak</Text>
             <Text style={styles.tipBody}>
@@ -324,7 +331,7 @@ export default function DashboardScreen() {
           activeOpacity={0.8}
         >
           <View style={styles.leaderboardIcon}>
-            <Ionicons name="trophy" size={18} color={COLORS.neonYellow} />
+            <Ionicons name="trophy" size={18} color={colors.neonYellow} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.leaderboardTitle}>Leaderboard</Text>
@@ -332,7 +339,7 @@ export default function DashboardScreen() {
               {myRank ? `You're #${myRank.rnk} by level` : 'See how you rank'}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
 
         {/* Progress preview — mini trend for Body Weight / Strength / Cardio */}
@@ -396,304 +403,307 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bgPrimary,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: SPACING.lg,
-    paddingBottom: SPACING.xxxl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.lg,
-  },
-  greeting: {
-    fontSize: FONT_SIZES.xxxl,
-    fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
-    letterSpacing: -0.5,
-  },
-  date: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-    letterSpacing: 0,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.bgElevated,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.purple,
-  },
-  avatarText: {
-    color: COLORS.primary,
-    fontSize: FONT_SIZES.md,
-    fontWeight: FONT_WEIGHTS.black,
-  },
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgPrimary,
+    },
+    scroll: {
+      flex: 1,
+    },
+    content: {
+      padding: SPACING.lg,
+      paddingBottom: SPACING.xxxl,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: SPACING.lg,
+    },
+    greeting: {
+      fontSize: FONT_SIZES.xxxl,
+      fontWeight: FONT_WEIGHTS.black,
+      color: colors.textPrimary,
+      letterSpacing: -0.5,
+    },
+    date: {
+      fontSize: FONT_SIZES.sm,
+      color: colors.textSecondary,
+      marginTop: SPACING.xs,
+      letterSpacing: 0,
+    },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: RADIUS.full,
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1.5,
+      borderColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...SHADOWS.purple,
+    },
+    avatarText: {
+      color: colors.primary,
+      fontSize: FONT_SIZES.md,
+      fontWeight: FONT_WEIGHTS.black,
+    },
 
-  // Hero circle
-  heroWrapper: {
-    alignSelf: 'center',
-    width: HERO_SIZE,
-    height: HERO_SIZE,
-    marginBottom: SPACING.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroCenter: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroNumber: {
-    fontSize: FONT_SIZES.xxxl,
-    fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
-  },
-  heroSubtitle: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
-    marginTop: SPACING.xs,
-  },
-  heroBadge: {
-    marginTop: SPACING.md,
-    borderColor: COLORS.borderDefault,
-    borderWidth: 1,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-  },
-  heroBadgeText: {
-    color: COLORS.textMuted,
-    fontSize: FONT_SIZES.xs,
-    letterSpacing: 1,
-  },
+    // Hero circle
+    heroWrapper: {
+      alignSelf: 'center',
+      width: HERO_SIZE,
+      height: HERO_SIZE,
+      marginBottom: SPACING.xl,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    heroCenter: {
+      position: 'absolute',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    heroNumber: {
+      fontSize: FONT_SIZES.xxxl,
+      fontWeight: FONT_WEIGHTS.black,
+      color: colors.textPrimary,
+    },
+    heroSubtitle: {
+      fontSize: FONT_SIZES.sm,
+      color: colors.textSecondary,
+      letterSpacing: 1,
+      marginTop: SPACING.xs,
+    },
+    heroBadge: {
+      marginTop: SPACING.md,
+      borderColor: colors.borderDefault,
+      borderWidth: 1,
+      borderRadius: RADIUS.full,
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.xs,
+    },
+    heroBadgeText: {
+      color: colors.textMuted,
+      fontSize: FONT_SIZES.xs,
+      letterSpacing: 1,
+    },
 
-  // Week row
-  weekRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.lg,
-  },
-  weekDayWrapper: {
-    alignItems: 'center',
-  },
-  weekCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: RADIUS.full,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(74, 107, 90, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.xs,
-  },
-  weekCircleToday: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-    ...SHADOWS.purple,
-  },
-  weekCircleFuture: {
-    opacity: 0.4,
-  },
-  weekPercent: {
-    fontSize: 9,
-    color: COLORS.textSecondary,
-    fontWeight: FONT_WEIGHTS.bold,
-  },
-  weekPercentToday: {
-    color: COLORS.textInverse,
-  },
-  weekLabel: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
-  },
+    // Week row
+    weekRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: SPACING.lg,
+    },
+    weekDayWrapper: {
+      alignItems: 'center',
+    },
+    weekCircle: {
+      width: 38,
+      height: 38,
+      borderRadius: RADIUS.full,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: 'rgba(74, 107, 90, 0.2)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: SPACING.xs,
+    },
+    weekCircleToday: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+      ...SHADOWS.purple,
+    },
+    weekCircleFuture: {
+      opacity: 0.4,
+    },
+    weekPercent: {
+      fontSize: 9,
+      color: colors.textSecondary,
+      fontWeight: FONT_WEIGHTS.bold,
+    },
+    weekPercentToday: {
+      color: colors.textInverse,
+    },
+    weekLabel: {
+      fontSize: FONT_SIZES.xs,
+      color: colors.textMuted,
+    },
 
-  // Tip / streak card
-  tipCard: {
-    ...CARD.glowing,
-    ...SHADOWS.purple,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  tipIcon: {},
-  tipTitle: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
-  },
-  tipBody: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
-  },
+    // Tip / streak card
+    tipCard: {
+      ...CARD.glowing,
+      ...SHADOWS.purple,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.md,
+      marginBottom: SPACING.lg,
+    },
+    tipIcon: {},
+    tipTitle: {
+      fontSize: FONT_SIZES.md,
+      fontWeight: FONT_WEIGHTS.bold,
+      color: colors.textPrimary,
+      marginBottom: SPACING.xs,
+    },
+    tipBody: {
+      fontSize: FONT_SIZES.xs,
+      color: colors.textSecondary,
+    },
 
-  // XP card
-  xpCard: {
-    backgroundColor: COLORS.bgSecondary,
-    borderWidth: 1,
-    borderRadius: RADIUS.md,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
-  },
-  xpHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
-  xpHeaderText: {
-    flex: 1,
-  },
-  xpLevelLabel: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
-    letterSpacing: 0.3,
-  },
-  xpRankNameText: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: FONT_WEIGHTS.black,
-    letterSpacing: 0.3,
-    marginTop: 2,
-  },
-  xpTotalText: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textPrimary,
-  },
-  xpBarTrack: {
-    height: 8,
-    backgroundColor: COLORS.bgTertiary,
-    borderRadius: RADIUS.full,
-    overflow: 'hidden',
-    marginBottom: SPACING.xs,
-  },
-  xpBarFill: {
-    height: '100%',
-    borderRadius: RADIUS.full,
-  },
-  xpBarFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  xpBarLabel: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
-    letterSpacing: 1,
-  },
+    // XP card
+    xpCard: {
+      backgroundColor: colors.bgSecondary,
+      borderWidth: 1,
+      borderRadius: RADIUS.md,
+      padding: SPACING.lg,
+      marginBottom: SPACING.lg,
+    },
+    xpHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.sm,
+      marginBottom: SPACING.md,
+    },
+    xpHeaderText: {
+      flex: 1,
+    },
+    xpLevelLabel: {
+      fontSize: FONT_SIZES.xs,
+      color: colors.textMuted,
+      letterSpacing: 0.3,
+    },
+    xpRankNameText: {
+      fontSize: FONT_SIZES.sm,
+      fontWeight: FONT_WEIGHTS.black,
+      letterSpacing: 0.3,
+      marginTop: 2,
+    },
+    xpTotalText: {
+      fontSize: FONT_SIZES.lg,
+      fontWeight: FONT_WEIGHTS.bold,
+      color: colors.textPrimary,
+    },
+    xpBarTrack: {
+      height: 8,
+      backgroundColor: colors.bgTertiary,
+      borderRadius: RADIUS.full,
+      overflow: 'hidden',
+      marginBottom: SPACING.xs,
+    },
+    xpBarFill: {
+      height: '100%',
+      borderRadius: RADIUS.full,
+    },
+    xpBarFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    xpBarLabel: {
+      fontSize: FONT_SIZES.xs,
+      color: colors.textMuted,
+      letterSpacing: 1,
+    },
 
-  // Leaderboard teaser
-  leaderboardCard: {
-    ...CARD.default,
-    ...SHADOWS.purple,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  leaderboardIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.neonYellow + '18',
-    borderWidth: 1,
-    borderColor: COLORS.neonYellow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  leaderboardTitle: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textPrimary,
-  },
-  leaderboardSubtitle: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
-    marginTop: 2,
-  },
+    // Leaderboard teaser
+    leaderboardCard: {
+      ...CARD.default,
+      ...SHADOWS.purple,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.md,
+      marginBottom: SPACING.lg,
+    },
+    leaderboardIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: RADIUS.full,
+      backgroundColor: colors.neonYellow + '18',
+      borderWidth: 1,
+      borderColor: colors.neonYellow,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    leaderboardTitle: {
+      fontSize: FONT_SIZES.md,
+      fontWeight: FONT_WEIGHTS.bold,
+      color: colors.textPrimary,
+    },
+    leaderboardSubtitle: {
+      fontSize: FONT_SIZES.xs,
+      color: colors.textMuted,
+      marginTop: 2,
+    },
 
-  sectionTitle: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textMuted,
-    letterSpacing: 0.5,
-    marginBottom: SPACING.md,
-  },
+    sectionTitle: {
+      fontSize: FONT_SIZES.xs,
+      fontWeight: FONT_WEIGHTS.bold,
+      color: colors.textMuted,
+      letterSpacing: 0.5,
+      marginBottom: SPACING.md,
+    },
 
-  // Daily tasks
-  taskRow: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    paddingBottom: SPACING.xs,
-  },
-  taskCard: {
-    width: 110,
-    backgroundColor: COLORS.bgTertiary,
-    borderWidth: 1,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    paddingVertical: SPACING.lg,
-  },
-  taskIcon: {
-    marginBottom: SPACING.sm,
-  },
-  taskLabel: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: FONT_WEIGHTS.bold,
-    textAlign: 'center',
-    letterSpacing: 1,
-  },
+    // Daily tasks
+    taskRow: {
+      flexDirection: 'row',
+      gap: SPACING.sm,
+      paddingBottom: SPACING.xs,
+    },
+    taskCard: {
+      width: 110,
+      backgroundColor: colors.bgTertiary,
+      borderWidth: 1,
+      borderRadius: RADIUS.md,
+      alignItems: 'center',
+      paddingVertical: SPACING.lg,
+    },
+    taskIcon: {
+      marginBottom: SPACING.sm,
+    },
+    taskLabel: {
+      fontSize: FONT_SIZES.xs,
+      fontWeight: FONT_WEIGHTS.bold,
+      textAlign: 'center',
+      letterSpacing: 1,
+    },
 
-  // Recent workouts — fixed height shows ~3 cards with a peek of the next
-  // one, so it visually reads as scrollable rather than just short.
-  recentWorkoutsBox: {
-    height: 240,
-  },
-  workoutCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(74, 107, 90, 0.15)',
-    borderRadius: RADIUS.md,
-    padding: SPACING.lg,
-    overflow: 'hidden',
-    marginBottom: SPACING.sm,
-  },
-  workoutLeft: {
-    flex: 1,
-  },
-  workoutName: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textPrimary,
-    letterSpacing: 1,
-    marginBottom: SPACING.xs,
-  },
-  workoutCategory: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.primary,
-    letterSpacing: 1,
-  },
-  workoutDate: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
-    letterSpacing: 1,
-  },
-});
+    // Recent workouts — fixed height shows ~3 cards with a peek of the next
+    // one, so it visually reads as scrollable rather than just short.
+    recentWorkoutsBox: {
+      height: 240,
+    },
+    workoutCard: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(74, 107, 90, 0.15)',
+      borderRadius: RADIUS.md,
+      padding: SPACING.lg,
+      overflow: 'hidden',
+      marginBottom: SPACING.sm,
+    },
+    workoutLeft: {
+      flex: 1,
+    },
+    workoutName: {
+      fontSize: FONT_SIZES.lg,
+      fontWeight: FONT_WEIGHTS.bold,
+      color: colors.textPrimary,
+      letterSpacing: 1,
+      marginBottom: SPACING.xs,
+    },
+    workoutCategory: {
+      fontSize: FONT_SIZES.sm,
+      color: colors.primary,
+      letterSpacing: 1,
+    },
+    workoutDate: {
+      fontSize: FONT_SIZES.xs,
+      color: colors.textMuted,
+      letterSpacing: 1,
+    },
+  });
+}
