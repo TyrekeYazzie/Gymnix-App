@@ -32,6 +32,8 @@ export interface Profile {
   goal_pace: GoalPace;
   units: 'metric' | 'imperial';
   reminders_enabled: boolean;
+  dark_mode_enabled: boolean;
+  daily_quotes_enabled: boolean;
   total_xp: number;
   weekly_routine: WeeklyRoutine;
   created_at: string;
