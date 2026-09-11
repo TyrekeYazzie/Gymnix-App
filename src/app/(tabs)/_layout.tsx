@@ -1,7 +1,6 @@
 import { Tabs } from 'expo-router';
 import React, { useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { COLORS } from '@/constants/theme';
 import TabBar from '@/components/TabBar';
 import QuickLogMenu from '@/components/QuickLogMenu';
 import WorkoutLog from '@/components/logs/WorkoutLog';

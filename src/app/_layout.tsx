@@ -4,9 +4,10 @@ import { View, ActivityIndicator, Text } from 'react-native';
 import { useFonts } from 'expo-font';
 import { CormorantGaramond_500Medium_Italic } from '@expo-google-fonts/cormorant-garamond';
 import { Cinzel_600SemiBold } from '@expo-google-fonts/cinzel';
-import { COLORS, SPACING } from '@/constants/theme';
+import { SPACING } from '@/constants/theme';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ProfileProvider, useProfile } from '@/context/ProfileContext';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Sentry } from '@/lib/sentry';
 import ErrorFallback from '@/components/ErrorFallback';
@@ -20,6 +21,7 @@ function Layout() {
   // ProfileProvider was rendered from inside Layout's own return, since that
   // put Layout's hooks outside the provider's subtree.
   const { profile, loading: profileLoading } = useProfile();
+  const { theme } = useTheme();
   const [fontsLoaded] = useFonts({ CormorantGaramond_500Medium_Italic, Cinzel_600SemiBold });
   // Only wait on the profile fetch once there's a session to fetch one for —
   // profileLoading never resolves to false until a user exists (see
@@ -51,13 +53,13 @@ function Layout() {
       {loading ? (
         <View style={{
           flex: 1,
-          backgroundColor: COLORS.bgPrimary,
+          backgroundColor: theme.colors.bgPrimary,
           justifyContent: 'center',
           alignItems: 'center'
         }}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={{
-            color: COLORS.textSecondary,
+            color: theme.colors.textSecondary,
             marginTop: SPACING.lg,
           }}>
             Loading...
@@ -84,7 +86,9 @@ function RootLayout() {
   return (
     <Sentry.ErrorBoundary fallback={({ resetError }) => <ErrorFallback resetError={resetError} />}>
       <ProfileProvider>
-        <Layout />
+        <ThemeProvider>
+          <Layout />
+        </ThemeProvider>
       </ProfileProvider>
     </Sentry.ErrorBoundary>
   );
