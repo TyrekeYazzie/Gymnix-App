@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { UnlockedAchievement } from '@/types';
-import { COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING, RADIUS } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
+import { FONT_SIZES, FONT_WEIGHTS, SPACING, RADIUS, Theme } from '@/constants/theme';
 
 // Dropped into each log modal's insert-save path, right after
 // checkAndUnlockAchievements() resolves — same amber/gold banner treatment
@@ -12,12 +13,15 @@ import { COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING, RADIUS } from '@/constants/t
 // threshold at once (e.g. a workout that both hits 50 logged AND a 7-day
 // streak), so this maps over the full list.
 export default function AchievementUnlockBanner({ achievements }: { achievements: UnlockedAchievement[] }) {
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   if (achievements.length === 0) return null;
   return (
     <>
       {achievements.map(a => (
         <View key={a.key} style={styles.banner}>
-          <Ionicons name="ribbon" size={16} color={COLORS.neonYellow} />
+          <Ionicons name="ribbon" size={16} color={colors.neonYellow} />
           <Text style={styles.text}>Achievement unlocked: {a.name}!</Text>
         </View>
       ))}
@@ -25,14 +29,17 @@ export default function AchievementUnlockBanner({ achievements }: { achievements
   );
 }
 
-const styles = StyleSheet.create({
-  banner: {
-    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
-    marginHorizontal: SPACING.lg, marginBottom: SPACING.md,
-    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.neonYellow + '18',
-    borderWidth: 1, borderColor: COLORS.neonYellow,
-  },
-  text: { color: COLORS.textPrimary, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
-});
+function makeStyles(theme: Theme) {
+  const { colors } = theme;
+  return StyleSheet.create({
+    banner: {
+      flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
+      marginHorizontal: SPACING.lg, marginBottom: SPACING.md,
+      paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+      borderRadius: RADIUS.md,
+      backgroundColor: colors.neonYellow + '18',
+      borderWidth: 1, borderColor: colors.neonYellow,
+    },
+    text: { color: colors.textPrimary, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
+  });
+}

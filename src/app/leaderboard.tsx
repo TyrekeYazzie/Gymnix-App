@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, ActivityIndicator,
@@ -16,20 +16,23 @@ import {
   MyLevelRank, MyLogCountRank, MyStreakRank,
 } from '@/lib/leaderboard';
 import { LevelLeaderboardEntry, LogCountLeaderboardEntry, StreakLeaderboardEntry } from '@/types';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme, Colors
 } from '@/constants/theme';
 
 type TabKey = 'level' | 'strength' | 'cardio' | 'streak';
 type Row = LevelLeaderboardEntry | LogCountLeaderboardEntry | StreakLeaderboardEntry;
 
-const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
-  { key: 'level',    label: 'Level',    icon: 'trophy-outline',  color: COLORS.primary },
-  { key: 'strength', label: 'Strength', icon: 'barbell-outline', color: COLORS.accent },
-  { key: 'cardio',   label: 'Cardio',   icon: 'heart-outline',   color: COLORS.neonGreen },
-  { key: 'streak',   label: 'Streak',   icon: 'flame-outline',   color: COLORS.neonOrange },
-];
+function getTabs(colors: Colors): { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
+  return [
+    { key: 'level',    label: 'Level',    icon: 'trophy-outline',  color: colors.primary },
+    { key: 'strength', label: 'Strength', icon: 'barbell-outline', color: colors.accent },
+    { key: 'cardio',   label: 'Cardio',   icon: 'heart-outline',   color: colors.neonGreen },
+    { key: 'streak',   label: 'Streak',   icon: 'flame-outline',   color: colors.neonOrange },
+  ];
+}
 
 function getInitials(name: string | null | undefined): string {
   if (!name) return '?';
@@ -38,17 +41,21 @@ function getInitials(name: string | null | undefined): string {
 }
 
 // Gold/silver/bronze for the podium, muted for everyone else.
-function medalColor(rnk: number): string {
-  if (rnk === 1) return COLORS.neonYellow;
-  if (rnk === 2) return COLORS.textSecondary;
-  if (rnk === 3) return COLORS.neonOrange;
-  return COLORS.textMuted;
+function medalColor(colors: Colors, rnk: number): string {
+  if (rnk === 1) return colors.neonYellow;
+  if (rnk === 2) return colors.textSecondary;
+  if (rnk === 3) return colors.neonOrange;
+  return colors.textMuted;
 }
 
 export default function LeaderboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const TABS = useMemo(() => getTabs(colors), [colors]);
 
   const [tab, setTab] = useState<TabKey>('level');
   const [loading, setLoading] = useState(true);
@@ -132,7 +139,7 @@ export default function LeaderboardScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backButtonRow}>
-            <Ionicons name="chevron-back" size={18} color={COLORS.primary} />
+            <Ionicons name="chevron-back" size={18} color={colors.primary} />
             <Text style={styles.backButton}>Back</Text>
           </TouchableOpacity>
         </View>
@@ -150,7 +157,7 @@ export default function LeaderboardScreen() {
                 onPress={() => setTab(t.key)}
                 activeOpacity={0.7}
               >
-                <Ionicons name={t.icon} size={16} color={active ? t.color : COLORS.textMuted} />
+                <Ionicons name={t.icon} size={16} color={active ? t.color : colors.textMuted} />
                 <Text style={[styles.tabLabel, active && { color: t.color, fontWeight: FONT_WEIGHTS.bold }]}>
                   {t.label}
                 </Text>
@@ -172,7 +179,7 @@ export default function LeaderboardScreen() {
 
         {loading ? (
           <View style={styles.loadingWrap}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
+            <ActivityIndicator size="small" color={colors.primary} />
           </View>
         ) : rows.length === 0 ? (
           <View style={styles.card}>
@@ -186,7 +193,7 @@ export default function LeaderboardScreen() {
                 <View key={row.user_id}>
                   {i > 0 && <View style={styles.rowDivider} />}
                   <View style={[styles.row, isMe && { backgroundColor: activeTabDef.color + '10' }]}>
-                    <Text style={[styles.rank, { color: medalColor(row.rnk) }]}>#{row.rnk}</Text>
+                    <Text style={[styles.rank, { color: medalColor(colors, row.rnk) }]}>#{row.rnk}</Text>
                     <View style={styles.avatar}>
                       <Text style={styles.avatarText}>{getInitials(row.full_name)}</Text>
                     </View>
@@ -227,13 +234,15 @@ export default function LeaderboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxxl },
   header: { marginBottom: SPACING.sm },
   backButtonRow: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' },
   backButton: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 1,
@@ -241,20 +250,20 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     letterSpacing: 0.5,
     marginBottom: SPACING.sm,
   },
   dividerLine: {
     height: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     width: 40,
     marginBottom: SPACING.xl,
   },
   sectionTitle: {
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.5,
     marginBottom: SPACING.md,
   },
@@ -267,20 +276,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: SPACING.xs,
     borderWidth: 1,
-    borderColor: COLORS.borderDefault,
+    borderColor: colors.borderDefault,
     borderRadius: RADIUS.md,
     paddingVertical: SPACING.sm,
   },
-  tabLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted },
+  tabLabel: { fontSize: FONT_SIZES.sm, color: colors.textMuted },
   explainer: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     marginBottom: SPACING.lg,
     lineHeight: 16,
   },
 
   loadingWrap: { paddingVertical: SPACING.xxxl, alignItems: 'center' },
-  emptyText: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted, textAlign: 'center' },
+  emptyText: { fontSize: FONT_SIZES.sm, color: colors.textMuted, textAlign: 'center' },
 
   card: {
     ...CARD.default,
@@ -296,7 +305,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.sm,
     borderRadius: RADIUS.sm,
   },
-  rowDivider: { height: 1, backgroundColor: COLORS.borderDefault },
+  rowDivider: { height: 1, backgroundColor: colors.borderDefault },
   rank: {
     width: 34,
     fontSize: FONT_SIZES.sm,
@@ -306,25 +315,26 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
-    borderColor: COLORS.borderDefault,
+    borderColor: colors.borderDefault,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.black,
   },
   name: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontWeight: FONT_WEIGHTS.medium,
   },
   value: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: FONT_WEIGHTS.bold,
   },
-});
+  });
+}

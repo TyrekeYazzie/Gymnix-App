@@ -13,9 +13,10 @@ import { Sex, WeightGoalType, GoalPace, ActivityLevel, Profile } from '@/types';
 import {
   ACTIVITY_LEVELS, GOAL_PACES, WEIGHT_GOAL_LABELS,
 } from '@/constants/nutrition';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme
 } from '@/constants/theme';
 
 const WEIGHT_GOALS: { value: WeightGoalType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -28,6 +29,9 @@ export default function NutritionGoals() {
   const router = useRouter();
   const { user } = useAuth();
   const { profile, setProfile, isImperial } = useProfile();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const [sex, setSex] = useState<Sex | null>(profile?.sex ?? null);
   const [goalType, setGoalType] = useState<WeightGoalType>(profile?.weight_goal_type ?? 'maintain');
@@ -84,7 +88,7 @@ export default function NutritionGoals() {
 
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backButtonRow}>
-            <Ionicons name="chevron-back" size={18} color={COLORS.primary} />
+            <Ionicons name="chevron-back" size={18} color={colors.primary} />
             <Text style={styles.backButton}>Back</Text>
           </TouchableOpacity>
         </View>
@@ -101,14 +105,14 @@ export default function NutritionGoals() {
             onPress={() => router.push('/(tabs)/profile')}
             activeOpacity={0.8}
           >
-            <Ionicons name="alert-circle-outline" size={18} color={COLORS.accent} />
+            <Ionicons name="alert-circle-outline" size={18} color={colors.accent} />
             <View style={{ flex: 1 }}>
               <Text style={styles.warningTitle}>Add your body stats</Text>
               <Text style={styles.warningText}>
                 Height, weight, and age are needed to calculate real numbers. Tap to edit your profile.
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.accent} />
+            <Ionicons name="chevron-forward" size={16} color={colors.accent} />
           </TouchableOpacity>
         )}
 
@@ -125,7 +129,7 @@ export default function NutritionGoals() {
               <Ionicons
                 name={g.icon}
                 size={18}
-                color={goalType === g.value ? COLORS.primary : COLORS.textMuted}
+                color={goalType === g.value ? colors.primary : colors.textMuted}
               />
               <Text style={[styles.segmentText, goalType === g.value && styles.segmentTextActive]}>
                 {g.label}
@@ -232,15 +236,15 @@ export default function NutritionGoals() {
             <View style={styles.rowDivider} />
             <View style={styles.macroPreviewRow}>
               <View style={styles.macroPreviewBox}>
-                <Text style={[styles.macroPreviewValue, { color: COLORS.neonBlue }]}>{targets.proteinG}g</Text>
+                <Text style={[styles.macroPreviewValue, { color: colors.neonBlue }]}>{targets.proteinG}g</Text>
                 <Text style={styles.macroPreviewLabel}>Protein</Text>
               </View>
               <View style={styles.macroPreviewBox}>
-                <Text style={[styles.macroPreviewValue, { color: COLORS.neonYellow }]}>{targets.carbsG}g</Text>
+                <Text style={[styles.macroPreviewValue, { color: colors.neonYellow }]}>{targets.carbsG}g</Text>
                 <Text style={styles.macroPreviewLabel}>Carbs</Text>
               </View>
               <View style={styles.macroPreviewBox}>
-                <Text style={[styles.macroPreviewValue, { color: COLORS.accent }]}>{targets.fatG}g</Text>
+                <Text style={[styles.macroPreviewValue, { color: colors.accent }]}>{targets.fatG}g</Text>
                 <Text style={styles.macroPreviewLabel}>Fat</Text>
               </View>
             </View>
@@ -259,7 +263,7 @@ export default function NutritionGoals() {
           activeOpacity={0.8}
           disabled={saving}
         >
-          <Text style={[styles.saveText, saved && { color: COLORS.neonGreen }]}>
+          <Text style={[styles.saveText, saved && { color: colors.neonGreen }]}>
             {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save'}
           </Text>
         </TouchableOpacity>
@@ -269,13 +273,15 @@ export default function NutritionGoals() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxxl },
   header: { marginBottom: SPACING.sm },
   backButtonRow: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' },
   backButton: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 1,
@@ -283,19 +289,19 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     letterSpacing: 0.5,
     marginBottom: SPACING.sm,
   },
   subtitle: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: SPACING.lg,
     lineHeight: 18,
   },
   dividerLine: {
     height: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     width: 40,
     marginBottom: SPACING.xl,
   },
@@ -308,13 +314,13 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
   },
   warningTitle: {
-    color: COLORS.accent,
+    color: colors.accent,
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
     marginBottom: 2,
   },
   warningText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: FONT_SIZES.xs,
     lineHeight: 16,
   },
@@ -322,13 +328,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.5,
     marginBottom: SPACING.md,
   },
   hint: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     lineHeight: 16,
     marginTop: -SPACING.sm,
     marginBottom: SPACING.md,
@@ -347,17 +353,17 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
   },
   segmentButtonActive: {
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
     ...SHADOWS.purple,
   },
   segmentText: {
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.3,
   },
   segmentTextActive: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
 
   card: {
@@ -372,36 +378,36 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
   },
   rowLabel: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: FONT_SIZES.md,
     fontWeight: FONT_WEIGHTS.bold,
   },
   rowSubtext: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: FONT_SIZES.xs,
     marginTop: 2,
   },
   rowDivider: {
     height: 1,
-    backgroundColor: COLORS.borderDefault,
+    backgroundColor: colors.borderDefault,
   },
   radio: {
     width: 20,
     height: 20,
     borderRadius: RADIUS.full,
     borderWidth: 1.5,
-    borderColor: COLORS.borderDefault,
+    borderColor: colors.borderDefault,
     alignItems: 'center',
     justifyContent: 'center',
   },
   radioActive: {
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
 
   previewCard: { gap: SPACING.md },
@@ -412,12 +418,12 @@ const styles = StyleSheet.create({
   },
   previewGoalLabel: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: FONT_WEIGHTS.bold,
   },
   previewCalories: {
     fontSize: FONT_SIZES.xl,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontWeight: FONT_WEIGHTS.black,
   },
   previewMetaRow: {
@@ -426,7 +432,7 @@ const styles = StyleSheet.create({
   },
   previewMeta: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.3,
   },
   macroPreviewRow: {
@@ -441,24 +447,25 @@ const styles = StyleSheet.create({
   },
   macroPreviewLabel: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.3,
   },
 
   saveButton: {
     backgroundColor: 'transparent',
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
     borderWidth: 1,
     borderRadius: RADIUS.md,
     padding: SPACING.lg,
     alignItems: 'center',
     marginTop: SPACING.sm,
   },
-  saveButtonSaved: { borderColor: COLORS.neonGreen },
+  saveButtonSaved: { borderColor: colors.neonGreen },
   saveText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: FONT_WEIGHTS.bold,
     fontSize: FONT_SIZES.md,
     letterSpacing: 0.5,
   },
-});
+  });
+}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   StyleSheet, Alert, KeyboardAvoidingView, Platform, ActivityIndicator
@@ -11,14 +11,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { WORKOUT_CATEGORIES } from '@/constants/workoutCategories';
 import { COMMON_EXERCISES } from '@/constants/exercises';
 import { TemplateExercise } from '@/types';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme
 } from '@/constants/theme';
 
 export default function TemplateEditor() {
   const router = useRouter();
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEditing = !!id;
 
@@ -122,7 +126,7 @@ export default function TemplateEditor() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xxxl }} />
+        <ActivityIndicator color={colors.primary} style={{ marginTop: SPACING.xxxl }} />
       </SafeAreaView>
     );
   }
@@ -134,7 +138,7 @@ export default function TemplateEditor() {
 
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backButtonRow}>
-              <Ionicons name="chevron-back" size={18} color={COLORS.primary} />
+              <Ionicons name="chevron-back" size={18} color={colors.primary} />
               <Text style={styles.backButton}>Back</Text>
             </TouchableOpacity>
             {isEditing && (
@@ -146,7 +150,7 @@ export default function TemplateEditor() {
                 accessibilityRole="button"
                 accessibilityLabel="Delete template"
               >
-                <Ionicons name="trash-outline" size={18} color={COLORS.accent} />
+                <Ionicons name="trash-outline" size={18} color={colors.accent} />
               </TouchableOpacity>
             )}
           </View>
@@ -157,7 +161,7 @@ export default function TemplateEditor() {
           <TextInput
             style={styles.input}
             placeholder="e.g. Push Day A"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={colors.textMuted}
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
@@ -176,8 +180,8 @@ export default function TemplateEditor() {
                 return (
                   <View key={`${ex.name}-${i}`}>
                     <View style={styles.exerciseRow}>
-                      <View style={[styles.exerciseIcon, { borderColor: cat?.color ?? COLORS.borderDefault }]}>
-                        <Ionicons name={cat?.icon ?? 'barbell-outline'} size={16} color={cat?.color ?? COLORS.textMuted} />
+                      <View style={[styles.exerciseIcon, { borderColor: cat?.color ?? colors.borderDefault }]}>
+                        <Ionicons name={cat?.icon ?? 'barbell-outline'} size={16} color={cat?.color ?? colors.textMuted} />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.exerciseName}>{ex.name}</Text>
@@ -191,7 +195,7 @@ export default function TemplateEditor() {
                           accessibilityRole="button"
                           accessibilityLabel={`Move ${ex.name} up`}
                         >
-                          <Ionicons name="chevron-up" size={16} color={i === 0 ? COLORS.borderDefault : COLORS.textMuted} />
+                          <Ionicons name="chevron-up" size={16} color={i === 0 ? colors.borderDefault : colors.textMuted} />
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => moveExercise(i, 1)}
@@ -200,7 +204,7 @@ export default function TemplateEditor() {
                           accessibilityRole="button"
                           accessibilityLabel={`Move ${ex.name} down`}
                         >
-                          <Ionicons name="chevron-down" size={16} color={i === exercises.length - 1 ? COLORS.borderDefault : COLORS.textMuted} />
+                          <Ionicons name="chevron-down" size={16} color={i === exercises.length - 1 ? colors.borderDefault : colors.textMuted} />
                         </TouchableOpacity>
                       </View>
                       <TouchableOpacity
@@ -210,7 +214,7 @@ export default function TemplateEditor() {
                         accessibilityRole="button"
                         accessibilityLabel={`Remove ${ex.name}`}
                       >
-                        <Ionicons name="close" size={16} color={COLORS.accent} />
+                        <Ionicons name="close" size={16} color={colors.accent} />
                       </TouchableOpacity>
                     </View>
                     {i < exercises.length - 1 && <View style={styles.rowDivider} />}
@@ -235,8 +239,8 @@ export default function TemplateEditor() {
                     onPress={() => handleCategoryChange(c.name)}
                     activeOpacity={0.75}
                   >
-                    <Ionicons name={c.icon} size={14} color={exCategory === c.name ? COLORS.textInverse : c.color} />
-                    <Text style={[styles.categoryName, exCategory === c.name && { color: COLORS.textInverse }]}>
+                    <Ionicons name={c.icon} size={14} color={exCategory === c.name ? colors.textInverse : c.color} />
+                    <Text style={[styles.categoryName, exCategory === c.name && { color: colors.textInverse }]}>
                       {c.name}
                     </Text>
                   </TouchableOpacity>
@@ -267,7 +271,7 @@ export default function TemplateEditor() {
               value={exCustomName}
               onChangeText={setExCustomName}
               placeholder="Or type a custom exercise name…"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
             />
 
             <View style={styles.stepperGrid}>
@@ -318,7 +322,7 @@ export default function TemplateEditor() {
             </View>
 
             <TouchableOpacity style={styles.addExerciseButton} onPress={handleAddExercise} activeOpacity={0.8}>
-              <Ionicons name="add" size={16} color={COLORS.primary} />
+              <Ionicons name="add" size={16} color={colors.primary} />
               <Text style={styles.addExerciseButtonText}>Add to Template</Text>
             </TouchableOpacity>
           </View>
@@ -338,13 +342,15 @@ export default function TemplateEditor() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxxl },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
   backButtonRow: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' },
   backButton: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 1,
@@ -352,29 +358,29 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     letterSpacing: 0.5,
     marginBottom: SPACING.sm,
   },
   dividerLine: {
     height: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     width: 40,
     marginBottom: SPACING.xl,
   },
   label: {
-    fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted,
+    fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: colors.textMuted,
     letterSpacing: 1.5, marginBottom: SPACING.sm,
   },
   input: {
-    backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault, borderWidth: 1,
-    borderRadius: RADIUS.sm, padding: SPACING.md, color: COLORS.textPrimary,
+    backgroundColor: colors.bgTertiary, borderColor: colors.borderDefault, borderWidth: 1,
+    borderRadius: RADIUS.sm, padding: SPACING.md, color: colors.textPrimary,
     marginBottom: SPACING.md,
   },
   sectionTitle: {
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.5,
     marginBottom: SPACING.md,
   },
@@ -384,7 +390,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   emptyText: {
-    fontSize: FONT_SIZES.sm, color: COLORS.textMuted, lineHeight: 18,
+    fontSize: FONT_SIZES.sm, color: colors.textMuted, lineHeight: 18,
   },
 
   exerciseRow: {
@@ -394,48 +400,49 @@ const styles = StyleSheet.create({
     width: 32, height: 32, borderRadius: RADIUS.full, borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',
   },
-  exerciseName: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textPrimary },
-  exerciseMeta: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 2 },
+  exerciseName: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: colors.textPrimary },
+  exerciseMeta: { fontSize: FONT_SIZES.xs, color: colors.textMuted, marginTop: 2 },
   reorderCol: { alignItems: 'center', gap: 2 },
   removeExerciseBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  rowDivider: { height: 1, backgroundColor: COLORS.borderDefault },
+  rowDivider: { height: 1, backgroundColor: colors.borderDefault },
 
   categoryRow: { flexDirection: 'row', gap: SPACING.sm, paddingBottom: 4 },
   categoryPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.full,
-    backgroundColor: COLORS.bgTertiary, borderWidth: 1, borderColor: COLORS.borderDefault,
+    backgroundColor: colors.bgTertiary, borderWidth: 1, borderColor: colors.borderDefault,
   },
-  categoryName: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textSecondary, letterSpacing: 0.5 },
+  categoryName: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: colors.textSecondary, letterSpacing: 0.5 },
 
   exerciseGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.md },
   exerciseChip: {
     paddingHorizontal: 14, paddingVertical: 9, borderRadius: RADIUS.full,
-    backgroundColor: COLORS.bgTertiary, borderWidth: 1, borderColor: COLORS.borderDefault,
+    backgroundColor: colors.bgTertiary, borderWidth: 1, borderColor: colors.borderDefault,
   },
-  exerciseChipText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.medium },
+  exerciseChipText: { fontSize: FONT_SIZES.sm, color: colors.textSecondary, fontWeight: FONT_WEIGHTS.medium },
 
   stepperGrid: { flexDirection: 'row', gap: SPACING.lg, marginBottom: SPACING.lg },
   stepperCol: { flex: 1 },
   stepper: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: COLORS.bgTertiary, borderWidth: 1, borderColor: COLORS.borderDefault,
+    backgroundColor: colors.bgTertiary, borderWidth: 1, borderColor: colors.borderDefault,
     borderRadius: RADIUS.sm, paddingHorizontal: SPACING.sm,
   },
   stepperBtn: { width: 32, height: 36, alignItems: 'center', justifyContent: 'center' },
-  stepperBtnText: { fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.bold, color: COLORS.primary },
-  stepperValue: { fontSize: FONT_SIZES.md, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textPrimary },
+  stepperBtnText: { fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.bold, color: colors.primary },
+  stepperValue: { fontSize: FONT_SIZES.md, fontWeight: FONT_WEIGHTS.bold, color: colors.textPrimary },
 
   addExerciseButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 1, borderColor: COLORS.primary, borderRadius: RADIUS.sm, paddingVertical: SPACING.sm,
+    borderWidth: 1, borderColor: colors.primary, borderRadius: RADIUS.sm, paddingVertical: SPACING.sm,
   },
-  addExerciseButtonText: { color: COLORS.primary, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm },
+  addExerciseButtonText: { color: colors.primary, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm },
 
   saveButton: {
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 16, alignItems: 'center',
+    backgroundColor: colors.primary, borderRadius: RADIUS.md, paddingVertical: 16, alignItems: 'center',
   },
   saveButtonText: {
-    color: COLORS.textInverse, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.lg, letterSpacing: 0.5,
+    color: colors.textInverse, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.lg, letterSpacing: 0.5,
   },
-});
+  });
+}

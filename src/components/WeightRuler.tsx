@@ -1,9 +1,10 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, Animated,
   NativeSyntheticEvent, NativeScrollEvent, LayoutChangeEvent,
 } from 'react-native';
-import { COLORS, FONT_SIZES, FONT_WEIGHTS } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
+import { FONT_SIZES, FONT_WEIGHTS, Theme } from '@/constants/theme';
 
 const ITEM_WIDTH = 10;      // px per `step` unit along the ruler
 const TICK_AREA_HEIGHT = 34;
@@ -35,7 +36,10 @@ function isNearMultiple(value: number, multiple: number, tolerance: number): boo
 export default function WeightRuler({
   value, onChange, min, max, step, minorStep, majorStep, accentColor, formatLabel,
 }: Props) {
-  const color = accentColor ?? COLORS.primary;
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const color = accentColor ?? colors.primary;
   const count = Math.round((max - min) / step) + 1;
 
   const [wrapWidth, setWrapWidth] = useState(0);
@@ -115,7 +119,7 @@ export default function WeightRuler({
                   {
                     height,
                     width: isMajor ? 2 : 1,
-                    backgroundColor: isMajor ? color : COLORS.borderDefault,
+                    backgroundColor: isMajor ? color : colors.borderDefault,
                   },
                 ]}
               />
@@ -132,7 +136,9 @@ export default function WeightRuler({
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(theme: Theme) {
+  const { colors } = theme;
+  return StyleSheet.create({
   wrap: { height: TICK_AREA_HEIGHT + 18 },
   pointer: {
     position: 'absolute', top: 0, width: 2, height: TICK_AREA_HEIGHT,
@@ -143,6 +149,7 @@ const styles = StyleSheet.create({
   tickLabel: {
     position: 'absolute', top: TICK_AREA_HEIGHT + 2, width: 40, left: -19,
     textAlign: 'center', fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.medium,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
   },
-});
+  });
+}

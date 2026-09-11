@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Modal, TextInput, Alert, Dimensions,
@@ -13,9 +13,10 @@ import { checkAndUnlockAchievements } from '@/lib/achievements';
 import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
 import { UnlockedAchievement } from '@/types';
 import WeightRuler from '@/components/WeightRuler';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme
 } from '@/constants/theme';
 
 // slide the sheet fully past the bottom edge regardless of device height or sheet content length
@@ -32,6 +33,9 @@ interface Props {
 export default function WeightLog({ visible, onClose, onSaved }: Props) {
   const { user } = useAuth();
   const { profile, isImperial, refreshProfile } = useProfile();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   // always stored as kg internally
   const startKg = profile?.weight_kg ?? 70;
@@ -129,7 +133,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
   const diffKg = lastEntry ? weightKg - lastEntry.weight_kg : null;
   const diffDisplay = diffKg !== null ? toDisplay(Math.abs(diffKg)).toFixed(1) : null;
   const diffSign = diffKg !== null && diffKg > 0 ? '+' : '-';
-  const diffColor = diffKg === null ? COLORS.textMuted : diffKg < 0 ? COLORS.neonGreen : diffKg > 0 ? COLORS.accent : COLORS.textMuted;
+  const diffColor = diffKg === null ? colors.textMuted : diffKg < 0 ? colors.neonGreen : diffKg > 0 ? colors.accent : colors.textMuted;
 
   const startEditingEntry = (entry: WeightEntry) => {
     setEditingEntry(entry);
@@ -291,7 +295,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
                   accessibilityRole="button"
                   accessibilityLabel="Delete last logged weight entry"
                 >
-                  <Ionicons name="trash-outline" size={16} color={COLORS.accent} />
+                  <Ionicons name="trash-outline" size={16} color={colors.accent} />
                 </TouchableOpacity>
               </TouchableOpacity>
             )}
@@ -315,7 +319,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
               step={ruler.step}
               minorStep={ruler.minorStep}
               majorStep={ruler.majorStep}
-              accentColor={COLORS.accent}
+              accentColor={colors.accent}
             />
             <View style={{ marginBottom: SPACING.lg }} />
 
@@ -341,7 +345,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
                         accessibilityRole="button"
                         accessibilityLabel={`Delete ${toDisplay(entry.weight_kg).toFixed(1)} ${displayUnit} weight entry`}
                       >
-                        <Ionicons name="trash-outline" size={16} color={COLORS.accent} />
+                        <Ionicons name="trash-outline" size={16} color={colors.accent} />
                       </TouchableOpacity>
                     </View>
                   </TouchableOpacity>
@@ -353,7 +357,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
             <TextInput
               style={[styles.input, { marginBottom: SPACING.lg }]}
               placeholder="e.g. Morning, after workout..."
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               value={notes}
               onChangeText={setNotes}
               returnKeyType="done"
@@ -379,54 +383,57 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.bgOverlay },
+function makeStyles(theme: Theme) {
+  const { colors, SHADOWS } = theme;
+  return StyleSheet.create({
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bgOverlay },
   sheet: {
-    backgroundColor: COLORS.bgSecondary, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
-    borderWidth: 1, borderColor: COLORS.accent + '88', borderBottomWidth: 0,
+    backgroundColor: colors.bgSecondary, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
+    borderWidth: 1, borderColor: colors.accent + '88', borderBottomWidth: 0,
     maxHeight: '85%', paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxxl, ...SHADOWS.crimson,
   },
   handleArea: { alignItems: 'center', paddingVertical: SPACING.md },
-  handleBar: { width: 40, height: 4, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full },
+  handleBar: { width: 40, height: 4, backgroundColor: colors.borderDefault, borderRadius: RADIUS.full },
   title: {
-    fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary,
+    fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary,
   },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cancelEditLink: { fontSize: FONT_SIZES.xs, color: COLORS.primary, fontWeight: FONT_WEIGHTS.bold },
+  cancelEditLink: { fontSize: FONT_SIZES.xs, color: colors.primary, fontWeight: FONT_WEIGHTS.bold },
   lastEntry: {
-    backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
-    marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDefault,
+    backgroundColor: colors.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
+    marginBottom: SPACING.lg, borderWidth: 1, borderColor: colors.borderDefault,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  lastEntryActive: { borderColor: COLORS.accent },
-  lastLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, letterSpacing: 1 },
-  lastValue: { fontSize: FONT_SIZES.sm, color: COLORS.textPrimary, fontWeight: FONT_WEIGHTS.bold },
+  lastEntryActive: { borderColor: colors.accent },
+  lastLabel: { fontSize: FONT_SIZES.xs, color: colors.textMuted, letterSpacing: 1 },
+  lastValue: { fontSize: FONT_SIZES.sm, color: colors.textPrimary, fontWeight: FONT_WEIGHTS.bold },
   weightDisplay: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', marginBottom: SPACING.sm },
-  weightNumber: { fontSize: FONT_SIZES.xxxl, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary, marginRight: SPACING.xs },
-  weightUnit: { fontSize: FONT_SIZES.lg, color: COLORS.textMuted, marginBottom: SPACING.xs },
+  weightNumber: { fontSize: FONT_SIZES.xxxl, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary, marginRight: SPACING.xs },
+  weightUnit: { fontSize: FONT_SIZES.lg, color: colors.textMuted, marginBottom: SPACING.xs },
   weightDiff: { fontSize: FONT_SIZES.xs, textAlign: 'center', marginBottom: SPACING.lg },
   label: {
-    fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted,
+    fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: colors.textMuted,
     letterSpacing: 1.5, marginBottom: SPACING.sm,
   },
   historyRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.borderDefault,
+    paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: colors.borderDefault,
   },
-  historyRowActive: { backgroundColor: COLORS.accentGlow },
+  historyRowActive: { backgroundColor: colors.accentGlow },
   historyRightGroup: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   historyDeleteBtn: {
     width: 32, height: 32, borderRadius: RADIUS.full,
     alignItems: 'center', justifyContent: 'center',
   },
-  historyAmount: { fontSize: FONT_SIZES.sm, color: COLORS.textPrimary, fontWeight: FONT_WEIGHTS.medium },
-  historyTime: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted },
+  historyAmount: { fontSize: FONT_SIZES.sm, color: colors.textPrimary, fontWeight: FONT_WEIGHTS.medium },
+  historyTime: { fontSize: FONT_SIZES.xs, color: colors.textMuted },
   input: {
-    backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault, borderWidth: 1,
-    borderRadius: RADIUS.sm, padding: SPACING.md, color: COLORS.textPrimary,
+    backgroundColor: colors.bgTertiary, borderColor: colors.borderDefault, borderWidth: 1,
+    borderRadius: RADIUS.sm, padding: SPACING.md, color: colors.textPrimary,
   },
-  saveButton: { backgroundColor: COLORS.accent, borderRadius: RADIUS.md, padding: SPACING.lg, alignItems: 'center', marginBottom: SPACING.sm, ...SHADOWS.crimson },
-  saveText: { color: COLORS.textInverse, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md, letterSpacing: 0.5 },
+  saveButton: { backgroundColor: colors.accent, borderRadius: RADIUS.md, padding: SPACING.lg, alignItems: 'center', marginBottom: SPACING.sm, ...SHADOWS.crimson },
+  saveText: { color: colors.textInverse, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md, letterSpacing: 0.5 },
   cancelButton: { padding: SPACING.lg, alignItems: 'center' },
-  cancelText: { color: COLORS.textMuted, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm, letterSpacing: 0.5 },
-});
+  cancelText: { color: colors.textMuted, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm, letterSpacing: 0.5 },
+  });
+}

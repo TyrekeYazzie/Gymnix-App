@@ -6,14 +6,15 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
+import { useTheme } from '@/context/ThemeContext';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import { WORKOUT_CATEGORIES } from '@/constants/workoutCategories';
-import { CARDIO_TYPES } from '@/components/logs/CardioLog';
+import { getCardioTypes } from '@/components/logs/CardioLog';
 import { getSignedPhotoUrls } from '@/utils/workoutPhotos';
 import { Workout, CardioLogEntry, WaterLogEntry, WeightLogEntry, Meal } from '@/types';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme, Colors
 } from '@/constants/theme';
 
 const WEEKDAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -24,13 +25,15 @@ const VIEWER_HEIGHT = Math.min(VIEWER_WIDTH * 1.25, SCREEN_HEIGHT * 0.6);
 
 type LogType = 'workout' | 'cardio' | 'water' | 'meal' | 'weight';
 
-const LOG_TYPE_COLORS: Record<LogType, string> = {
-  workout: COLORS.primary,
-  cardio:  COLORS.neonGreen,
-  meal:    COLORS.neonYellow,
-  water:   COLORS.neonBlue,
-  weight:  COLORS.neonOrange,
-};
+function getLogTypeColors(colors: Colors): Record<LogType, string> {
+  return {
+    workout: colors.primary,
+    cardio:  colors.neonGreen,
+    meal:    colors.neonYellow,
+    water:   colors.neonBlue,
+    weight:  colors.neonOrange,
+  };
+}
 
 const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
@@ -50,6 +53,11 @@ function buildGrid(monthDate: Date): (Date | null)[] {
 export default function CalendarScreen() {
   const { user } = useAuth();
   const { isImperial } = useProfile();
+  const { theme } = useTheme();
+  const { colors, CARD } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const LOG_TYPE_COLORS = useMemo(() => getLogTypeColors(colors), [colors]);
+  const CARDIO_TYPES = useMemo(() => getCardioTypes(colors), [colors]);
   const swipeHandlers = useSwipeTabs();
 
   const [monthDate, setMonthDate] = useState(() => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d; });
@@ -184,7 +192,7 @@ export default function CalendarScreen() {
             accessibilityRole="button"
             accessibilityLabel="Previous month"
           >
-            <Ionicons name="chevron-back" size={18} color={COLORS.primary} />
+            <Ionicons name="chevron-back" size={18} color={colors.primary} />
           </TouchableOpacity>
           <Text style={styles.monthLabel}>
             {monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -196,7 +204,7 @@ export default function CalendarScreen() {
             accessibilityRole="button"
             accessibilityLabel="Next month"
           >
-            <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
+            <Ionicons name="chevron-forward" size={18} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
@@ -277,7 +285,7 @@ export default function CalendarScreen() {
                   return (
                     <View key={w.id} style={styles.detailRow}>
                       <Text style={styles.detailRowText}>
-                        <Ionicons name={cat?.icon ?? 'barbell-outline'} size={13} color={cat?.color ?? COLORS.primary} /> {w.name}
+                        <Ionicons name={cat?.icon ?? 'barbell-outline'} size={13} color={cat?.color ?? colors.primary} /> {w.name}
                       </Text>
                       <Text style={styles.detailRowMeta}>{w.sets?.length ?? 0} sets</Text>
                     </View>
@@ -297,7 +305,7 @@ export default function CalendarScreen() {
                   return (
                     <View key={c.id} style={styles.detailRow}>
                       <Text style={styles.detailRowText}>
-                        <Ionicons name={t?.icon ?? 'heart-outline'} size={13} color={t?.color ?? COLORS.neonGreen} /> {c.type}
+                        <Ionicons name={t?.icon ?? 'heart-outline'} size={13} color={t?.color ?? colors.neonGreen} /> {c.type}
                       </Text>
                       <Text style={styles.detailRowMeta}>{c.duration ?? ''}</Text>
                     </View>
@@ -390,8 +398,10 @@ export default function CalendarScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   fixedTop: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg },
   listScroll: { flex: 1 },
   listContent: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxxl },
@@ -399,11 +409,11 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     letterSpacing: 0.5,
     marginBottom: SPACING.sm,
   },
-  dividerLine: { height: 1, backgroundColor: COLORS.primary, width: 40, marginBottom: SPACING.lg },
+  dividerLine: { height: 1, backgroundColor: colors.primary, width: 40, marginBottom: SPACING.lg },
 
   monthHeader: {
     flexDirection: 'row',
@@ -414,19 +424,19 @@ const styles = StyleSheet.create({
   monthArrow: {
     width: 32, height: 32, borderRadius: RADIUS.full,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: COLORS.bgTertiary,
+    backgroundColor: colors.bgTertiary,
   },
   monthLabel: {
     fontSize: FONT_SIZES.lg,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
 
   calendarCard: { ...SHADOWS.purple, marginBottom: SPACING.lg },
   weekdayRow: { flexDirection: 'row', marginBottom: SPACING.sm },
   weekdayLabel: {
     width: `${100 / 7}%`, textAlign: 'center',
-    fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontWeight: FONT_WEIGHTS.bold,
+    fontSize: FONT_SIZES.xs, color: colors.textMuted, fontWeight: FONT_WEIGHTS.bold,
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   cell: { width: `${100 / 7}%`, alignItems: 'center', marginBottom: SPACING.sm },
@@ -435,8 +445,8 @@ const styles = StyleSheet.create({
     width: 30, height: 30, borderRadius: RADIUS.full,
     alignItems: 'center', justifyContent: 'center',
   },
-  cellCircleToday: { borderWidth: 1.5, borderColor: COLORS.primary },
-  cellCircleSelected: { backgroundColor: COLORS.primary },
+  cellCircleToday: { borderWidth: 1.5, borderColor: colors.primary },
+  cellCircleSelected: { backgroundColor: colors.primary },
   cellPhotoBadge: {
     position: 'absolute',
     top: -3,
@@ -445,35 +455,35 @@ const styles = StyleSheet.create({
     height: 13,
     borderRadius: RADIUS.full,
     borderWidth: 1.5,
-    borderColor: COLORS.bgElevated,
+    borderColor: colors.bgElevated,
   },
-  cellText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
-  cellTextToday: { color: COLORS.primary, fontWeight: FONT_WEIGHTS.bold },
-  cellTextSelected: { color: COLORS.textInverse, fontWeight: FONT_WEIGHTS.bold },
+  cellText: { fontSize: FONT_SIZES.sm, color: colors.textSecondary },
+  cellTextToday: { color: colors.primary, fontWeight: FONT_WEIGHTS.bold },
+  cellTextSelected: { color: colors.textInverse, fontWeight: FONT_WEIGHTS.bold },
   dotRow: { flexDirection: 'row', gap: 3, height: 8, marginTop: 3, alignItems: 'center' },
   dot: { width: 5, height: 5, borderRadius: RADIUS.full },
 
-  sectionTitle: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted, letterSpacing: 0.5, marginBottom: SPACING.md },
+  sectionTitle: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: colors.textMuted, letterSpacing: 0.5, marginBottom: SPACING.md },
 
   detailCard: { marginBottom: SPACING.md },
   detailHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
   detailDot: { width: 8, height: 8, borderRadius: RADIUS.full },
-  detailTitle: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textPrimary },
+  detailTitle: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: colors.textPrimary },
   detailRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: SPACING.xs,
   },
-  detailRowText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
-  detailRowMeta: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted },
+  detailRowText: { fontSize: FONT_SIZES.sm, color: colors.textSecondary },
+  detailRowMeta: { fontSize: FONT_SIZES.xs, color: colors.textMuted },
 
   emptyState: { ...CARD.default, alignItems: 'center', paddingVertical: SPACING.xl },
-  emptyText: { color: COLORS.textMuted, fontSize: FONT_SIZES.sm },
+  emptyText: { color: colors.textMuted, fontSize: FONT_SIZES.sm },
 
   // Photo viewer
-  viewerBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.bgOverlay },
+  viewerBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bgOverlay },
   viewerCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },
   viewerDate: {
-    color: COLORS.textInverse,
+    color: colors.textInverse,
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 0.5,
@@ -487,11 +497,12 @@ const styles = StyleSheet.create({
     height: VIEWER_HEIGHT,
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
-    backgroundColor: COLORS.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     ...SHADOWS.purple,
   },
   viewerImage: { width: '100%', height: '100%' },
   viewerDots: { flexDirection: 'row', gap: 6, marginTop: SPACING.lg },
   viewerDot: { width: 6, height: 6, borderRadius: RADIUS.full, backgroundColor: 'rgba(247, 243, 233, 0.35)' },
-  viewerDotActive: { backgroundColor: COLORS.textInverse, width: 16 },
-});
+  viewerDotActive: { backgroundColor: colors.textInverse, width: 16 },
+  });
+}

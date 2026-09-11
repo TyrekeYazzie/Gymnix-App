@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, LayoutChangeEvent,
@@ -11,24 +11,31 @@ import { xpProgress } from '@/lib/xp';
 import { XP_MEAL, XP_WATER, XP_WEIGHT } from '@/lib/xp';
 import { RANKS, getRankIndex } from '@/constants/ranks';
 import RankMedallion from '@/components/RankMedallion';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme, Colors
 } from '@/constants/theme';
 
 const ITEM_WIDTH = 92;
 
-const XP_SOURCES = [
-  { icon: 'barbell-outline' as const, label: 'Workouts', detail: '10 XP per set, plus up to +20 more for heavier sets', color: COLORS.primary },
-  { icon: 'heart-outline' as const, label: 'Cardio', detail: '15–75 XP based on session duration', color: COLORS.neonGreen },
-  { icon: 'water-outline' as const, label: 'Water', detail: `${XP_WATER} XP per log`, color: COLORS.neonBlue },
-  { icon: 'nutrition-outline' as const, label: 'Meals', detail: `${XP_MEAL} XP per log`, color: COLORS.neonYellow },
-  { icon: 'body-outline' as const, label: 'Weigh-ins', detail: `${XP_WEIGHT} XP per log`, color: COLORS.accent },
-];
+function getXpSources(colors: Colors) {
+  return [
+    { icon: 'barbell-outline' as const, label: 'Workouts', detail: '10 XP per set, plus up to +20 more for heavier sets', color: colors.primary },
+    { icon: 'heart-outline' as const, label: 'Cardio', detail: '15–75 XP based on session duration', color: colors.neonGreen },
+    { icon: 'water-outline' as const, label: 'Water', detail: `${XP_WATER} XP per log`, color: colors.neonBlue },
+    { icon: 'nutrition-outline' as const, label: 'Meals', detail: `${XP_MEAL} XP per log`, color: colors.neonYellow },
+    { icon: 'body-outline' as const, label: 'Weigh-ins', detail: `${XP_WEIGHT} XP per log`, color: colors.accent },
+  ];
+}
 
 export default function RankChartScreen() {
   const router = useRouter();
   const { profile } = useProfile();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const XP_SOURCES = useMemo(() => getXpSources(colors), [colors]);
 
   const totalXP = profile?.total_xp ?? 0;
   const xp = xpProgress(totalXP);
@@ -59,7 +66,7 @@ export default function RankChartScreen() {
 
         {/* Header */}
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backRow}>
-          <Ionicons name="chevron-back" size={18} color={COLORS.primary} />
+          <Ionicons name="chevron-back" size={18} color={colors.primary} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.screenTitle}>Your Rank</Text>
@@ -74,7 +81,7 @@ export default function RankChartScreen() {
 
           {isMaxRank ? (
             <View style={styles.maxBadge}>
-              <Ionicons name="trophy" size={14} color={COLORS.neonYellow} />
+              <Ionicons name="trophy" size={14} color={colors.neonYellow} />
               <Text style={styles.maxBadgeText}>Max rank reached</Text>
             </View>
           ) : (
@@ -111,7 +118,7 @@ export default function RankChartScreen() {
               >
                 <View style={[
                   styles.stripMedallionWrap,
-                  isSelected && { backgroundColor: (locked ? COLORS.borderDefault : rank.color) + '14' },
+                  isSelected && { backgroundColor: (locked ? colors.borderDefault : rank.color) + '14' },
                 ]}>
                   <RankMedallion rank={rank} size={60} locked={locked} emphasized={isCurrent} />
                 </View>
@@ -131,10 +138,10 @@ export default function RankChartScreen() {
         </ScrollView>
 
         {/* Selected rank detail */}
-        <View style={[styles.detailCard, { borderColor: selectedLocked ? COLORS.borderDefault : selectedRank.color }]}>
+        <View style={[styles.detailCard, { borderColor: selectedLocked ? colors.borderDefault : selectedRank.color }]}>
           <RankMedallion rank={selectedRank} size={44} locked={selectedLocked} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.detailName, { color: selectedLocked ? COLORS.textMuted : selectedRank.color }]}>
+            <Text style={[styles.detailName, { color: selectedLocked ? colors.textMuted : selectedRank.color }]}>
               {selectedRank.name}
             </Text>
             <Text style={styles.detailDescription}>{selectedRank.description}</Text>
@@ -175,39 +182,41 @@ export default function RankChartScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxxl },
 
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: SPACING.sm, alignSelf: 'flex-start' },
-  backText: { color: COLORS.primary, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 1 },
-  screenTitle: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary, letterSpacing: 0.5, marginBottom: SPACING.sm },
-  dividerLine: { height: 1, backgroundColor: COLORS.primary, width: 40, marginBottom: SPACING.xl },
+  backText: { color: colors.primary, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 1 },
+  screenTitle: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary, letterSpacing: 0.5, marginBottom: SPACING.sm },
+  dividerLine: { height: 1, backgroundColor: colors.primary, width: 40, marginBottom: SPACING.xl },
 
-  sectionTitle: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted, letterSpacing: 0.5, marginBottom: SPACING.md },
+  sectionTitle: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: colors.textMuted, letterSpacing: 0.5, marginBottom: SPACING.md },
 
   heroCard: {
     ...CARD.default, ...SHADOWS.purple,
     alignItems: 'center', paddingVertical: SPACING.xl, marginBottom: SPACING.xl,
   },
   heroRankName: { fontSize: FONT_SIZES.xl, fontWeight: FONT_WEIGHTS.black, letterSpacing: 0.5, marginTop: SPACING.md, textAlign: 'center' },
-  heroLevel: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted, marginTop: 2 },
-  heroDescription: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, textAlign: 'center', marginTop: SPACING.sm, marginBottom: SPACING.lg, paddingHorizontal: SPACING.md },
-  heroXpTrack: { width: '100%', height: 8, backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.full, overflow: 'hidden', marginBottom: SPACING.xs },
+  heroLevel: { fontSize: FONT_SIZES.sm, color: colors.textMuted, marginTop: 2 },
+  heroDescription: { fontSize: FONT_SIZES.sm, color: colors.textSecondary, textAlign: 'center', marginTop: SPACING.sm, marginBottom: SPACING.lg, paddingHorizontal: SPACING.md },
+  heroXpTrack: { width: '100%', height: 8, backgroundColor: colors.bgTertiary, borderRadius: RADIUS.full, overflow: 'hidden', marginBottom: SPACING.xs },
   heroXpFill: { height: '100%', borderRadius: RADIUS.full },
-  heroXpFooter: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, letterSpacing: 0.3 },
+  heroXpFooter: { fontSize: FONT_SIZES.xs, color: colors.textMuted, letterSpacing: 0.3 },
   maxBadge: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.xs,
-    borderWidth: 1, borderColor: COLORS.neonYellow, borderRadius: RADIUS.full,
+    borderWidth: 1, borderColor: colors.neonYellow, borderRadius: RADIUS.full,
     paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs,
   },
-  maxBadgeText: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.neonYellow, letterSpacing: 0.5 },
+  maxBadgeText: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: colors.neonYellow, letterSpacing: 0.5 },
 
   stripScroll: { marginBottom: SPACING.lg },
   stripItem: { alignItems: 'center', paddingVertical: SPACING.sm },
   stripMedallionWrap: { borderRadius: RADIUS.full, padding: 4, marginBottom: SPACING.xs },
-  stripLabel: { fontSize: 10, color: COLORS.textMuted, textAlign: 'center', letterSpacing: 0.2, lineHeight: 13 },
-  stripYouAre: { fontSize: 8, color: COLORS.textMuted, letterSpacing: 0.5, marginTop: 2 },
+  stripLabel: { fontSize: 10, color: colors.textMuted, textAlign: 'center', letterSpacing: 0.2, lineHeight: 13 },
+  stripYouAre: { fontSize: 8, color: colors.textMuted, letterSpacing: 0.5, marginTop: 2 },
 
   detailCard: {
     ...CARD.default, ...SHADOWS.subtle,
@@ -215,15 +224,16 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, marginBottom: SPACING.xl,
   },
   detailName: { fontSize: FONT_SIZES.md, fontWeight: FONT_WEIGHTS.black, letterSpacing: 0.3, marginBottom: 2 },
-  detailDescription: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginBottom: 4 },
-  detailMeta: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 0.3 },
+  detailDescription: { fontSize: FONT_SIZES.xs, color: colors.textSecondary, marginBottom: 4 },
+  detailMeta: { fontSize: FONT_SIZES.xs, color: colors.textMuted, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 0.3 },
 
   xpCard: { ...CARD.default, ...SHADOWS.purple, marginBottom: SPACING.md, padding: SPACING.sm },
   xpRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.sm },
   xpIcon: { width: 32, height: 32, borderRadius: RADIUS.full, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  xpLabel: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textPrimary },
-  xpDetail: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 2 },
-  rowDivider: { height: 1, backgroundColor: COLORS.borderDefault },
+  xpLabel: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: colors.textPrimary },
+  xpDetail: { fontSize: FONT_SIZES.xs, color: colors.textMuted, marginTop: 2 },
+  rowDivider: { height: 1, backgroundColor: colors.borderDefault },
 
-  footnote: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, textAlign: 'center', lineHeight: 16, paddingHorizontal: SPACING.md },
-});
+  footnote: { fontSize: FONT_SIZES.xs, color: colors.textMuted, textAlign: 'center', lineHeight: 16, paddingHorizontal: SPACING.md },
+  });
+}

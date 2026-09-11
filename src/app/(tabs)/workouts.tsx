@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert
 } from 'react-native';
@@ -7,13 +7,14 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/context/ThemeContext';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import WorkoutLog from '@/components/logs/WorkoutLog';
 import { WORKOUT_CATEGORIES as categories } from '@/constants/workoutCategories';
 import { Workout, TemplateExercise } from '@/types';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme
 } from '@/constants/theme';
 
 // Sequencing state for an in-progress "Start Template" run — see the
@@ -29,6 +30,9 @@ export default function Workouts() {
   const router = useRouter();
   const { startTemplateId } = useLocalSearchParams<{ startTemplateId?: string }>();
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
@@ -169,7 +173,7 @@ export default function Workouts() {
               accessibilityRole="button"
               accessibilityLabel="Workout templates"
             >
-              <Ionicons name="list-outline" size={16} color={COLORS.primary} />
+              <Ionicons name="list-outline" size={16} color={colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.addButton}
@@ -203,11 +207,11 @@ export default function Workouts() {
 
         {/* Search */}
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={16} color={COLORS.textMuted} />
+          <Ionicons name="search" size={16} color={colors.textMuted} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search workouts"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={colors.textMuted}
             value={search}
             onChangeText={setSearch}
           />
@@ -242,7 +246,7 @@ export default function Workouts() {
                 <Ionicons
                   name={cat.icon}
                   size={14}
-                  color={activeFilter === cat.name ? COLORS.textInverse : cat.color}
+                  color={activeFilter === cat.name ? colors.textInverse : cat.color}
                 />
                 <Text style={[
                   styles.filterPillText,
@@ -277,8 +281,8 @@ export default function Workouts() {
                 onPress={() => { setActiveTemplate(null); setEditingWorkout(workout); setModalVisible(true); }}
                 activeOpacity={0.7}
               >
-                <View style={[styles.workoutIcon, { borderColor: cat?.color ?? COLORS.primary }]}>
-                  <Ionicons name={cat?.icon ?? 'barbell-outline'} size={18} color={cat?.color ?? COLORS.primary} />
+                <View style={[styles.workoutIcon, { borderColor: cat?.color ?? colors.primary }]}>
+                  <Ionicons name={cat?.icon ?? 'barbell-outline'} size={18} color={cat?.color ?? colors.primary} />
                 </View>
                 <View style={styles.workoutLeft}>
                   <Text style={styles.workoutName}>{workout.name}</Text>
@@ -316,8 +320,10 @@ export default function Workouts() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   fixedTop: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg },
   listScroll: { flex: 1 },
   listContent: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxxl },
@@ -330,12 +336,12 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     letterSpacing: 0.5,
   },
   subtitle: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginTop: SPACING.xs,
     letterSpacing: 1,
   },
@@ -348,14 +354,14 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: RADIUS.full,
-    borderColor: COLORS.primaryLight,
+    borderColor: colors.primaryLight,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOWS.purple,
   },
   addButton: {
-    borderColor: COLORS.primaryLight,
+    borderColor: colors.primaryLight,
     borderWidth: 1,
     borderRadius: RADIUS.sm,
     paddingHorizontal: SPACING.md,
@@ -363,7 +369,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.purple,
   },
   addButtonText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 0.3,
@@ -381,22 +387,22 @@ const styles = StyleSheet.create({
   summaryNumber: {
     fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   summaryLabel: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 1,
     marginTop: SPACING.xs,
   },
-  summaryDivider: { width: 1, height: 40, backgroundColor: COLORS.borderDefault },
+  summaryDivider: { width: 1, height: 40, backgroundColor: colors.borderDefault },
 
   // Search
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.bgTertiary,
-    borderColor: COLORS.borderDefault,
+    backgroundColor: colors.bgTertiary,
+    borderColor: colors.borderDefault,
     borderWidth: 1,
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.md,
@@ -405,7 +411,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: FONT_SIZES.sm,
     paddingVertical: SPACING.md,
   },
@@ -419,31 +425,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    backgroundColor: COLORS.bgTertiary,
-    borderColor: COLORS.borderDefault,
+    backgroundColor: colors.bgTertiary,
+    borderColor: colors.borderDefault,
     borderWidth: 1,
     borderRadius: RADIUS.full,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
   },
   filterPillActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   filterPillText: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 1,
   },
   filterPillTextActive: {
-    color: COLORS.textInverse,
+    color: colors.textInverse,
   },
 
   sectionTitle: {
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.5,
     marginBottom: SPACING.md,
   },
@@ -467,25 +473,25 @@ const styles = StyleSheet.create({
   },
   workoutLeft: { flex: 1 },
   workoutName: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: FONT_SIZES.md,
     fontWeight: FONT_WEIGHTS.bold,
     marginBottom: SPACING.xs,
   },
   workoutMeta: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: FONT_SIZES.xs,
     letterSpacing: 1,
   },
   workoutRight: { alignItems: 'flex-end' },
   workoutDate: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: FONT_SIZES.xs,
     letterSpacing: 1,
     marginBottom: SPACING.xs,
   },
   workoutCalories: {
-    color: COLORS.neonGreen,
+    color: colors.neonGreen,
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
   },
@@ -495,13 +501,14 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xxxl,
   },
   emptyText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: FONT_SIZES.sm,
     letterSpacing: 0.3,
     marginBottom: SPACING.sm,
   },
   emptySubText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: FONT_SIZES.xs,
   },
-});
+  });
+}

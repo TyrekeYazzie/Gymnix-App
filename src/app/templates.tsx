@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator
 } from 'react-native';
@@ -9,14 +9,18 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { WORKOUT_CATEGORIES } from '@/constants/workoutCategories';
 import { WorkoutTemplate } from '@/types';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme
 } from '@/constants/theme';
 
 export default function Templates() {
   const router = useRouter();
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -83,7 +87,7 @@ export default function Templates() {
 
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backButtonRow}>
-            <Ionicons name="chevron-back" size={18} color={COLORS.primary} />
+            <Ionicons name="chevron-back" size={18} color={colors.primary} />
             <Text style={styles.backButton}>Back</Text>
           </TouchableOpacity>
         </View>
@@ -103,12 +107,12 @@ export default function Templates() {
           onPress={() => router.push('/template-editor')}
           activeOpacity={0.8}
         >
-          <Ionicons name="add" size={18} color={COLORS.textInverse} />
+          <Ionicons name="add" size={18} color={colors.textInverse} />
           <Text style={styles.newButtonText}>New Template</Text>
         </TouchableOpacity>
 
         {loading ? (
-          <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
+          <ActivityIndicator color={colors.primary} style={{ marginTop: SPACING.xl }} />
         ) : templates.length === 0 ? (
           <View style={styles.card}>
             <Text style={styles.emptyText}>
@@ -138,7 +142,7 @@ export default function Templates() {
                     accessibilityRole="button"
                     accessibilityLabel={`Delete ${t.name}`}
                   >
-                    <Ionicons name="trash-outline" size={18} color={COLORS.accent} />
+                    <Ionicons name="trash-outline" size={18} color={colors.accent} />
                   </TouchableOpacity>
                 </View>
 
@@ -146,9 +150,9 @@ export default function Templates() {
                   {categoriesInTemplate(t).map((cat) => {
                     const c = getCategory(cat);
                     return (
-                      <View key={cat} style={[styles.categoryPill, { borderColor: c?.color ?? COLORS.borderDefault }]}>
-                        <Ionicons name={c?.icon ?? 'ellipse-outline'} size={12} color={c?.color ?? COLORS.textMuted} />
-                        <Text style={[styles.categoryPillText, { color: c?.color ?? COLORS.textMuted }]}>{cat}</Text>
+                      <View key={cat} style={[styles.categoryPill, { borderColor: c?.color ?? colors.borderDefault }]}>
+                        <Ionicons name={c?.icon ?? 'ellipse-outline'} size={12} color={c?.color ?? colors.textMuted} />
+                        <Text style={[styles.categoryPillText, { color: c?.color ?? colors.textMuted }]}>{cat}</Text>
                       </View>
                     );
                   })}
@@ -160,7 +164,7 @@ export default function Templates() {
                 onPress={() => handleStart(t)}
                 activeOpacity={0.85}
               >
-                <Ionicons name="play" size={14} color={COLORS.textInverse} />
+                <Ionicons name="play" size={14} color={colors.textInverse} />
                 <Text style={styles.startButtonText}>Start</Text>
               </TouchableOpacity>
             </View>
@@ -172,13 +176,15 @@ export default function Templates() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxxl },
   header: { marginBottom: SPACING.sm },
   backButtonRow: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' },
   backButton: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 1,
@@ -187,29 +193,29 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     letterSpacing: 0.5,
     marginBottom: SPACING.sm,
   },
   subtitle: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: SPACING.lg,
     lineHeight: 18,
   },
   dividerLine: {
     height: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     width: 40,
     marginBottom: SPACING.xl,
   },
   newButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.xs,
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.md, padding: SPACING.md,
+    backgroundColor: colors.primary, borderRadius: RADIUS.md, padding: SPACING.md,
     marginBottom: SPACING.xl,
   },
   newButtonText: {
-    color: COLORS.textInverse, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md, letterSpacing: 0.5,
+    color: colors.textInverse, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md, letterSpacing: 0.5,
   },
   card: {
     ...CARD.default,
@@ -217,7 +223,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   emptyText: {
-    fontSize: FONT_SIZES.sm, color: COLORS.textMuted, lineHeight: 18,
+    fontSize: FONT_SIZES.sm, color: colors.textMuted, lineHeight: 18,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -227,12 +233,12 @@ const styles = StyleSheet.create({
   templateName: {
     fontSize: FONT_SIZES.md,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   templateMeta: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.5,
   },
   deleteButton: {
@@ -248,9 +254,10 @@ const styles = StyleSheet.create({
   categoryPillText: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold },
   startButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.sm, paddingVertical: SPACING.sm,
+    backgroundColor: colors.primary, borderRadius: RADIUS.sm, paddingVertical: SPACING.sm,
   },
   startButtonText: {
-    color: COLORS.textInverse, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm, letterSpacing: 0.5,
+    color: colors.textInverse, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm, letterSpacing: 0.5,
   },
-});
+  });
+}

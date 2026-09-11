@@ -8,21 +8,24 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
+import { useTheme } from '@/context/ThemeContext';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import CaloriesLog from '@/components/logs/CaloriesLog';
 import { nutritionTargetsOrDefault } from '@/lib/nutrition';
 import { WEIGHT_GOAL_LABELS } from '@/constants/nutrition';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme, Colors
 } from '@/constants/theme';
 
-const MEAL_TYPES: { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
-  { name: 'Breakfast', icon: 'sunny-outline',      color: COLORS.neonYellow },
-  { name: 'Lunch',     icon: 'restaurant-outline', color: COLORS.primary },
-  { name: 'Dinner',    icon: 'moon-outline',       color: COLORS.neonBlue },
-  { name: 'Snack',     icon: 'fast-food-outline',  color: COLORS.neonGreen },
-];
+function getMealTypes(colors: Colors): { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
+  return [
+    { name: 'Breakfast', icon: 'sunny-outline',      color: colors.neonYellow },
+    { name: 'Lunch',     icon: 'restaurant-outline', color: colors.primary },
+    { name: 'Dinner',    icon: 'moon-outline',       color: colors.neonBlue },
+    { name: 'Snack',     icon: 'fast-food-outline',  color: colors.neonGreen },
+  ];
+}
 
 interface Meal {
   id: string;
@@ -46,6 +49,10 @@ export default function Calories() {
   const router = useRouter();
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const MEAL_TYPES = useMemo(() => getMealTypes(colors), [colors]);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
@@ -63,9 +70,9 @@ export default function Calories() {
   const percentage = Math.min((totalCalories / GOAL) * 100, 100);
 
   const macroRows = [
-    { label: 'Protein', consumed: protein, target: targets.proteinG, color: COLORS.neonBlue },
-    { label: 'Carbs',   consumed: carbs,   target: targets.carbsG,   color: COLORS.neonYellow },
-    { label: 'Fat',     consumed: fat,     target: targets.fatG,     color: COLORS.accent },
+    { label: 'Protein', consumed: protein, target: targets.proteinG, color: colors.neonBlue },
+    { label: 'Carbs',   consumed: carbs,   target: targets.carbsG,   color: colors.neonYellow },
+    { label: 'Fat',     consumed: fat,     target: targets.fatG,     color: colors.accent },
   ];
 
   const today = new Date().toLocaleDateString('en-US', {
@@ -93,9 +100,9 @@ export default function Calories() {
   );
 
   const getProgressColor = () => {
-    if (percentage >= 100) return COLORS.accent;
-    if (percentage >= 75) return COLORS.neonYellow;
-    return COLORS.primary;
+    if (percentage >= 100) return colors.accent;
+    if (percentage >= 75) return colors.neonYellow;
+    return colors.primary;
   };
 
   const formatTime = (dateStr: string) =>
@@ -149,7 +156,7 @@ export default function Calories() {
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={[
                 styles.calorieNumber,
-                { color: remaining < 0 ? COLORS.accent : COLORS.neonGreen }
+                { color: remaining < 0 ? colors.accent : colors.neonGreen }
               ]}>
                 {Math.abs(remaining).toLocaleString()}
               </Text>
@@ -205,11 +212,11 @@ export default function Calories() {
           onPress={() => router.push('/nutrition-goals')}
           activeOpacity={0.7}
         >
-          <View style={[styles.insightIcon, { borderColor: targets.complete ? COLORS.neonGreen : COLORS.accent }]}>
+          <View style={[styles.insightIcon, { borderColor: targets.complete ? colors.neonGreen : colors.accent }]}>
             <Ionicons
               name={targets.complete ? 'analytics-outline' : 'alert-circle-outline'}
               size={16}
-              color={targets.complete ? COLORS.neonGreen : COLORS.accent}
+              color={targets.complete ? colors.neonGreen : colors.accent}
             />
           </View>
           <View style={{ flex: 1 }}>
@@ -229,16 +236,16 @@ export default function Calories() {
               </>
             )}
           </View>
-          <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
 
         {/* Search */}
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={16} color={COLORS.textMuted} />
+          <Ionicons name="search" size={16} color={colors.textMuted} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search meals"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={colors.textMuted}
             value={search}
             onChangeText={setSearch}
           />
@@ -271,7 +278,7 @@ export default function Calories() {
                 <Ionicons
                   name={type.icon}
                   size={14}
-                  color={activeFilter === type.name ? COLORS.textInverse : type.color}
+                  color={activeFilter === type.name ? colors.textInverse : type.color}
                 />
                 <Text style={[
                   styles.filterPillText,
@@ -306,8 +313,8 @@ export default function Calories() {
                 onPress={() => { setEditingMeal(meal); setModalVisible(true); }}
                 activeOpacity={0.7}
               >
-                <View style={[styles.mealIcon, { borderColor: type?.color ?? COLORS.primary }]}>
-                  <Ionicons name={type?.icon ?? 'restaurant-outline'} size={18} color={type?.color ?? COLORS.primary} />
+                <View style={[styles.mealIcon, { borderColor: type?.color ?? colors.primary }]}>
+                  <Ionicons name={type?.icon ?? 'restaurant-outline'} size={18} color={type?.color ?? colors.primary} />
                 </View>
                 <View style={styles.mealLeft}>
                   <Text style={styles.mealName}>{meal.meal_name}</Text>
@@ -337,10 +344,12 @@ export default function Calories() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   fixedTop: {
     paddingHorizontal: SPACING.lg,
@@ -362,17 +371,17 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     letterSpacing: 0.5,
   },
   date: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginTop: SPACING.xs,
     letterSpacing: 1,
   },
   addButton: {
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
     borderWidth: 1,
     borderRadius: RADIUS.sm,
     paddingHorizontal: SPACING.md,
@@ -380,14 +389,14 @@ const styles = StyleSheet.create({
     ...SHADOWS.purple,
   },
   addButtonText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 0.3,
   },
   dividerLine: {
     height: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     width: 40,
     marginBottom: SPACING.lg,
   },
@@ -401,7 +410,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.5,
     marginBottom: SPACING.lg,
   },
@@ -414,22 +423,22 @@ const styles = StyleSheet.create({
   calorieNumber: {
     fontSize: FONT_SIZES.xxxl,
     fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   calorieLabel: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.3,
     marginTop: SPACING.xs,
   },
   calorieDivider: {
     width: 1,
     height: 50,
-    backgroundColor: COLORS.borderDefault,
+    backgroundColor: colors.borderDefault,
   },
   progressTrack: {
     height: 8,
-    backgroundColor: COLORS.borderDefault,
+    backgroundColor: colors.borderDefault,
     borderRadius: RADIUS.full,
     overflow: 'hidden',
     marginBottom: SPACING.sm,
@@ -444,7 +453,7 @@ const styles = StyleSheet.create({
   },
   goalText: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 1,
   },
 
@@ -467,13 +476,13 @@ const styles = StyleSheet.create({
   },
   macroLabel: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.3,
   },
   macroTrack: {
     width: '100%',
     height: 4,
-    backgroundColor: COLORS.borderDefault,
+    backgroundColor: colors.borderDefault,
     borderRadius: RADIUS.full,
     overflow: 'hidden',
     marginTop: SPACING.sm,
@@ -484,7 +493,7 @@ const styles = StyleSheet.create({
   },
   macroTarget: {
     fontSize: 9,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     marginTop: 4,
   },
 
@@ -506,13 +515,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   insightTitle: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
     marginBottom: 2,
   },
   insightSubtext: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: FONT_SIZES.xs,
     letterSpacing: 0.3,
   },
@@ -521,8 +530,8 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.bgTertiary,
-    borderColor: COLORS.borderDefault,
+    backgroundColor: colors.bgTertiary,
+    borderColor: colors.borderDefault,
     borderWidth: 1,
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.md,
@@ -531,7 +540,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: FONT_SIZES.sm,
     paddingVertical: SPACING.md,
   },
@@ -545,32 +554,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    backgroundColor: COLORS.bgTertiary,
-    borderColor: COLORS.borderDefault,
+    backgroundColor: colors.bgTertiary,
+    borderColor: colors.borderDefault,
     borderWidth: 1,
     borderRadius: RADIUS.full,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
   },
   filterPillActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   filterPillText: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 1,
   },
   filterPillTextActive: {
-    color: COLORS.textInverse,
+    color: colors.textInverse,
   },
 
   // Meals
   sectionTitle: {
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.5,
     marginBottom: SPACING.md,
   },
@@ -594,13 +603,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mealName: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: FONT_SIZES.md,
     fontWeight: FONT_WEIGHTS.bold,
     marginBottom: SPACING.xs,
   },
   mealTime: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: FONT_SIZES.xs,
     letterSpacing: 1,
   },
@@ -608,12 +617,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   mealCalories: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: FONT_SIZES.lg,
     fontWeight: FONT_WEIGHTS.black,
   },
   mealKcal: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: FONT_SIZES.xs,
   },
 
@@ -624,13 +633,14 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xxxl,
   },
   emptyText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: FONT_SIZES.sm,
     letterSpacing: 0.3,
     marginBottom: SPACING.sm,
   },
   emptySubText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: FONT_SIZES.xs,
   },
-});
+  });
+}

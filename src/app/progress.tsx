@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Dimensions
@@ -10,18 +10,23 @@ import Svg, { Polyline, Circle, Line, Rect } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
-import CardioLog, { CARDIO_TYPES, KM_TO_MI, CardioEntry as CardioEditEntry } from '@/components/logs/CardioLog';
+import CardioLog, { getCardioTypes, KM_TO_MI, CardioEntry as CardioEditEntry } from '@/components/logs/CardioLog';
 import { DAILY_GOAL_ML } from '@/components/logs/WaterLog';
 import { topSetWeight } from '@/lib/workouts';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme,
+  // Static (always-light) CARD — used below only for its .default.padding
+  // number in a layout calc, not a color, so it doesn't need to react to
+  // theme; the component itself uses the theme-aware CARD from useTheme().
+  CARD as STATIC_CARD,
 } from '@/constants/theme';
 
 const TABS = ['Weight', 'Strength', 'Water', 'Cardio'] as const;
 type Tab = typeof TABS[number];
 
-const CHART_WIDTH = Dimensions.get('window').width - (SPACING.lg + CARD.default.padding) * 2;
+const CHART_WIDTH = Dimensions.get('window').width - (SPACING.lg + STATIC_CARD.default.padding) * 2;
 const CHART_HEIGHT = 140;
 
 interface WeightEntry { id: string; weight_kg: number; created_at: string; }
@@ -57,6 +62,10 @@ export default function Progress() {
   const router = useRouter();
   const { user } = useAuth();
   const { isImperial } = useProfile();
+  const { theme } = useTheme();
+  const { colors, CARD } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const CARDIO_TYPES = useMemo(() => getCardioTypes(colors), [colors]);
   const [tab, setTab] = useState<Tab>('Weight');
   const [loading, setLoading] = useState(true);
 
@@ -188,7 +197,7 @@ export default function Progress() {
 
         {/* Header */}
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backRow}>
-          <Ionicons name="chevron-back" size={18} color={COLORS.primary} />
+          <Ionicons name="chevron-back" size={18} color={colors.primary} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.screenTitle}>Progress</Text>
@@ -228,7 +237,7 @@ export default function Progress() {
                 <View style={styles.summaryBox}>
                   <Text style={[
                     styles.summaryNumber,
-                    weightDelta !== null && { color: weightDelta < 0 ? COLORS.neonGreen : weightDelta > 0 ? COLORS.accent : COLORS.textPrimary },
+                    weightDelta !== null && { color: weightDelta < 0 ? colors.neonGreen : weightDelta > 0 ? colors.accent : colors.textPrimary },
                   ]}>
                     {weightDelta !== null ? `${weightDelta > 0 ? '+' : ''}${displayWeight(weightDelta).toFixed(1)}` : '—'}
                   </Text>
@@ -244,10 +253,10 @@ export default function Progress() {
               <View style={[CARD.default, styles.chartCard]}>
                 <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
                   {[0, 0.5, 1].map((f) => (
-                    <Line key={f} x1={0} x2={CHART_WIDTH} y1={CHART_HEIGHT * f} y2={CHART_HEIGHT * f} stroke={COLORS.graphGrid} strokeWidth={1} />
+                    <Line key={f} x1={0} x2={CHART_WIDTH} y1={CHART_HEIGHT * f} y2={CHART_HEIGHT * f} stroke={colors.graphGrid} strokeWidth={1} />
                   ))}
                   {weightPoints.length > 1 && (
-                    <Polyline points={weightPolyline} fill="none" stroke={COLORS.graphLine} strokeWidth={2} />
+                    <Polyline points={weightPolyline} fill="none" stroke={colors.graphLine} strokeWidth={2} />
                   )}
                   {weightPoints.map((p, i) => (
                     <Circle
@@ -255,7 +264,7 @@ export default function Progress() {
                       cx={p.x}
                       cy={p.y}
                       r={i === weightPoints.length - 1 ? 4 : 3}
-                      fill={i === weightPoints.length - 1 ? COLORS.graphDotToday : COLORS.graphDot}
+                      fill={i === weightPoints.length - 1 ? colors.graphDotToday : colors.graphDot}
                     />
                   ))}
                 </Svg>
@@ -264,8 +273,8 @@ export default function Progress() {
               <Text style={styles.sectionTitle}>Recent entries</Text>
               {weightEntries.map((entry) => (
                 <View key={entry.id} style={styles.listCard}>
-                  <View style={[styles.listIcon, { borderColor: COLORS.neonBlue }]}>
-                    <Ionicons name="body-outline" size={16} color={COLORS.neonBlue} />
+                  <View style={[styles.listIcon, { borderColor: colors.neonBlue }]}>
+                    <Ionicons name="body-outline" size={16} color={colors.neonBlue} />
                   </View>
                   <View style={styles.listLeft}>
                     <Text style={styles.listName}>{displayWeight(entry.weight_kg).toFixed(1)} {weightUnit}</Text>
@@ -312,7 +321,7 @@ export default function Progress() {
                 <View style={styles.summaryBox}>
                   <Text style={[
                     styles.summaryNumber,
-                    exerciseDelta !== null && { color: exerciseDelta > 0 ? COLORS.neonGreen : exerciseDelta < 0 ? COLORS.accent : COLORS.textPrimary },
+                    exerciseDelta !== null && { color: exerciseDelta > 0 ? colors.neonGreen : exerciseDelta < 0 ? colors.accent : colors.textPrimary },
                   ]}>
                     {exerciseDelta !== null ? `${exerciseDelta > 0 ? '+' : ''}${exerciseDelta}` : '—'}
                   </Text>
@@ -328,10 +337,10 @@ export default function Progress() {
               <View style={[CARD.default, styles.chartCard]}>
                 <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
                   {[0, 0.5, 1].map((f) => (
-                    <Line key={f} x1={0} x2={CHART_WIDTH} y1={CHART_HEIGHT * f} y2={CHART_HEIGHT * f} stroke={COLORS.graphGrid} strokeWidth={1} />
+                    <Line key={f} x1={0} x2={CHART_WIDTH} y1={CHART_HEIGHT * f} y2={CHART_HEIGHT * f} stroke={colors.graphGrid} strokeWidth={1} />
                   ))}
                   {exercisePoints.length > 1 && (
-                    <Polyline points={exercisePolyline} fill="none" stroke={COLORS.graphLine} strokeWidth={2} />
+                    <Polyline points={exercisePolyline} fill="none" stroke={colors.graphLine} strokeWidth={2} />
                   )}
                   {exercisePoints.map((p, i) => (
                     <Circle
@@ -339,7 +348,7 @@ export default function Progress() {
                       cx={p.x}
                       cy={p.y}
                       r={exercisePRFlags[i] ? 5 : i === exercisePoints.length - 1 ? 4 : 3}
-                      fill={exercisePRFlags[i] ? COLORS.neonYellow : i === exercisePoints.length - 1 ? COLORS.graphDotToday : COLORS.graphDot}
+                      fill={exercisePRFlags[i] ? colors.neonYellow : i === exercisePoints.length - 1 ? colors.graphDotToday : colors.graphDot}
                     />
                   ))}
                 </Svg>
@@ -348,8 +357,8 @@ export default function Progress() {
               <Text style={styles.sectionTitle}>Recent sessions</Text>
               {exerciseDesc.map((entry) => (
                 <View key={entry.id} style={styles.listCard}>
-                  <View style={[styles.listIcon, { borderColor: COLORS.primary }]}>
-                    <Ionicons name="barbell-outline" size={16} color={COLORS.primary} />
+                  <View style={[styles.listIcon, { borderColor: colors.primary }]}>
+                    <Ionicons name="barbell-outline" size={16} color={colors.primary} />
                   </View>
                   <View style={styles.listLeft}>
                     <Text style={styles.listName}>{topSetWeight(entry.sets)} top set</Text>
@@ -359,7 +368,7 @@ export default function Progress() {
                     <Text style={styles.listDate}>{formatDate(entry.created_at)}</Text>
                     {prSessionIds.has(entry.id) && (
                       <View style={styles.prTag}>
-                        <Ionicons name="trophy" size={10} color={COLORS.neonYellow} />
+                        <Ionicons name="trophy" size={10} color={colors.neonYellow} />
                         <Text style={styles.prTagText}>PR</Text>
                       </View>
                     )}
@@ -396,7 +405,7 @@ export default function Progress() {
                   x1={0} x2={CHART_WIDTH}
                   y1={CHART_HEIGHT - (DAILY_GOAL_ML / waterMax) * CHART_HEIGHT}
                   y2={CHART_HEIGHT - (DAILY_GOAL_ML / waterMax) * CHART_HEIGHT}
-                  stroke={COLORS.graphGoalLine} strokeWidth={1} strokeDasharray="4,4"
+                  stroke={colors.graphGoalLine} strokeWidth={1} strokeDasharray="4,4"
                 />
                 {last7Days.map((d, i) => {
                   const barWidth = (CHART_WIDTH / 7) * 0.5;
@@ -411,7 +420,7 @@ export default function Progress() {
                       width={barWidth}
                       height={barHeight}
                       rx={3}
-                      fill={met ? COLORS.graphDotToday : COLORS.graphDot}
+                      fill={met ? colors.graphDotToday : colors.graphDot}
                     />
                   );
                 })}
@@ -434,8 +443,8 @@ export default function Progress() {
             ) : (
               waterEntries.slice(0, 15).map((entry, i) => (
                 <View key={i} style={styles.listCard}>
-                  <View style={[styles.listIcon, { borderColor: COLORS.neonBlue }]}>
-                    <Ionicons name="water-outline" size={16} color={COLORS.neonBlue} />
+                  <View style={[styles.listIcon, { borderColor: colors.neonBlue }]}>
+                    <Ionicons name="water-outline" size={16} color={colors.neonBlue} />
                   </View>
                   <View style={styles.listLeft}>
                     <Text style={styles.listName}>{displayWater(entry.amount_ml).toFixed(0)} {waterUnit}</Text>
@@ -493,7 +502,7 @@ export default function Progress() {
                     <Ionicons
                       name={t.icon}
                       size={14}
-                      color={cardioFilter === t.name ? COLORS.textInverse : t.color}
+                      color={cardioFilter === t.name ? colors.textInverse : t.color}
                     />
                     <Text style={[styles.filterPillText, cardioFilter === t.name && styles.filterPillTextActive]}>{t.name}</Text>
                   </TouchableOpacity>
@@ -519,8 +528,8 @@ export default function Progress() {
                     onPress={() => { setEditingCardio(entry); setCardioLogOpen(true); }}
                     activeOpacity={0.7}
                   >
-                    <View style={[styles.listIcon, { borderColor: t?.color ?? COLORS.neonGreen }]}>
-                      <Ionicons name={t?.icon ?? 'heart-outline'} size={16} color={t?.color ?? COLORS.neonGreen} />
+                    <View style={[styles.listIcon, { borderColor: t?.color ?? colors.neonGreen }]}>
+                      <Ionicons name={t?.icon ?? 'heart-outline'} size={16} color={t?.color ?? colors.neonGreen} />
                     </View>
                     <View style={styles.listLeft}>
                       <Text style={styles.listName}>{entry.type}</Text>
@@ -553,26 +562,28 @@ export default function Progress() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxxl },
 
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: SPACING.sm },
-  backText: { color: COLORS.primary, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 1 },
+  backText: { color: colors.primary, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 1 },
   screenTitle: {
     fontSize: FONT_SIZES.xl, fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary, letterSpacing: 0.3,
+    color: colors.textPrimary, letterSpacing: 0.3,
   },
-  dividerLine: { height: 1, backgroundColor: COLORS.primary, width: 40, marginTop: SPACING.sm, marginBottom: SPACING.lg },
+  dividerLine: { height: 1, backgroundColor: colors.primary, width: 40, marginTop: SPACING.sm, marginBottom: SPACING.lg },
 
   tabRow: {
-    flexDirection: 'row', backgroundColor: COLORS.bgTertiary,
+    flexDirection: 'row', backgroundColor: colors.bgTertiary,
     borderRadius: RADIUS.md, padding: 4, marginBottom: SPACING.lg,
   },
   tabButton: { flex: 1, alignItems: 'center', paddingVertical: SPACING.sm, borderRadius: RADIUS.sm },
-  tabButtonActive: { backgroundColor: COLORS.primary },
-  tabButtonText: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 1 },
-  tabButtonTextActive: { color: COLORS.textInverse },
+  tabButtonActive: { backgroundColor: colors.primary },
+  tabButtonText: { fontSize: FONT_SIZES.xs, color: colors.textSecondary, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 1 },
+  tabButtonTextActive: { color: colors.textInverse },
 
   summaryRow: {
     ...CARD.default, ...SHADOWS.purple,
@@ -580,25 +591,25 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg, paddingVertical: SPACING.lg,
   },
   summaryBox: { flex: 1, alignItems: 'center' },
-  summaryNumber: { fontSize: FONT_SIZES.xl, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary },
-  summaryLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, letterSpacing: 0.5, marginTop: SPACING.xs, textAlign: 'center' },
-  summaryDivider: { width: 1, height: 40, backgroundColor: COLORS.borderDefault },
+  summaryNumber: { fontSize: FONT_SIZES.xl, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary },
+  summaryLabel: { fontSize: FONT_SIZES.xs, color: colors.textMuted, letterSpacing: 0.5, marginTop: SPACING.xs, textAlign: 'center' },
+  summaryDivider: { width: 1, height: 40, backgroundColor: colors.borderDefault },
 
   chartCard: { marginBottom: SPACING.lg, alignItems: 'center' },
   weekdayRow: { flexDirection: 'row', width: CHART_WIDTH, marginTop: SPACING.xs },
-  weekdayLabel: { flex: 1, textAlign: 'center', fontSize: FONT_SIZES.xs, color: COLORS.textMuted },
+  weekdayLabel: { flex: 1, textAlign: 'center', fontSize: FONT_SIZES.xs, color: colors.textMuted },
 
   filterRow: { flexDirection: 'row', gap: SPACING.sm },
   filterPill: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.xs,
-    backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault, borderWidth: 1,
+    backgroundColor: colors.bgTertiary, borderColor: colors.borderDefault, borderWidth: 1,
     borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
   },
-  filterPillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  filterPillText: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 1 },
-  filterPillTextActive: { color: COLORS.textInverse },
+  filterPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filterPillText: { fontSize: FONT_SIZES.xs, color: colors.textSecondary, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 1 },
+  filterPillTextActive: { color: colors.textInverse },
 
-  sectionTitle: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted, letterSpacing: 0.5, marginBottom: SPACING.md },
+  sectionTitle: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: colors.textMuted, letterSpacing: 0.5, marginBottom: SPACING.md },
 
   listCard: {
     ...CARD.default, ...SHADOWS.subtle,
@@ -606,14 +617,15 @@ const styles = StyleSheet.create({
   },
   listIcon: { width: 42, height: 42, borderRadius: RADIUS.full, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   listLeft: { flex: 1 },
-  listName: { color: COLORS.textPrimary, fontSize: FONT_SIZES.md, fontWeight: FONT_WEIGHTS.bold, marginBottom: SPACING.xs },
-  listMeta: { color: COLORS.textMuted, fontSize: FONT_SIZES.xs, letterSpacing: 0.5 },
-  listDate: { color: COLORS.textSecondary, fontSize: FONT_SIZES.xs, letterSpacing: 1 },
-  listCalories: { color: COLORS.neonGreen, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, marginTop: SPACING.xs },
+  listName: { color: colors.textPrimary, fontSize: FONT_SIZES.md, fontWeight: FONT_WEIGHTS.bold, marginBottom: SPACING.xs },
+  listMeta: { color: colors.textMuted, fontSize: FONT_SIZES.xs, letterSpacing: 0.5 },
+  listDate: { color: colors.textSecondary, fontSize: FONT_SIZES.xs, letterSpacing: 1 },
+  listCalories: { color: colors.neonGreen, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, marginTop: SPACING.xs },
   prTag: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: SPACING.xs },
-  prTagText: { color: COLORS.neonYellow, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 0.5 },
+  prTagText: { color: colors.neonYellow, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 0.5 },
 
   emptyState: { ...CARD.default, alignItems: 'center', paddingVertical: SPACING.xxxl },
-  emptyText: { color: COLORS.textMuted, fontSize: FONT_SIZES.sm, letterSpacing: 0.3, marginBottom: SPACING.sm },
-  emptySubText: { color: COLORS.textMuted, fontSize: FONT_SIZES.xs },
-});
+  emptyText: { color: colors.textMuted, fontSize: FONT_SIZES.sm, letterSpacing: 0.3, marginBottom: SPACING.sm },
+  emptySubText: { color: colors.textMuted, fontSize: FONT_SIZES.xs },
+  });
+}

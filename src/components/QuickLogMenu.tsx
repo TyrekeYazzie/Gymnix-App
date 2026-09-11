@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, Animated,
   StyleSheet, Dimensions, Modal
@@ -6,17 +6,20 @@ import {
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { COLORS, FONT_SIZES, FONT_WEIGHTS, RADIUS } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
+import { FONT_SIZES, FONT_WEIGHTS, RADIUS, Theme, Colors } from '@/constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const ORBS: { key: string; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
-  { key: 'workout',  label: 'Workout',  icon: 'barbell-outline',   color: COLORS.primary },
-  { key: 'cardio',   label: 'Cardio',   icon: 'heart-outline',     color: COLORS.neonGreen },
-  { key: 'water',    label: 'Water',    icon: 'water-outline',     color: COLORS.neonBlue },
-  { key: 'weight',   label: 'Weight',   icon: 'body-outline',      color: COLORS.accent },
-  { key: 'calories', label: 'Calories', icon: 'nutrition-outline', color: COLORS.neonYellow },
-];
+function getOrbs(colors: Colors): { key: string; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
+  return [
+    { key: 'workout',  label: 'Workout',  icon: 'barbell-outline',   color: colors.primary },
+    { key: 'cardio',   label: 'Cardio',   icon: 'heart-outline',     color: colors.neonGreen },
+    { key: 'water',    label: 'Water',    icon: 'water-outline',     color: colors.neonBlue },
+    { key: 'weight',   label: 'Weight',   icon: 'body-outline',      color: colors.accent },
+    { key: 'calories', label: 'Calories', icon: 'nutrition-outline', color: colors.neonYellow },
+  ];
+}
 
 const ARC_RADIUS = 145;
 const START_ANGLE = 210;
@@ -38,6 +41,10 @@ interface Props {
 }
 
 export default function QuickLogMenu({ visible, onClose, onSelect }: Props) {
+  const { theme, isDark } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const ORBS = useMemo(() => getOrbs(colors), [colors]);
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const orbAnims = useRef(ORBS.map(() => new Animated.Value(0))).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -142,7 +149,7 @@ export default function QuickLogMenu({ visible, onClose, onSelect }: Props) {
                 onPress={() => handleOrbPress(orb.key)}
                 activeOpacity={0.8}
               >
-                <BlurView intensity={45} tint="light" style={StyleSheet.absoluteFillObject} />
+                <BlurView intensity={45} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFillObject} />
                 <LinearGradient
                   colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
                   start={{ x: 0.2, y: 0.05 }}
@@ -160,10 +167,12 @@ export default function QuickLogMenu({ visible, onClose, onSelect }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(theme: Theme) {
+  const { colors } = theme;
+  return StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.bgOverlay,
+    backgroundColor: colors.bgOverlay,
   },
   orbsAnchor: {
     position: 'absolute',
@@ -184,7 +193,7 @@ const styles = StyleSheet.create({
     // Android, web) so the orb still reads as a solid button rather than
     // looking broken/transparent. Left uncolored (vs. a tinted wash) so the
     // circle reads as clear glass — the border + icon carry the category color.
-    backgroundColor: COLORS.bgElevated + 'aa',
+    backgroundColor: colors.bgElevated + 'aa',
     overflow: 'hidden',
     borderWidth: 1.5,
     alignItems: 'center',
@@ -201,9 +210,10 @@ const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 0.5,
     marginTop: 6,
-    color: COLORS.textInverse,
+    color: colors.textInverse,
     textShadowColor: 'rgba(0,0,0,0.55)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
-});
+  });
+}

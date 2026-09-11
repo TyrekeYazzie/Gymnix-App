@@ -15,9 +15,10 @@ import { checkAndUnlockAchievements } from '@/lib/achievements';
 import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
 import { nutritionTargetsOrDefault } from '@/lib/nutrition';
 import { CustomMeal, Meal, UnlockedAchievement } from '@/types';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme, Colors
 } from '@/constants/theme';
 
 // slide the sheet fully past the bottom edge regardless of device height or sheet content length
@@ -28,12 +29,14 @@ const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
 const CALORIE_MIN = 50;
 const CALORIE_MAX = 1500;
 
-const MEAL_TYPES: { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
-  { name: 'Breakfast', icon: 'sunny-outline',      color: COLORS.neonYellow },
-  { name: 'Lunch',     icon: 'restaurant-outline', color: COLORS.primary },
-  { name: 'Dinner',    icon: 'moon-outline',       color: COLORS.neonBlue },
-  { name: 'Snack',     icon: 'fast-food-outline',  color: COLORS.neonGreen },
-];
+function getMealTypes(colors: Colors): { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
+  return [
+    { name: 'Breakfast', icon: 'sunny-outline',      color: colors.neonYellow },
+    { name: 'Lunch',     icon: 'restaurant-outline', color: colors.primary },
+    { name: 'Dinner',    icon: 'moon-outline',       color: colors.neonBlue },
+    { name: 'Snack',     icon: 'fast-food-outline',  color: colors.neonGreen },
+  ];
+}
 
 const QUICK_MEALS = [
   { name: 'Protein Shake', meal_type: 'Snack',     calories: 180, protein: 25, carbs: 8,  fat: 3  },
@@ -56,6 +59,10 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
   const router = useRouter();
   const { user } = useAuth();
   const { profile, refreshProfile } = useProfile();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const MEAL_TYPES = useMemo(() => getMealTypes(colors), [colors]);
   const CALORIE_GOAL = useMemo(() => nutritionTargetsOrDefault(profile).calorieGoal, [profile]);
   const [mealType, setMealType] = useState('');
   const [mealName, setMealName] = useState('');
@@ -83,7 +90,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
 
   const remaining = CALORIE_GOAL - todayCalories;
   const progressPercent = Math.min((todayCalories / CALORIE_GOAL) * 100, 100);
-  const progressColor = progressPercent >= 100 ? COLORS.accent : progressPercent >= 75 ? COLORS.neonYellow : COLORS.neonGreen;
+  const progressColor = progressPercent >= 100 ? colors.accent : progressPercent >= 75 ? colors.neonYellow : colors.neonGreen;
 
   const panResponder = useRef(
     PanResponder.create({
@@ -172,7 +179,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
 
   const goToCustomMeals = () => animateClose(() => router.push('/custom-meals'));
 
-  const getMealColor = (m: string) => MEAL_TYPES.find(t => t.name === m)?.color ?? COLORS.neonYellow;
+  const getMealColor = (m: string) => MEAL_TYPES.find(t => t.name === m)?.color ?? colors.neonYellow;
 
   const applyQuickMeal = (m: typeof QUICK_MEALS[0]) => {
     setMealName(m.name); setMealType(m.meal_type);
@@ -206,7 +213,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
     ? customMeals.map(m => ({
         key: m.id,
         label: m.name,
-        color: COLORS.neonYellow,
+        color: colors.neonYellow,
         selected: mealName === m.name,
         onPress: () => applyCustomMeal(m),
       }))
@@ -345,7 +352,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
                   accessibilityRole="button"
                   accessibilityLabel="Delete meal"
                 >
-                  <Ionicons name="trash-outline" size={18} color={COLORS.accent} />
+                  <Ionicons name="trash-outline" size={18} color={colors.accent} />
                 </TouchableOpacity>
               )}
             </View>
@@ -414,7 +421,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
                   <Ionicons
                     name={t.icon}
                     size={20}
-                    color={mealType === t.name ? t.color : COLORS.textSecondary}
+                    color={mealType === t.name ? t.color : colors.textSecondary}
                     style={styles.mealIcon}
                   />
                   <Text style={[styles.mealTypeName, mealType === t.name && { color: t.color }]}>{t.name}</Text>
@@ -427,7 +434,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
             <TextInput
               style={styles.input}
               placeholder="e.g. Chicken and rice"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               value={mealName}
               onChangeText={setMealName}
               autoCapitalize="words"
@@ -464,9 +471,9 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
               style={styles.slider}
               minimumValue={CALORIE_MIN} maximumValue={CALORIE_MAX} step={10}
               value={calories} onValueChange={setCalories}
-              minimumTrackTintColor={COLORS.neonYellow}
-              maximumTrackTintColor={COLORS.borderDefault}
-              thumbTintColor={COLORS.neonYellow}
+              minimumTrackTintColor={colors.neonYellow}
+              maximumTrackTintColor={colors.borderDefault}
+              thumbTintColor={colors.neonYellow}
             />
 
             {/* Macros toggle */}
@@ -485,17 +492,17 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
                 <Text style={styles.label}>Protein — {protein}g</Text>
                 <Slider style={styles.slider} minimumValue={0} maximumValue={100} step={1}
                   value={protein} onValueChange={setProtein}
-                  minimumTrackTintColor={COLORS.neonGreen} maximumTrackTintColor={COLORS.borderDefault} thumbTintColor={COLORS.neonGreen} />
+                  minimumTrackTintColor={colors.neonGreen} maximumTrackTintColor={colors.borderDefault} thumbTintColor={colors.neonGreen} />
 
                 <Text style={[styles.label, { marginTop: SPACING.sm }]}>Carbs — {carbs}g</Text>
                 <Slider style={styles.slider} minimumValue={0} maximumValue={200} step={1}
                   value={carbs} onValueChange={setCarbs}
-                  minimumTrackTintColor={COLORS.primary} maximumTrackTintColor={COLORS.borderDefault} thumbTintColor={COLORS.primary} />
+                  minimumTrackTintColor={colors.primary} maximumTrackTintColor={colors.borderDefault} thumbTintColor={colors.primary} />
 
                 <Text style={[styles.label, { marginTop: SPACING.sm }]}>Fat — {fat}g</Text>
                 <Slider style={[styles.slider, { marginBottom: SPACING.md }]} minimumValue={0} maximumValue={100} step={1}
                   value={fat} onValueChange={setFat}
-                  minimumTrackTintColor={COLORS.accent} maximumTrackTintColor={COLORS.borderDefault} thumbTintColor={COLORS.accent} />
+                  minimumTrackTintColor={colors.accent} maximumTrackTintColor={colors.borderDefault} thumbTintColor={colors.accent} />
               </View>
             )}
 
@@ -516,17 +523,19 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.bgOverlay },
+function makeStyles(theme: Theme) {
+  const { colors } = theme;
+  return StyleSheet.create({
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bgOverlay },
   sheet: {
-    backgroundColor: COLORS.bgSecondary, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
-    borderWidth: 1, borderColor: COLORS.neonYellow + '88', borderBottomWidth: 0,
+    backgroundColor: colors.bgSecondary, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
+    borderWidth: 1, borderColor: colors.neonYellow + '88', borderBottomWidth: 0,
     maxHeight: '90%', paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxxl,
   },
   handleArea: { alignItems: 'center', paddingVertical: SPACING.md },
-  handleBar: { width: 40, height: 4, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full },
+  handleBar: { width: 40, height: 4, backgroundColor: colors.borderDefault, borderRadius: RADIUS.full },
   title: {
-    fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary,
+    fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary,
   },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   deleteIconBtn: {
@@ -534,48 +543,49 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   progressCard: {
-    backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
-    marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDefault,
+    backgroundColor: colors.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
+    marginBottom: SPACING.lg, borderWidth: 1, borderColor: colors.borderDefault,
   },
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.sm },
-  progressLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, letterSpacing: 1 },
+  progressLabel: { fontSize: FONT_SIZES.xs, color: colors.textMuted, letterSpacing: 1 },
   progressValue: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
-  progressTrack: { height: 6, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full, overflow: 'hidden', marginBottom: SPACING.xs },
+  progressTrack: { height: 6, backgroundColor: colors.borderDefault, borderRadius: RADIUS.full, overflow: 'hidden', marginBottom: SPACING.xs },
   progressFill: { height: '100%', borderRadius: RADIUS.full },
-  remainingText: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, textAlign: 'center' },
+  remainingText: { fontSize: FONT_SIZES.xs, color: colors.textMuted, textAlign: 'center' },
   label: {
-    fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted,
+    fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: colors.textMuted,
     letterSpacing: 1.5, marginBottom: SPACING.sm,
   },
   quickAddHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  manageLink: { fontSize: FONT_SIZES.xs, color: COLORS.primary, fontWeight: FONT_WEIGHTS.bold, marginBottom: SPACING.sm },
+  manageLink: { fontSize: FONT_SIZES.xs, color: colors.primary, fontWeight: FONT_WEIGHTS.bold, marginBottom: SPACING.sm },
   chipRow: { flexDirection: 'row', gap: SPACING.sm, paddingBottom: SPACING.xs },
-  chip: { borderColor: COLORS.borderDefault, borderWidth: 1, borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs },
-  chipText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.medium },
+  chip: { borderColor: colors.borderDefault, borderWidth: 1, borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs },
+  chipText: { fontSize: FONT_SIZES.sm, color: colors.textSecondary, fontWeight: FONT_WEIGHTS.medium },
   mealTypeRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
   mealTypeCard: {
-    flex: 1, backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault,
+    flex: 1, backgroundColor: colors.bgTertiary, borderColor: colors.borderDefault,
     borderWidth: 1, borderRadius: RADIUS.md, alignItems: 'center', paddingVertical: SPACING.md,
   },
   mealIcon: { marginBottom: 4 },
-  mealTypeName: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.bold },
+  mealTypeName: { fontSize: FONT_SIZES.xs, color: colors.textSecondary, fontWeight: FONT_WEIGHTS.bold },
   input: {
-    backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault, borderWidth: 1,
-    borderRadius: RADIUS.sm, padding: SPACING.md, color: COLORS.textPrimary,
+    backgroundColor: colors.bgTertiary, borderColor: colors.borderDefault, borderWidth: 1,
+    borderRadius: RADIUS.sm, padding: SPACING.md, color: colors.textPrimary,
   },
   slider: { width: '100%', height: 40 },
   calorieLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  calorieValue: { fontSize: FONT_SIZES.sm, color: COLORS.neonYellow, fontWeight: FONT_WEIGHTS.bold, marginBottom: SPACING.sm },
+  calorieValue: { fontSize: FONT_SIZES.sm, color: colors.neonYellow, fontWeight: FONT_WEIGHTS.bold, marginBottom: SPACING.sm },
   calorieInput: {
-    backgroundColor: COLORS.bgTertiary, borderColor: COLORS.neonYellow, borderWidth: 1,
+    backgroundColor: colors.bgTertiary, borderColor: colors.neonYellow, borderWidth: 1,
     borderRadius: RADIUS.sm, paddingHorizontal: SPACING.sm, paddingVertical: 4,
-    color: COLORS.textPrimary, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold,
+    color: colors.textPrimary, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold,
     minWidth: 70, textAlign: 'right', marginBottom: SPACING.xs,
   },
   macroToggle: { marginBottom: SPACING.lg, paddingVertical: SPACING.sm },
-  macroToggleText: { fontSize: FONT_SIZES.sm, color: COLORS.primary, fontWeight: FONT_WEIGHTS.bold },
-  saveButton: { backgroundColor: COLORS.neonYellow + 'dd', borderRadius: RADIUS.md, padding: SPACING.lg, alignItems: 'center', marginBottom: SPACING.sm },
-  saveText: { color: COLORS.textPrimary, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md, letterSpacing: 0.5 },
+  macroToggleText: { fontSize: FONT_SIZES.sm, color: colors.primary, fontWeight: FONT_WEIGHTS.bold },
+  saveButton: { backgroundColor: colors.neonYellow + 'dd', borderRadius: RADIUS.md, padding: SPACING.lg, alignItems: 'center', marginBottom: SPACING.sm },
+  saveText: { color: colors.textPrimary, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md, letterSpacing: 0.5 },
   cancelButton: { padding: SPACING.lg, alignItems: 'center' },
-  cancelText: { color: COLORS.textMuted, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm, letterSpacing: 0.5 },
-});
+  cancelText: { color: colors.textMuted, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm, letterSpacing: 0.5 },
+  });
+}

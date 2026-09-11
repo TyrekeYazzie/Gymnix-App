@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform
@@ -9,14 +9,18 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomMeal } from '@/types';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme
 } from '@/constants/theme';
 
 export default function CustomMeals() {
   const router = useRouter();
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [meals, setMeals] = useState<CustomMeal[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
@@ -88,7 +92,7 @@ export default function CustomMeals() {
 
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backButtonRow}>
-              <Ionicons name="chevron-back" size={18} color={COLORS.primary} />
+              <Ionicons name="chevron-back" size={18} color={colors.primary} />
               <Text style={styles.backButton}>Back</Text>
             </TouchableOpacity>
           </View>
@@ -104,7 +108,7 @@ export default function CustomMeals() {
             <TextInput
               style={styles.input}
               placeholder="e.g. Chicken and rice"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               value={name}
               onChangeText={setName}
               autoCapitalize="words"
@@ -113,7 +117,7 @@ export default function CustomMeals() {
             <TextInput
               style={styles.input}
               placeholder="e.g. 450"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               value={calories}
               onChangeText={(t) => setCalories(t.replace(/[^0-9]/g, ''))}
               keyboardType="number-pad"
@@ -125,7 +129,7 @@ export default function CustomMeals() {
               activeOpacity={0.8}
               disabled={saving}
             >
-              <Ionicons name="add" size={18} color={COLORS.textInverse} />
+              <Ionicons name="add" size={18} color={colors.textInverse} />
               <Text style={styles.addButtonText}>{saving ? 'Adding…' : 'Add Meal'}</Text>
             </TouchableOpacity>
           </View>
@@ -156,7 +160,7 @@ export default function CustomMeals() {
                       style={styles.deleteButton}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                      <Ionicons name="trash-outline" size={18} color={COLORS.accent} />
+                      <Ionicons name="trash-outline" size={18} color={colors.accent} />
                     </TouchableOpacity>
                   </View>
                   {i < meals.length - 1 && <View style={styles.rowDivider} />}
@@ -171,13 +175,15 @@ export default function CustomMeals() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxxl },
   header: { marginBottom: SPACING.sm },
   backButtonRow: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' },
   backButton: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 1,
@@ -185,26 +191,26 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     letterSpacing: 0.5,
     marginBottom: SPACING.sm,
   },
   subtitle: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: SPACING.lg,
     lineHeight: 18,
   },
   dividerLine: {
     height: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     width: 40,
     marginBottom: SPACING.xl,
   },
   sectionTitle: {
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.5,
     marginBottom: SPACING.md,
   },
@@ -214,32 +220,32 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   label: {
-    fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted,
+    fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: colors.textMuted,
     letterSpacing: 1.5, marginBottom: SPACING.sm,
   },
   input: {
-    backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault, borderWidth: 1,
-    borderRadius: RADIUS.sm, padding: SPACING.md, color: COLORS.textPrimary,
+    backgroundColor: colors.bgTertiary, borderColor: colors.borderDefault, borderWidth: 1,
+    borderRadius: RADIUS.sm, padding: SPACING.md, color: colors.textPrimary,
   },
   addButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.xs,
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.md, padding: SPACING.md,
+    backgroundColor: colors.primary, borderRadius: RADIUS.md, padding: SPACING.md,
     marginTop: SPACING.lg,
   },
   addButtonText: {
-    color: COLORS.textInverse, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md, letterSpacing: 0.5,
+    color: colors.textInverse, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md, letterSpacing: 0.5,
   },
   emptyText: {
-    fontSize: FONT_SIZES.sm, color: COLORS.textMuted, lineHeight: 18,
+    fontSize: FONT_SIZES.sm, color: colors.textMuted, lineHeight: 18,
   },
   mealRow: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.md, paddingVertical: SPACING.md,
   },
   mealName: {
-    fontSize: FONT_SIZES.md, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textPrimary,
+    fontSize: FONT_SIZES.md, fontWeight: FONT_WEIGHTS.bold, color: colors.textPrimary,
   },
   mealCalories: {
-    fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 2,
+    fontSize: FONT_SIZES.xs, color: colors.textMuted, marginTop: 2,
   },
   deleteButton: {
     width: 32, height: 32, borderRadius: RADIUS.full,
@@ -247,6 +253,7 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     height: 1,
-    backgroundColor: COLORS.borderDefault,
+    backgroundColor: colors.borderDefault,
   },
-});
+  });
+}

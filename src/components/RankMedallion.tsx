@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import Svg, { Circle, Line } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Rank } from '@/constants/ranks';
-import { COLORS } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 
 interface Props {
   rank: Rank;
@@ -27,7 +27,8 @@ const TICK_OUTER_R = 48;
 // change — so climbing ranks reads as "the same seal, more prestigious ink"
 // rather than a totally different bespoke illustration each time.
 export default function RankMedallion({ rank, size = 64, locked = false, emphasized = false }: Props) {
-  const color = locked ? COLORS.borderDefault : rank.color;
+  const { theme: { colors } } = useTheme();
+  const color = locked ? colors.borderDefault : rank.color;
 
   const ticks = Array.from({ length: TICK_COUNT }, (_, i) => {
     const angle = (i / TICK_COUNT) * 2 * Math.PI;
@@ -53,7 +54,7 @@ export default function RankMedallion({ rank, size = 64, locked = false, emphasi
         ))}
         <Circle
           cx={CENTER} cy={CENTER} r={OUTER_R}
-          fill={COLORS.bgElevated}
+          fill={colors.bgElevated}
           stroke={color}
           strokeWidth={emphasized ? 4 : 3}
         />
@@ -69,8 +70,8 @@ export default function RankMedallion({ rank, size = 64, locked = false, emphasi
         <Ionicons name={rank.icon} size={size * 0.36} color={color} />
       </View>
       {locked && (
-        <View style={styles.lockBadge}>
-          <Ionicons name="lock-closed" size={Math.max(size * 0.18, 11)} color={COLORS.textMuted} />
+        <View style={[styles.lockBadge, { backgroundColor: colors.bgElevated, borderColor: colors.borderDefault }]}>
+          <Ionicons name="lock-closed" size={Math.max(size * 0.18, 11)} color={colors.textMuted} />
         </View>
       )}
     </View>
@@ -83,10 +84,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -2,
     right: -2,
-    backgroundColor: COLORS.bgElevated,
     borderRadius: 999,
     padding: 3,
     borderWidth: 1,
-    borderColor: COLORS.borderDefault,
   },
 });

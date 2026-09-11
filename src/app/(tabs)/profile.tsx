@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   View, Text, ScrollView,
   TouchableOpacity, StyleSheet
@@ -8,11 +8,12 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'expo-router'
 import { useSwipeTabs } from '@/hooks/useSwipeTabs'
 import { useProfile } from '@/context/ProfileContext'
+import { useTheme } from '@/context/ThemeContext'
 import EditProfile from '@/components/EditProfile'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme
 } from '@/constants/theme'
 import { xpProgress } from '@/lib/xp'
 import { getRank } from '@/constants/ranks'
@@ -20,6 +21,8 @@ import RankMedallion from '@/components/RankMedallion'
 import { ACTIVITY_LEVELS } from '@/constants/nutrition'
 
 function DataRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
   return (
     <View style={styles.dataRow}>
       <Text style={styles.dataLabel}>{label}</Text>
@@ -32,6 +35,9 @@ function DataRow({ label, value, valueColor }: { label: string; value: string; v
 export default function Profile() {
   const router = useRouter()
   const { profile, isImperial } = useProfile()
+  const { theme } = useTheme()
+  const { colors } = theme
+  const styles = useMemo(() => makeStyles(theme), [theme])
   const [editing, setEditing] = useState(false)
   const swipeHandlers = useSwipeTabs()
 
@@ -68,7 +74,7 @@ export default function Profile() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.editHeader}>
             <TouchableOpacity onPress={() => setEditing(false)} style={styles.backRow} activeOpacity={0.7}>
-              <Ionicons name="chevron-back" size={16} color={COLORS.primary} />
+              <Ionicons name="chevron-back" size={16} color={colors.primary} />
               <Text style={styles.backText}>BACK</Text>
             </TouchableOpacity>
             <Text style={styles.screenTitle}>EDIT PROFILE</Text>
@@ -114,14 +120,14 @@ export default function Profile() {
             <View style={styles.dataPanel}>
               <DataRow label="Age" value={profile?.age ? `${profile.age} yrs` : '—'} />
               <View style={styles.dataRowDivider} />
-              <DataRow label="Height" value={heightDisplay} valueColor={COLORS.neonBlue} />
+              <DataRow label="Height" value={heightDisplay} valueColor={colors.neonBlue} />
               <View style={styles.dataRowDivider} />
-              <DataRow label="Weight" value={weightDisplay} valueColor={COLORS.neonBlue} />
+              <DataRow label="Weight" value={weightDisplay} valueColor={colors.neonBlue} />
               <View style={styles.dataRowDivider} />
               <DataRow
                 label="Units"
                 value={isImperial ? 'Imperial' : 'Metric'}
-                valueColor={COLORS.textMuted}
+                valueColor={colors.textMuted}
               />
             </View>
           </View>
@@ -141,7 +147,7 @@ export default function Profile() {
                 <Text style={[styles.rankText, { color: rank.color }]}>{rank.name}</Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </View>
           <View style={styles.xpTrack}>
             <View style={[styles.xpFill, { width: `${xp.percent}%` as any, backgroundColor: rank.color }]} />
@@ -162,7 +168,7 @@ export default function Profile() {
           <DataRow
             label="Goal"
             value={profile?.goal || 'Not set'}
-            valueColor={COLORS.neonGreen}
+            valueColor={colors.neonGreen}
           />
           <View style={styles.dataRowDivider} />
           <DataRow
@@ -170,7 +176,7 @@ export default function Profile() {
             value={ACTIVITY_LEVELS.find(a => a.value === profile?.activity_level)?.label
               || profile?.activity_level
               || 'Not set'}
-            valueColor={COLORS.neonGreen}
+            valueColor={colors.neonGreen}
           />
         </View>
 
@@ -185,11 +191,11 @@ export default function Profile() {
             onPress={() => router.push('/progress')}
             activeOpacity={0.7}
           >
-            <View style={[styles.sysIcon, { borderColor: COLORS.neonGreen }]}>
-              <Ionicons name="trending-up-outline" size={14} color={COLORS.neonGreen} />
+            <View style={[styles.sysIcon, { borderColor: colors.neonGreen }]}>
+              <Ionicons name="trending-up-outline" size={14} color={colors.neonGreen} />
             </View>
             <Text style={styles.systemLabel}>Progress</Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
           <View style={styles.dataRowDivider} />
           <TouchableOpacity
@@ -197,11 +203,11 @@ export default function Profile() {
             onPress={() => router.push('/insights')}
             activeOpacity={0.7}
           >
-            <View style={[styles.sysIcon, { borderColor: COLORS.neonBlue }]}>
-              <Ionicons name="bar-chart-outline" size={14} color={COLORS.neonBlue} />
+            <View style={[styles.sysIcon, { borderColor: colors.neonBlue }]}>
+              <Ionicons name="bar-chart-outline" size={14} color={colors.neonBlue} />
             </View>
             <Text style={styles.systemLabel}>Weekly Recap</Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
           <View style={styles.dataRowDivider} />
           <TouchableOpacity
@@ -209,11 +215,11 @@ export default function Profile() {
             onPress={() => router.push('/leaderboard')}
             activeOpacity={0.7}
           >
-            <View style={[styles.sysIcon, { borderColor: COLORS.neonYellow }]}>
-              <Ionicons name="trophy-outline" size={14} color={COLORS.neonYellow} />
+            <View style={[styles.sysIcon, { borderColor: colors.neonYellow }]}>
+              <Ionicons name="trophy-outline" size={14} color={colors.neonYellow} />
             </View>
             <Text style={styles.systemLabel}>Leaderboard</Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
           <View style={styles.dataRowDivider} />
           <TouchableOpacity
@@ -221,11 +227,11 @@ export default function Profile() {
             onPress={() => router.push('/achievements')}
             activeOpacity={0.7}
           >
-            <View style={[styles.sysIcon, { borderColor: COLORS.neonOrange }]}>
-              <Ionicons name="ribbon-outline" size={14} color={COLORS.neonOrange} />
+            <View style={[styles.sysIcon, { borderColor: colors.neonOrange }]}>
+              <Ionicons name="ribbon-outline" size={14} color={colors.neonOrange} />
             </View>
             <Text style={styles.systemLabel}>Achievements</Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
           <View style={styles.dataRowDivider} />
           <TouchableOpacity
@@ -233,11 +239,11 @@ export default function Profile() {
             onPress={() => setEditing(true)}
             activeOpacity={0.7}
           >
-            <View style={[styles.sysIcon, { borderColor: COLORS.primary }]}>
-              <Ionicons name="person-outline" size={14} color={COLORS.primary} />
+            <View style={[styles.sysIcon, { borderColor: colors.primary }]}>
+              <Ionicons name="person-outline" size={14} color={colors.primary} />
             </View>
             <Text style={styles.systemLabel}>Edit Profile</Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
           <View style={styles.dataRowDivider} />
           <TouchableOpacity
@@ -245,17 +251,17 @@ export default function Profile() {
             onPress={() => router.push('/settings')}
             activeOpacity={0.7}
           >
-            <View style={[styles.sysIcon, { borderColor: COLORS.accent }]}>
-              <Ionicons name="settings-outline" size={14} color={COLORS.accent} />
+            <View style={[styles.sysIcon, { borderColor: colors.accent }]}>
+              <Ionicons name="settings-outline" size={14} color={colors.accent} />
             </View>
             <Text style={styles.systemLabel}>App Settings</Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
         {/* Logout */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
-          <Ionicons name="log-out-outline" size={16} color={COLORS.neonOrange} />
+          <Ionicons name="log-out-outline" size={16} color={colors.neonOrange} />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
@@ -266,8 +272,10 @@ export default function Profile() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxxl },
 
   headerRow: {
@@ -278,14 +286,14 @@ const styles = StyleSheet.create({
   },
   headerLabel: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   screenTitle: {
     fontSize: FONT_SIZES.xl,
     fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     letterSpacing: 0.3,
   },
   idTag: {
@@ -301,7 +309,7 @@ const styles = StyleSheet.create({
   },
   dividerLine: {
     height: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     width: 40,
     marginBottom: SPACING.lg,
   },
@@ -309,7 +317,7 @@ const styles = StyleSheet.create({
   editHeader: { marginBottom: SPACING.sm },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: SPACING.sm },
   backText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 1,
@@ -317,7 +325,7 @@ const styles = StyleSheet.create({
 
   // HUD card
   hudCard: {
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: RADIUS.md,
     padding: SPACING.lg,
     marginBottom: SPACING.lg,
@@ -337,33 +345,33 @@ const styles = StyleSheet.create({
   avatar: {
     width: 68,
     height: 68,
-    backgroundColor: COLORS.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
-    borderColor: COLORS.borderDefault,
+    borderColor: colors.borderDefault,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: FONT_SIZES.xxl,
     fontWeight: FONT_WEIGHTS.black,
   },
   dataPanel: { flex: 1, gap: 2 },
   dataRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5 },
   dataLabel: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: FONT_SIZES.xs,
     letterSpacing: 1,
     width: 60,
   },
-  dataDots: { flex: 1, borderBottomWidth: 1, borderBottomColor: COLORS.borderDefault, borderStyle: 'dotted', marginHorizontal: SPACING.xs },
+  dataDots: { flex: 1, borderBottomWidth: 1, borderBottomColor: colors.borderDefault, borderStyle: 'dotted', marginHorizontal: SPACING.xs },
   dataValue: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 1,
   },
-  dataRowDivider: { height: 1, backgroundColor: COLORS.borderDefault },
+  dataRowDivider: { height: 1, backgroundColor: colors.borderDefault },
 
   // Clearance card
   clearanceCard: {
@@ -382,7 +390,7 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   clearanceLabel: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: FONT_SIZES.xs,
     letterSpacing: 0.3,
   },
@@ -400,7 +408,7 @@ const styles = StyleSheet.create({
   },
   xpTrack: {
     height: 6,
-    backgroundColor: COLORS.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderRadius: RADIUS.full,
     overflow: 'hidden',
     marginBottom: SPACING.xs,
@@ -408,7 +416,7 @@ const styles = StyleSheet.create({
   xpFill: { height: '100%', borderRadius: RADIUS.full },
   xpFooter: { flexDirection: 'row', justifyContent: 'space-between' },
   xpLabel: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 9,
     letterSpacing: 1,
   },
@@ -421,15 +429,15 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   sectionTitle: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: FONT_SIZES.xs,
     letterSpacing: 0.5,
   },
-  sectionLine: { flex: 1, height: 1, backgroundColor: COLORS.borderDefault },
+  sectionLine: { flex: 1, height: 1, backgroundColor: colors.borderDefault },
 
   // Mission card
   missionCard: {
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: RADIUS.md,
     padding: SPACING.lg,
     marginBottom: SPACING.lg,
@@ -461,7 +469,7 @@ const styles = StyleSheet.create({
   },
   systemLabel: {
     flex: 1,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: FONT_SIZES.md,
   },
 
@@ -472,21 +480,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: SPACING.sm,
     borderWidth: 1,
-    borderColor: COLORS.neonOrange + '66',
+    borderColor: colors.neonOrange + '66',
     borderRadius: RADIUS.md,
     padding: SPACING.lg,
     marginBottom: SPACING.lg,
   },
   logoutText: {
-    color: COLORS.neonOrange,
+    color: colors.neonOrange,
     fontWeight: FONT_WEIGHTS.bold,
     fontSize: FONT_SIZES.sm,
     letterSpacing: 0.5,
   },
   version: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 9,
     textAlign: 'center',
     letterSpacing: 0.3,
   },
-})
+  })
+}

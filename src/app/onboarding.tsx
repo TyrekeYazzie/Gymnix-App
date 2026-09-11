@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
@@ -8,26 +8,33 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD, BUTTON
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme, Colors
 } from '@/constants/theme';
 
 const STEP_COUNT = 4;
 
 const GOAL_SUGGESTIONS = ['Build muscle', 'Lose weight', 'Get stronger', 'Improve endurance', 'Stay healthy'];
 
-const TOUR_ITEMS: { icon: keyof typeof Ionicons.glyphMap; title: string; body: string; color: string }[] = [
-  { icon: 'barbell-outline',  title: 'Log everything',        body: 'Workouts, cardio, meals, water, and weight — all in one place.', color: COLORS.primary },
-  { icon: 'trophy-outline',   title: 'Earn XP & rank up',      body: 'Every log earns XP. Climb through ranks as you build consistency.', color: COLORS.neonYellow },
-  { icon: 'ribbon-outline',   title: 'Unlock achievements',    body: 'Hit milestones and streaks to unlock badges.', color: COLORS.neonOrange },
-  { icon: 'podium-outline',   title: 'Compete on leaderboards', body: 'See how your streak, strength, and cardio stack up against others.', color: COLORS.neonGreen },
-];
+function getTourItems(colors: Colors): { icon: keyof typeof Ionicons.glyphMap; title: string; body: string; color: string }[] {
+  return [
+    { icon: 'barbell-outline',  title: 'Log everything',        body: 'Workouts, cardio, meals, water, and weight — all in one place.', color: colors.primary },
+    { icon: 'trophy-outline',   title: 'Earn XP & rank up',      body: 'Every log earns XP. Climb through ranks as you build consistency.', color: colors.neonYellow },
+    { icon: 'ribbon-outline',   title: 'Unlock achievements',    body: 'Hit milestones and streaks to unlock badges.', color: colors.neonOrange },
+    { icon: 'podium-outline',   title: 'Compete on leaderboards', body: 'See how your streak, strength, and cardio stack up against others.', color: colors.neonGreen },
+  ];
+}
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { profile, setProfile, refreshProfile } = useProfile();
+  const { theme } = useTheme();
+  const { colors, BUTTON } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const TOUR_ITEMS = useMemo(() => getTourItems(colors), [colors]);
 
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -175,23 +182,23 @@ export default function OnboardingScreen() {
             </View>
 
             <Text style={styles.label}>Name</Text>
-            <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Your name" placeholderTextColor={COLORS.textMuted} />
+            <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Your name" placeholderTextColor={colors.textMuted} />
 
             <Text style={styles.label}>Age</Text>
-            <TextInput style={styles.input} value={age} onChangeText={setAge} placeholder="25" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" />
+            <TextInput style={styles.input} value={age} onChangeText={setAge} placeholder="25" placeholderTextColor={colors.textMuted} keyboardType="numeric" />
 
             <Text style={styles.label}>Height {units === 'imperial' ? '(ft / in)' : '(cm)'}</Text>
             {units === 'imperial' ? (
               <View style={styles.row}>
-                <TextInput style={[styles.input, { flex: 1, marginRight: SPACING.sm }]} value={heightFt} onChangeText={handleHeightFtChange} placeholder="5" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" />
-                <TextInput style={[styles.input, { flex: 1 }]} value={heightIn} onChangeText={handleHeightInChange} placeholder="7" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" />
+                <TextInput style={[styles.input, { flex: 1, marginRight: SPACING.sm }]} value={heightFt} onChangeText={handleHeightFtChange} placeholder="5" placeholderTextColor={colors.textMuted} keyboardType="numeric" />
+                <TextInput style={[styles.input, { flex: 1 }]} value={heightIn} onChangeText={handleHeightInChange} placeholder="7" placeholderTextColor={colors.textMuted} keyboardType="numeric" />
               </View>
             ) : (
-              <TextInput style={styles.input} value={heightCmDisplay} onChangeText={handleHeightCmChange} placeholder="175" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" />
+              <TextInput style={styles.input} value={heightCmDisplay} onChangeText={handleHeightCmChange} placeholder="175" placeholderTextColor={colors.textMuted} keyboardType="numeric" />
             )}
 
             <Text style={styles.label}>Weight ({units === 'imperial' ? 'lbs' : 'kg'})</Text>
-            <TextInput style={styles.input} value={weightDisplay} onChangeText={handleWeightChange} placeholder={units === 'imperial' ? '154' : '70'} placeholderTextColor={COLORS.textMuted} keyboardType="numeric" />
+            <TextInput style={styles.input} value={weightDisplay} onChangeText={handleWeightChange} placeholder={units === 'imperial' ? '154' : '70'} placeholderTextColor={colors.textMuted} keyboardType="numeric" />
           </View>
         )}
 
@@ -214,7 +221,7 @@ export default function OnboardingScreen() {
             </View>
 
             <Text style={styles.label}>Goal</Text>
-            <TextInput style={styles.input} value={goal} onChangeText={setGoal} placeholder="e.g. Build muscle" placeholderTextColor={COLORS.textMuted} />
+            <TextInput style={styles.input} value={goal} onChangeText={setGoal} placeholder="e.g. Build muscle" placeholderTextColor={colors.textMuted} />
           </View>
         )}
 
@@ -245,7 +252,7 @@ export default function OnboardingScreen() {
         <View style={styles.navRow}>
           {step > 0 ? (
             <TouchableOpacity onPress={back} style={styles.backButton} activeOpacity={0.7} disabled={saving}>
-              <Ionicons name="chevron-back" size={18} color={COLORS.primary} />
+              <Ionicons name="chevron-back" size={18} color={colors.primary} />
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
           ) : <View />}
@@ -262,52 +269,55 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   content: { padding: SPACING.lg, paddingTop: SPACING.xxxl, paddingBottom: SPACING.xxxl, flexGrow: 1 },
 
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.xl },
   dots: { flexDirection: 'row', gap: SPACING.xs },
-  dot: { width: 8, height: 8, borderRadius: RADIUS.full, backgroundColor: COLORS.borderDefault },
-  dotActive: { backgroundColor: COLORS.primary, width: 20 },
-  skipText: { color: COLORS.textMuted, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
+  dot: { width: 8, height: 8, borderRadius: RADIUS.full, backgroundColor: colors.borderDefault },
+  dotActive: { backgroundColor: colors.primary, width: 20 },
+  skipText: { color: colors.textMuted, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
 
   stepBlock: { flex: 1 },
-  title: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary, marginBottom: SPACING.sm },
-  subtitle: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginBottom: SPACING.xl, lineHeight: 20 },
+  title: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary, marginBottom: SPACING.sm },
+  subtitle: { fontSize: FONT_SIZES.sm, color: colors.textSecondary, marginBottom: SPACING.xl, lineHeight: 20 },
 
   unitsRow: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.lg },
   unitButton: { flex: 1, ...CARD.default, alignItems: 'center', paddingVertical: SPACING.md },
-  unitButtonActive: { borderColor: COLORS.primary, ...SHADOWS.purple },
-  unitButtonText: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted },
-  unitButtonTextActive: { color: COLORS.primary },
+  unitButtonActive: { borderColor: colors.primary, ...SHADOWS.purple },
+  unitButtonText: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: colors.textMuted },
+  unitButtonTextActive: { color: colors.primary },
 
-  label: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, letterSpacing: 1, marginBottom: SPACING.xs, marginTop: SPACING.md },
+  label: { fontSize: FONT_SIZES.sm, color: colors.textSecondary, letterSpacing: 1, marginBottom: SPACING.xs, marginTop: SPACING.md },
   input: {
-    backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault, borderWidth: 1,
-    borderRadius: RADIUS.sm, padding: SPACING.md, color: COLORS.textPrimary, fontSize: FONT_SIZES.md,
+    backgroundColor: colors.bgTertiary, borderColor: colors.borderDefault, borderWidth: 1,
+    borderRadius: RADIUS.sm, padding: SPACING.md, color: colors.textPrimary, fontSize: FONT_SIZES.md,
   },
   row: { flexDirection: 'row' },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.lg },
   chip: {
     paddingHorizontal: 14, paddingVertical: 9, borderRadius: RADIUS.full,
-    backgroundColor: COLORS.bgTertiary, borderWidth: 1, borderColor: COLORS.borderDefault,
+    backgroundColor: colors.bgTertiary, borderWidth: 1, borderColor: colors.borderDefault,
   },
-  chipActive: { backgroundColor: COLORS.primary + '22', borderColor: COLORS.primary },
-  chipText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.medium },
-  chipTextActive: { color: COLORS.primary, fontWeight: FONT_WEIGHTS.bold },
+  chipActive: { backgroundColor: colors.primary + '22', borderColor: colors.primary },
+  chipText: { fontSize: FONT_SIZES.sm, color: colors.textSecondary, fontWeight: FONT_WEIGHTS.medium },
+  chipTextActive: { color: colors.primary, fontWeight: FONT_WEIGHTS.bold },
 
   tourCard: { ...CARD.default, ...SHADOWS.purple, padding: SPACING.sm },
   tourRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.sm },
-  tourDivider: { height: 1, backgroundColor: COLORS.borderDefault },
+  tourDivider: { height: 1, backgroundColor: colors.borderDefault },
   tourIcon: { width: 36, height: 36, borderRadius: RADIUS.full, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  tourTitle: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textPrimary },
-  tourBody: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 2, lineHeight: 16 },
+  tourTitle: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: colors.textPrimary },
+  tourBody: { fontSize: FONT_SIZES.xs, color: colors.textMuted, marginTop: 2, lineHeight: 16 },
 
   navRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SPACING.xl },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingVertical: SPACING.sm },
-  backButtonText: { color: COLORS.primary, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
+  backButtonText: { color: colors.primary, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
   nextButton: { paddingHorizontal: SPACING.xxxl, marginLeft: 'auto' },
-  nextButtonText: { color: COLORS.textInverse, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md },
-});
+  nextButtonText: { color: colors.textInverse, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md },
+  });
+}

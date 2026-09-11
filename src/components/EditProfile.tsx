@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Alert
@@ -6,14 +6,18 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useProfile } from '@/context/ProfileContext'
+import { useTheme } from '@/context/ThemeContext'
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme
 } from '@/constants/theme'
 
 export default function EditProfile() {
   const { user } = useAuth()
   const { profile, setProfile, isImperial } = useProfile()
+  const { theme } = useTheme()
+  const { colors } = theme
+  const styles = useMemo(() => makeStyles(theme), [theme])
 
   const [name, setName] = useState(profile?.full_name ?? '')
   const [age, setAge] = useState(profile?.age?.toString() ?? '')
@@ -158,7 +162,7 @@ export default function EditProfile() {
           <Text style={[styles.unitButtonText, units === 'metric' && styles.unitButtonTextActive]}>
             Metric
           </Text>
-          <Text style={[styles.unitSub, units === 'metric' && { color: COLORS.primary }]}>
+          <Text style={[styles.unitSub, units === 'metric' && { color: colors.primary }]}>
             kg · cm · km
           </Text>
         </TouchableOpacity>
@@ -171,7 +175,7 @@ export default function EditProfile() {
           <Text style={[styles.unitButtonText, units === 'imperial' && styles.unitButtonTextActive]}>
             Imperial
           </Text>
-          <Text style={[styles.unitSub, units === 'imperial' && { color: COLORS.primary }]}>
+          <Text style={[styles.unitSub, units === 'imperial' && { color: colors.primary }]}>
             lbs · ft/in · mi
           </Text>
         </TouchableOpacity>
@@ -186,7 +190,7 @@ export default function EditProfile() {
         value={name}
         onChangeText={setName}
         placeholder="e.g. Jamie Smith"
-        placeholderTextColor={COLORS.textMuted}
+        placeholderTextColor={colors.textMuted}
       />
 
       <Text style={styles.label}>Age</Text>
@@ -195,7 +199,7 @@ export default function EditProfile() {
         value={age}
         onChangeText={setAge}
         placeholder="25"
-        placeholderTextColor={COLORS.textMuted}
+        placeholderTextColor={colors.textMuted}
         keyboardType="numeric"
       />
 
@@ -205,7 +209,7 @@ export default function EditProfile() {
         value={goal}
         onChangeText={setGoal}
         placeholder="e.g. Build muscle, Lose weight"
-        placeholderTextColor={COLORS.textMuted}
+        placeholderTextColor={colors.textMuted}
       />
 
       {/* Stats */}
@@ -221,7 +225,7 @@ export default function EditProfile() {
               value={heightFt}
               onChangeText={handleHeightFtChange}
               placeholder="5"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
             />
           </View>
@@ -231,7 +235,7 @@ export default function EditProfile() {
               value={heightIn}
               onChangeText={handleHeightInChange}
               placeholder="7"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
             />
           </View>
@@ -242,7 +246,7 @@ export default function EditProfile() {
           value={heightCmDisplay}
           onChangeText={handleHeightCmChange}
           placeholder="175"
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={colors.textMuted}
           keyboardType="numeric"
         />
       )}
@@ -254,7 +258,7 @@ export default function EditProfile() {
         value={weightDisplay}
         onChangeText={handleWeightChange}
         placeholder={units === 'imperial' ? '154' : '70'}
-        placeholderTextColor={COLORS.textMuted}
+        placeholderTextColor={colors.textMuted}
         keyboardType="numeric"
       />
 
@@ -263,7 +267,7 @@ export default function EditProfile() {
         onPress={saveProfile}
         activeOpacity={0.8}
       >
-        <Text style={[styles.buttonText, saved && { color: COLORS.neonGreen }]}>
+        <Text style={[styles.buttonText, saved && { color: colors.neonGreen }]}>
           {saved ? '✓ Saved' : 'Save Profile'}
         </Text>
       </TouchableOpacity>
@@ -272,29 +276,31 @@ export default function EditProfile() {
   )
 }
 
-const styles = StyleSheet.create({
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme
+  return StyleSheet.create({
   container: { padding: 20, paddingBottom: 40 },
   sectionTitle: {
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.5,
     marginBottom: SPACING.md,
   },
   label: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     letterSpacing: 1,
     marginBottom: SPACING.xs,
     marginTop: SPACING.md,
   },
   input: {
-    backgroundColor: COLORS.bgTertiary,
-    borderColor: COLORS.borderDefault,
+    backgroundColor: colors.bgTertiary,
+    borderColor: colors.borderDefault,
     borderWidth: 1,
     borderRadius: RADIUS.sm,
     padding: SPACING.md,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: FONT_SIZES.md,
   },
   row: { flexDirection: 'row' },
@@ -309,38 +315,39 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
   },
   unitButtonActive: {
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
     ...SHADOWS.purple,
   },
   unitButtonText: {
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 0.3,
   },
   unitButtonTextActive: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
   unitSub: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     marginTop: 4,
     letterSpacing: 1,
   },
   button: {
     backgroundColor: 'transparent',
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
     borderWidth: 1,
     borderRadius: RADIUS.md,
     padding: SPACING.lg,
     alignItems: 'center',
     marginTop: SPACING.xl * 3,
   },
-  buttonSaved: { borderColor: COLORS.neonGreen },
+  buttonSaved: { borderColor: colors.neonGreen },
   buttonText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: FONT_WEIGHTS.bold,
     fontSize: FONT_SIZES.md,
     letterSpacing: 0.5,
   },
-})
+  })
+}

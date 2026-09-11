@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -6,9 +6,10 @@ import Svg, { Polyline, Circle } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme, Colors
 } from '@/constants/theme';
 
 // A compact, at-a-glance companion to the full charts on the Progress screen
@@ -18,11 +19,13 @@ import {
 // which sparkline is showing.
 type Metric = 'weight' | 'strength' | 'cardio';
 
-const TABS: { key: Metric; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
-  { key: 'weight',   label: 'Body Weight', icon: 'body-outline',    color: COLORS.neonBlue },
-  { key: 'strength', label: 'Strength',    icon: 'barbell-outline', color: COLORS.primary },
-  { key: 'cardio',   label: 'Cardio',      icon: 'heart-outline',   color: COLORS.neonGreen },
-];
+function getTabs(colors: Colors): { key: Metric; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
+  return [
+    { key: 'weight',   label: 'Body Weight', icon: 'body-outline',    color: colors.neonBlue },
+    { key: 'strength', label: 'Strength',    icon: 'barbell-outline', color: colors.primary },
+    { key: 'cardio',   label: 'Cardio',      icon: 'heart-outline',   color: colors.neonGreen },
+  ];
+}
 
 const SPARK_HEIGHT = 46;
 const POINTS_LIMIT = 10;
@@ -53,6 +56,10 @@ export default function ProgressPreviewCard() {
   const router = useRouter();
   const { user } = useAuth();
   const { isImperial } = useProfile();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const TABS = useMemo(() => getTabs(colors), [colors]);
 
   const [metric, setMetric] = useState<Metric>('weight');
   const [cardWidth, setCardWidth] = useState(0);
@@ -96,7 +103,7 @@ export default function ProgressPreviewCard() {
   // does — matches the same convention progress.tsx already uses for its
   // Weight and Strength tabs.
   const deltaIsGood = delta !== null && (metric === 'weight' ? delta <= 0 : delta >= 0);
-  const deltaColor = delta === null || delta === 0 ? COLORS.textMuted : deltaIsGood ? COLORS.neonGreen : COLORS.accent;
+  const deltaColor = delta === null || delta === 0 ? colors.textMuted : deltaIsGood ? colors.neonGreen : colors.accent;
 
   const weightUnit = isImperial ? 'lbs' : 'kg';
   const unit = metric === 'weight' ? weightUnit : metric === 'strength' ? `${weightUnit} vol` : 'min';
@@ -109,7 +116,7 @@ export default function ProgressPreviewCard() {
         <Text style={styles.title}>Progress</Text>
         <TouchableOpacity onPress={() => router.push('/progress')} activeOpacity={0.7} style={styles.viewAll}>
           <Text style={styles.viewAllText}>View all</Text>
-          <Ionicons name="chevron-forward" size={14} color={COLORS.textMuted} />
+          <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
 
@@ -123,7 +130,7 @@ export default function ProgressPreviewCard() {
               onPress={() => setMetric(t.key)}
               activeOpacity={0.7}
             >
-              <Ionicons name={t.icon} size={13} color={active ? t.color : COLORS.textMuted} />
+              <Ionicons name={t.icon} size={13} color={active ? t.color : colors.textMuted} />
               <Text style={[styles.tabLabel, active && { color: t.color, fontWeight: FONT_WEIGHTS.bold }]}>
                 {t.label}
               </Text>
@@ -161,7 +168,7 @@ export default function ProgressPreviewCard() {
                     cx={p.x}
                     cy={p.y}
                     r={i === points.length - 1 ? 4 : 2.5}
-                    fill={i === points.length - 1 ? activeTab.color : COLORS.graphDot}
+                    fill={i === points.length - 1 ? activeTab.color : colors.graphDot}
                   />
                 ))}
               </Svg>
@@ -173,7 +180,9 @@ export default function ProgressPreviewCard() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
   card: {
     ...CARD.default,
     ...SHADOWS.purple,
@@ -188,10 +197,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZES.md,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   viewAll: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  viewAllText: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, letterSpacing: 0.3 },
+  viewAllText: { fontSize: FONT_SIZES.xs, color: colors.textMuted, letterSpacing: 0.3 },
 
   tabRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
   tab: {
@@ -201,19 +210,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     borderWidth: 1,
-    borderColor: COLORS.borderDefault,
+    borderColor: colors.borderDefault,
     borderRadius: RADIUS.sm,
     paddingVertical: SPACING.xs,
   },
-  tabLabel: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 0.2 },
+  tabLabel: { fontSize: 10, color: colors.textMuted, letterSpacing: 0.2 },
 
   statsRow: { flexDirection: 'row', alignItems: 'baseline', gap: SPACING.sm, marginBottom: SPACING.xs },
-  currentValue: { fontSize: FONT_SIZES.xl, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary },
-  unit: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.medium, color: COLORS.textMuted },
+  currentValue: { fontSize: FONT_SIZES.xl, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary },
+  unit: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.medium, color: colors.textMuted },
   delta: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold },
 
   sparkWrap: { width: '100%', height: SPARK_HEIGHT },
 
   emptyWrap: { paddingVertical: SPACING.lg, alignItems: 'center' },
-  emptyText: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted },
-});
+  emptyText: { fontSize: FONT_SIZES.xs, color: colors.textMuted },
+  });
+}

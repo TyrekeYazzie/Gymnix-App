@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Keyboard } from 'react-native';
-import { COLORS, FONT_SIZES, FONT_WEIGHTS, RADIUS } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
+import { FONT_SIZES, FONT_WEIGHTS, RADIUS, Theme } from '@/constants/theme';
 
 // A −/+ stepper with a tap-to-type-directly center value, generalizing the
 // same pattern template-editor.tsx already uses inline for target
@@ -34,7 +35,10 @@ function roundTo(v: number, decimals: number): number {
 export default function Stepper({
   value, onChange, min, max, step = 1, decimals = 0, accentColor, suffix, width = 150,
 }: Props) {
-  const color = accentColor ?? COLORS.primary;
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const color = accentColor ?? colors.primary;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
 
@@ -85,7 +89,7 @@ export default function Stepper({
             keyboardType={decimals > 0 ? 'decimal-pad' : 'number-pad'}
             returnKeyType="done"
             placeholder="0"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={colors.textMuted}
             autoFocus
             maxLength={6}
           />
@@ -112,7 +116,9 @@ export default function Stepper({
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(theme: Theme) {
+  const { colors } = theme;
+  return StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   btn: {
     width: 38, height: 38, borderRadius: RADIUS.full, borderWidth: 1.5,
@@ -122,9 +128,10 @@ const styles = StyleSheet.create({
   btnText: { fontSize: FONT_SIZES.xl, fontWeight: FONT_WEIGHTS.bold, lineHeight: FONT_SIZES.xl },
   valueWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 40 },
   valueText: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.black },
-  suffixText: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 2 },
+  suffixText: { fontSize: FONT_SIZES.xs, color: colors.textMuted, marginTop: 2 },
   input: {
     fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.black, textAlign: 'center',
     minWidth: 70, padding: 0,
   },
-});
+  });
+}

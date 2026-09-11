@@ -16,16 +16,19 @@ import {
   currentWeekWindow, previousWeekWindow, computePeriodStats, generateInsights,
   PeriodStats, Insight,
 } from '@/lib/insights';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme, Colors
 } from '@/constants/theme';
 
-const TONE_COLOR: Record<Insight['tone'], string> = {
-  positive: COLORS.neonGreen,
-  negative: COLORS.accent,
-  neutral: COLORS.neonBlue,
-};
+function getToneColor(colors: Colors): Record<Insight['tone'], string> {
+  return {
+    positive: colors.neonGreen,
+    negative: colors.accent,
+    neutral: colors.neonBlue,
+  };
+}
 
 function formatRange(start: Date, end: Date): string {
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
@@ -37,11 +40,14 @@ function formatRange(start: Date, end: Date): string {
 // null = direction doesn't imply better/worse (e.g. body weight) so it
 // always renders muted regardless of sign.
 function Delta({ diff, suffix, goodWhenUp }: { diff: number; suffix: string; goodWhenUp: boolean | null }) {
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   if (diff === 0) {
     return <Text style={styles.tileDeltaFlat}>Same as last wk</Text>;
   }
   const up = diff > 0;
-  const color = goodWhenUp === null ? COLORS.textMuted : (up === goodWhenUp ? COLORS.neonGreen : COLORS.accent);
+  const color = goodWhenUp === null ? colors.textMuted : (up === goodWhenUp ? colors.neonGreen : colors.accent);
   return (
     <View style={styles.tileDeltaRow}>
       <Ionicons name={up ? 'arrow-up' : 'arrow-down'} size={11} color={color} />
@@ -61,6 +67,8 @@ function StatTile({
   caption?: string;
   delta?: React.ReactNode;
 }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <View style={styles.statTile}>
       <View style={styles.tileHeader}>
@@ -82,6 +90,10 @@ export default function InsightsScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { profile, isImperial } = useProfile();
+  const { theme } = useTheme();
+  const { colors, CARD, SHADOWS } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const TONE_COLOR = useMemo(() => getToneColor(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [thisWeek, setThisWeek] = useState<PeriodStats | null>(null);
   const [lastWeek, setLastWeek] = useState<PeriodStats | null>(null);
@@ -138,7 +150,7 @@ export default function InsightsScreen() {
 
         {/* Header */}
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backRow}>
-          <Ionicons name="chevron-back" size={18} color={COLORS.primary} />
+          <Ionicons name="chevron-back" size={18} color={colors.primary} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.screenTitle}>Weekly Recap</Text>
@@ -147,7 +159,7 @@ export default function InsightsScreen() {
 
         {loading || !thisWeek || !lastWeek ? (
           <View style={styles.loadingWrap}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
+            <ActivityIndicator size="small" color={colors.primary} />
           </View>
         ) : (
           <>
@@ -178,12 +190,12 @@ export default function InsightsScreen() {
 
             <View style={styles.statsGrid}>
               <StatTile
-                icon="barbell-outline" iconColor={COLORS.primary} label="WORKOUTS"
+                icon="barbell-outline" iconColor={colors.primary} label="WORKOUTS"
                 value={`${thisWeek.workoutCount}`}
                 delta={<Delta diff={thisWeek.workoutCount - lastWeek.workoutCount} suffix="" goodWhenUp={true} />}
               />
               <StatTile
-                icon="trending-up-outline" iconColor={COLORS.primaryLight} label="VOLUME"
+                icon="trending-up-outline" iconColor={colors.primaryLight} label="VOLUME"
                 value={thisWeek.workoutVolume.toLocaleString()} unit={weightUnit}
                 delta={
                   lastWeek.workoutVolume > 0 && thisWeek.workoutVolume > 0
@@ -192,24 +204,24 @@ export default function InsightsScreen() {
                 }
               />
               <StatTile
-                icon="heart-outline" iconColor={COLORS.neonGreen} label="CARDIO"
+                icon="heart-outline" iconColor={colors.neonGreen} label="CARDIO"
                 value={`${thisWeek.cardioMinutes}`} unit="min"
                 caption={thisWeek.cardioDistanceKm > 0 ? `${toDisplayDistance(thisWeek.cardioDistanceKm).toFixed(1)} ${distanceUnit}` : undefined}
                 delta={<Delta diff={thisWeek.cardioMinutes - lastWeek.cardioMinutes} suffix=" min" goodWhenUp={true} />}
               />
               <StatTile
-                icon="water-outline" iconColor={COLORS.neonBlue} label="WATER GOAL"
+                icon="water-outline" iconColor={colors.neonBlue} label="WATER GOAL"
                 value={`${thisWeek.waterGoalDays}/7`} caption="days met"
                 delta={<Delta diff={thisWeek.waterGoalDays - lastWeek.waterGoalDays} suffix=" days" goodWhenUp={true} />}
               />
               <StatTile
-                icon="nutrition-outline" iconColor={COLORS.neonYellow} label="CALORIES"
+                icon="nutrition-outline" iconColor={colors.neonYellow} label="CALORIES"
                 value={thisWeek.caloriesLoggedDays > 0 ? Math.round(thisWeek.caloriesAvgPerLoggedDay).toLocaleString() : '—'}
                 unit={thisWeek.caloriesLoggedDays > 0 ? 'kcal/day' : undefined}
                 caption={thisWeek.caloriesLoggedDays > 0 && targets.calorieGoal > 0 ? `${Math.round((thisWeek.caloriesAvgPerLoggedDay / targets.calorieGoal) * 100)}% of ${targets.calorieGoal.toLocaleString()} goal` : 'No meals logged'}
               />
               <StatTile
-                icon="body-outline" iconColor={COLORS.neonOrange} label="WEIGHT"
+                icon="body-outline" iconColor={colors.neonOrange} label="WEIGHT"
                 value={thisWeek.weightLast !== null ? toDisplayWeight(thisWeek.weightLast).toFixed(1) : '—'}
                 unit={thisWeek.weightLast !== null ? weightUnit : undefined}
                 delta={
@@ -227,23 +239,25 @@ export default function InsightsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxxl },
 
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: SPACING.sm, alignSelf: 'flex-start' },
-  backText: { color: COLORS.primary, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 1 },
-  screenTitle: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary, letterSpacing: 0.5 },
-  rangeText: { fontSize: FONT_SIZES.md, color: COLORS.textSecondary, marginTop: SPACING.xs },
-  dividerLine: { height: 1, backgroundColor: COLORS.primary, width: 40, marginTop: SPACING.md, marginBottom: SPACING.xl },
+  backText: { color: colors.primary, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 1 },
+  screenTitle: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary, letterSpacing: 0.5 },
+  rangeText: { fontSize: FONT_SIZES.md, color: colors.textSecondary, marginTop: SPACING.xs },
+  dividerLine: { height: 1, backgroundColor: colors.primary, width: 40, marginTop: SPACING.md, marginBottom: SPACING.xl },
 
   loadingWrap: { paddingVertical: SPACING.xxxl, alignItems: 'center' },
 
-  sectionTitle: { fontSize: FONT_SIZES.md, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textPrimary, marginBottom: SPACING.xs },
-  rangeSubtext: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted, marginBottom: SPACING.lg },
+  sectionTitle: { fontSize: FONT_SIZES.md, fontWeight: FONT_WEIGHTS.bold, color: colors.textPrimary, marginBottom: SPACING.xs },
+  rangeSubtext: { fontSize: FONT_SIZES.sm, color: colors.textMuted, marginBottom: SPACING.lg },
 
   emptyState: { alignItems: 'center', paddingVertical: SPACING.xl, marginBottom: SPACING.xl },
-  emptyText: { color: COLORS.textMuted, fontSize: FONT_SIZES.sm, textAlign: 'center' },
+  emptyText: { color: colors.textMuted, fontSize: FONT_SIZES.sm, textAlign: 'center' },
 
   // Highlights — each insight is its own card with real breathing room,
   // rather than tightly divided rows packed into one block.
@@ -255,7 +269,7 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   insightIcon: { width: 40, height: 40, borderRadius: RADIUS.full, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  insightText: { flex: 1, fontSize: FONT_SIZES.md, color: COLORS.textPrimary, lineHeight: 22 },
+  insightText: { flex: 1, fontSize: FONT_SIZES.md, color: colors.textPrimary, lineHeight: 22 },
 
   // This-week-vs-last-week — a 2-column grid of stat tiles instead of a
   // dense list, so each number gets its own space and a big, legible type
@@ -269,11 +283,12 @@ const styles = StyleSheet.create({
   },
   tileHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginBottom: SPACING.sm },
   tileIcon: { width: 24, height: 24, borderRadius: RADIUS.full, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  tileLabel: { flex: 1, fontSize: 10, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted, letterSpacing: 0.5 },
-  tileValue: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary },
-  tileUnit: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.medium, color: COLORS.textMuted },
-  tileCaption: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 2 },
+  tileLabel: { flex: 1, fontSize: 10, fontWeight: FONT_WEIGHTS.bold, color: colors.textMuted, letterSpacing: 0.5 },
+  tileValue: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary },
+  tileUnit: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.medium, color: colors.textMuted },
+  tileCaption: { fontSize: FONT_SIZES.xs, color: colors.textMuted, marginTop: 2 },
   tileDeltaRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: SPACING.sm },
   tileDeltaText: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold },
-  tileDeltaFlat: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: SPACING.sm },
-});
+  tileDeltaFlat: { fontSize: FONT_SIZES.xs, color: colors.textMuted, marginTop: SPACING.sm },
+  });
+}

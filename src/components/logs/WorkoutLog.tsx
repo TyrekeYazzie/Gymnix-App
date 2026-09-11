@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   StyleSheet, Modal, Alert, Dimensions, Image,
@@ -18,9 +18,10 @@ import { getTodayKey, toDayCategories } from '@/utils/routine';
 import { pickWorkoutPhoto, uploadWorkoutPhoto } from '@/utils/workoutPhotos';
 import { topSetWeight } from '@/lib/workouts';
 import { Workout, UnlockedAchievement, TemplateExercise } from '@/types';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme
 } from '@/constants/theme';
 
 // slide the sheet fully past the bottom edge regardless of device height or sheet content length
@@ -48,6 +49,9 @@ interface Props {
 export default function WorkoutLog({ visible, onClose, onSaved, initialCategory, editEntry, onDeleted, templateStep }: Props) {
   const { user } = useAuth();
   const { profile, isImperial, refreshProfile } = useProfile();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const weightUnit = isImperial ? 'lbs' : 'kg';
 
   const [category, setCategory] = useState(initialCategory || 'CHEST');
@@ -415,7 +419,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                     accessibilityRole="button"
                     accessibilityLabel="Delete workout"
                   >
-                    <Ionicons name="trash-outline" size={16} color={COLORS.accent} />
+                    <Ionicons name="trash-outline" size={16} color={colors.accent} />
                   </TouchableOpacity>
                 )}
                 <View style={styles.photoBtnWrap}>
@@ -430,7 +434,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                     {photoUri ? (
                       <Image source={{ uri: photoUri }} style={styles.photoThumb} />
                     ) : (
-                      <Ionicons name="camera-outline" size={18} color={COLORS.textMuted} />
+                      <Ionicons name="camera-outline" size={18} color={colors.textMuted} />
                     )}
                   </TouchableOpacity>
                   {photoUri && (
@@ -441,7 +445,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                       accessibilityRole="button"
                       accessibilityLabel="Remove attached photo"
                     >
-                      <Ionicons name="close" size={10} color={COLORS.textInverse} />
+                      <Ionicons name="close" size={10} color={colors.textInverse} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -453,7 +457,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                   accessibilityRole="button"
                   accessibilityLabel="Close"
                 >
-                  <Ionicons name="close" size={16} color={COLORS.textMuted} />
+                  <Ionicons name="close" size={16} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -461,7 +465,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
 
           {prBanner && (
             <View style={styles.prBanner}>
-              <Ionicons name="trophy" size={16} color={COLORS.neonYellow} />
+              <Ionicons name="trophy" size={16} color={colors.neonYellow} />
               <Text style={styles.prBannerText}>New PR! {prBanner.weight} {weightUnit} on {prBanner.name}</Text>
             </View>
           )}
@@ -486,9 +490,9 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                     <Ionicons
                       name={c.icon}
                       size={16}
-                      color={category === c.name ? COLORS.textInverse : c.color}
+                      color={category === c.name ? colors.textInverse : c.color}
                     />
-                    <Text style={[styles.categoryName, category === c.name && { color: COLORS.textInverse }]}>
+                    <Text style={[styles.categoryName, category === c.name && { color: colors.textInverse }]}>
                       {c.name}
                     </Text>
                   </TouchableOpacity>
@@ -522,7 +526,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
               value={customName}
               onChangeText={setCustomName}
               placeholder="Or type a custom exercise name…"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               returnKeyType="done"
               onSubmitEditing={() => Keyboard.dismiss()}
             />
@@ -553,7 +557,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                   value={s.reps}
                   onChangeText={(v) => updateSet(i, 'reps', v)}
                   placeholder="0"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={colors.textMuted}
                   keyboardType="numeric"
                   returnKeyType="done"
                   onSubmitEditing={() => Keyboard.dismiss()}
@@ -563,7 +567,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                   value={s.weight}
                   onChangeText={(v) => updateSet(i, 'weight', v)}
                   placeholder="0"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={colors.textMuted}
                   keyboardType="numeric"
                   returnKeyType="done"
                   onSubmitEditing={() => Keyboard.dismiss()}
@@ -573,7 +577,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                   style={styles.removeBtn}
                   activeOpacity={0.7}
                 >
-                  <Text style={{ color: sets.length > 1 ? COLORS.textMuted : 'transparent', fontSize: 16 }}>−</Text>
+                  <Text style={{ color: sets.length > 1 ? colors.textMuted : 'transparent', fontSize: 16 }}>−</Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -585,7 +589,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
               minimumValue={5} maximumValue={180} step={5}
               value={duration} onValueChange={setDuration}
               minimumTrackTintColor={activeCat.color}
-              maximumTrackTintColor={COLORS.borderDefault}
+              maximumTrackTintColor={colors.borderDefault}
               thumbTintColor={activeCat.color}
             />
 
@@ -612,21 +616,23 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.bgOverlay },
+function makeStyles(theme: Theme) {
+  const { colors, SHADOWS } = theme;
+  return StyleSheet.create({
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bgOverlay },
   sheet: {
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderWidth: 1,
-    borderColor: COLORS.primary + '88',
+    borderColor: colors.primary + '88',
     borderBottomWidth: 0,
     maxHeight: '90%',
     paddingBottom: SPACING.xxxl,
     ...SHADOWS.purple,
   },
   handleArea: { alignItems: 'center', paddingVertical: 12 },
-  handleBar: { width: 36, height: 4, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full },
+  handleBar: { width: 36, height: 4, backgroundColor: colors.borderDefault, borderRadius: RADIUS.full },
 
   sheetHeader: {
     flexDirection: 'row',
@@ -641,7 +647,7 @@ const styles = StyleSheet.create({
   },
   sheetLabel: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontWeight: FONT_WEIGHTS.semibold,
     letterSpacing: 1,
     marginBottom: 2,
@@ -649,7 +655,7 @@ const styles = StyleSheet.create({
   sheetTitle: {
     fontSize: FONT_SIZES.xl,
     fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   headerActions: {
     flexDirection: 'row',
@@ -662,10 +668,10 @@ const styles = StyleSheet.create({
   photoBtn: {
     width: 32,
     height: 32,
-    backgroundColor: COLORS.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderRadius: RADIUS.full,
     borderWidth: 1,
-    borderColor: COLORS.borderDefault,
+    borderColor: colors.borderDefault,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -681,16 +687,16 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.accent,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.bgSecondary,
+    borderColor: colors.bgSecondary,
   },
   closeBtn: {
     width: 32,
     height: 32,
-    backgroundColor: COLORS.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderRadius: RADIUS.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -703,15 +709,15 @@ const styles = StyleSheet.create({
     marginHorizontal: SPACING.lg, marginBottom: SPACING.md,
     paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
     borderRadius: RADIUS.md,
-    backgroundColor: COLORS.neonYellow + '18',
-    borderWidth: 1, borderColor: COLORS.neonYellow,
+    backgroundColor: colors.neonYellow + '18',
+    borderWidth: 1, borderColor: colors.neonYellow,
   },
-  prBannerText: { color: COLORS.textPrimary, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
+  prBannerText: { color: colors.textPrimary, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
 
   sectionLabel: {
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 1.5,
     marginBottom: SPACING.sm,
   },
@@ -725,14 +731,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
-    borderColor: COLORS.borderDefault,
+    borderColor: colors.borderDefault,
   },
   categoryName: {
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     letterSpacing: 0.5,
   },
 
@@ -742,23 +748,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
-    borderColor: COLORS.borderDefault,
+    borderColor: colors.borderDefault,
   },
   exerciseChipText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: FONT_WEIGHTS.medium,
   },
 
   customInput: {
-    backgroundColor: COLORS.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
-    borderColor: COLORS.borderDefault,
+    borderColor: colors.borderDefault,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: FONT_SIZES.md,
     marginBottom: SPACING.lg,
   },
@@ -766,7 +772,7 @@ const styles = StyleSheet.create({
   // Sets
   setsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
   addSetBtn: { paddingVertical: 4, paddingHorizontal: 8 },
-  addSetText: { color: COLORS.primary, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
+  addSetText: { color: colors.primary, fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
 
   setColHeaders: {
     flexDirection: 'row',
@@ -777,7 +783,7 @@ const styles = StyleSheet.create({
   },
   setColLabel: {
     fontSize: 10,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 1,
     textAlign: 'center',
@@ -793,26 +799,26 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.bgElevated,
+    backgroundColor: colors.bgElevated,
     borderWidth: 1,
-    borderColor: COLORS.borderDefault,
+    borderColor: colors.borderDefault,
     alignItems: 'center',
     justifyContent: 'center',
   },
   setNum: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
   },
   setInput: {
     flex: 1,
-    backgroundColor: COLORS.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
-    borderColor: COLORS.borderDefault,
+    borderColor: colors.borderDefault,
     borderRadius: RADIUS.sm,
     paddingVertical: 10,
     paddingHorizontal: SPACING.md,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: FONT_SIZES.lg,
     fontWeight: FONT_WEIGHTS.bold,
     textAlign: 'center',
@@ -833,9 +839,10 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
   },
   saveText: {
-    color: COLORS.textInverse,
+    color: colors.textInverse,
     fontWeight: FONT_WEIGHTS.black,
     fontSize: FONT_SIZES.lg,
     letterSpacing: 0.5,
   },
-});
+  });
+}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Modal, Alert, Dimensions,
@@ -14,19 +14,26 @@ import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
 import { UnlockedAchievement } from '@/types';
 import Stepper from '@/components/Stepper';
 import { estimateCardioCalories } from '@/lib/cardioCalories';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme, Colors
 } from '@/constants/theme';
 
-export const CARDIO_TYPES: { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
-  { name: 'Run',   icon: 'speedometer-outline', color: COLORS.neonGreen },
-  { name: 'Bike',  icon: 'bicycle-outline',     color: COLORS.neonBlue },
-  { name: 'Swim',  icon: 'water-outline',       color: COLORS.primary },
-  { name: 'Walk',  icon: 'walk-outline',        color: COLORS.neonYellow },
-  { name: 'HIIT',  icon: 'flash-outline',       color: COLORS.accent },
-  { name: 'Row',   icon: 'boat-outline',        color: COLORS.neonOrange },
-];
+// Exported (rather than a plain array) so calendar.tsx — which looks up
+// cardio type icon/color for its day-detail rows — can build the same
+// theme-aware list from its own useTheme() colors instead of importing a
+// palette baked to one theme.
+export function getCardioTypes(colors: Colors): { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
+  return [
+    { name: 'Run',   icon: 'speedometer-outline', color: colors.neonGreen },
+    { name: 'Bike',  icon: 'bicycle-outline',     color: colors.neonBlue },
+    { name: 'Swim',  icon: 'water-outline',       color: colors.primary },
+    { name: 'Walk',  icon: 'walk-outline',        color: colors.neonYellow },
+    { name: 'HIIT',  icon: 'flash-outline',       color: colors.accent },
+    { name: 'Row',   icon: 'boat-outline',        color: colors.neonOrange },
+  ];
+}
 
 const DURATION_MIN = 0;
 const DURATION_MAX = 120;
@@ -60,6 +67,10 @@ export const KM_TO_MI = 0.621371;
 export default function CardioLog({ visible, onClose, onSaved, editEntry, onDeleted }: Props) {
   const { user } = useAuth();
   const { profile, isImperial, refreshProfile } = useProfile();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const CARDIO_TYPES = useMemo(() => getCardioTypes(colors), [colors]);
   const [type, setType] = useState('');
   // captured in whichever unit is currently displayed (mi or km) — both
   // start at 0 (not a guessed default) so a new log opens ready to type.
@@ -298,7 +309,7 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
                   accessibilityRole="button"
                   accessibilityLabel="Delete cardio session"
                 >
-                  <Ionicons name="trash-outline" size={18} color={COLORS.accent} />
+                  <Ionicons name="trash-outline" size={18} color={colors.accent} />
                 </TouchableOpacity>
               )}
             </View>
@@ -324,7 +335,7 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
                   <Ionicons
                     name={t.icon}
                     size={22}
-                    color={type === t.name ? t.color : COLORS.textSecondary}
+                    color={type === t.name ? t.color : colors.textSecondary}
                     style={styles.typeIcon}
                   />
                   <Text style={[styles.typeName, type === t.name && { color: t.color }]}>
@@ -344,7 +355,7 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
               step={0.1}
               decimals={1}
               suffix={distanceUnit}
-              accentColor={COLORS.neonGreen}
+              accentColor={colors.neonGreen}
               width={220}
             />
 
@@ -356,7 +367,7 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
               max={DURATION_MAX}
               step={1}
               suffix="min"
-              accentColor={COLORS.primary}
+              accentColor={colors.primary}
               width={220}
             />
 
@@ -387,7 +398,7 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
               max={4000}
               step={10}
               suffix="kcal"
-              accentColor={COLORS.accent}
+              accentColor={colors.accent}
               width={220}
             />
 
@@ -411,14 +422,16 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.bgOverlay },
+function makeStyles(theme: Theme) {
+  const { colors, SHADOWS } = theme;
+  return StyleSheet.create({
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bgOverlay },
   sheet: {
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderTopLeftRadius: RADIUS.xl,
     borderTopRightRadius: RADIUS.xl,
     borderWidth: 1,
-    borderColor: COLORS.neonGreen + '88',
+    borderColor: colors.neonGreen + '88',
     borderBottomWidth: 0,
     maxHeight: '85%',
     paddingHorizontal: SPACING.lg,
@@ -426,7 +439,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.green,
   },
   handleArea: { alignItems: 'center', paddingVertical: SPACING.md },
-  handleBar: { width: 40, height: 4, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full },
+  handleBar: { width: 40, height: 4, backgroundColor: colors.borderDefault, borderRadius: RADIUS.full },
   title: {
     fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black,
     letterSpacing: 0.5, marginBottom: SPACING.lg, textAlign: 'center',
@@ -437,49 +450,50 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   label: {
-    fontSize: FONT_SIZES.xs, color: COLORS.textMuted,
+    fontSize: FONT_SIZES.xs, color: colors.textMuted,
   },
   typeGrid: {
     flexDirection: 'row', flexWrap: 'wrap',
     gap: SPACING.sm, marginBottom: SPACING.lg,
   },
   typeCard: {
-    width: '30.6%', backgroundColor: COLORS.bgTertiary,
-    borderColor: COLORS.borderDefault, borderWidth: 1,
+    width: '30.6%', backgroundColor: colors.bgTertiary,
+    borderColor: colors.borderDefault, borderWidth: 1,
     borderRadius: RADIUS.md, alignItems: 'center', paddingVertical: SPACING.md,
   },
   typeIcon: { marginBottom: 4 },
   typeName: {
-    fontSize: FONT_SIZES.xs, color: COLORS.textSecondary,
+    fontSize: FONT_SIZES.xs, color: colors.textSecondary,
   },
   calorieLabelRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     marginBottom: SPACING.sm,
   },
   resetEstimateText: {
-    fontSize: FONT_SIZES.xs, color: COLORS.primary, fontWeight: FONT_WEIGHTS.bold,
+    fontSize: FONT_SIZES.xs, color: colors.primary, fontWeight: FONT_WEIGHTS.bold,
   },
   paceBox: {
-    backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.md,
+    backgroundColor: colors.bgTertiary, borderRadius: RADIUS.md,
     padding: SPACING.md, alignItems: 'center', marginVertical: SPACING.md,
-    borderWidth: 1, borderColor: COLORS.borderDefault,
+    borderWidth: 1, borderColor: colors.borderDefault,
   },
   paceLabel: {
-    fontSize: FONT_SIZES.xs, color: COLORS.textMuted,
+    fontSize: FONT_SIZES.xs, color: colors.textMuted,
   },
   paceValue: {
-    fontSize: FONT_SIZES.xl, color: COLORS.neonGreen,
+    fontSize: FONT_SIZES.xl, color: colors.neonGreen,
   },
   saveButton: {
-    backgroundColor: COLORS.neonGreen + 'dd', borderRadius: RADIUS.md,
+    backgroundColor: colors.neonGreen + 'dd', borderRadius: RADIUS.md,
     padding: SPACING.lg, alignItems: 'center', marginBottom: SPACING.sm,
     ...SHADOWS.green,
   },
   saveText: {
-    color: COLORS.bgPrimary, fontWeight: FONT_WEIGHTS.bold,
+    color: colors.bgPrimary, fontWeight: FONT_WEIGHTS.bold,
   },
   cancelButton: { padding: SPACING.lg, alignItems: 'center' },
   cancelText: {
-    color: COLORS.textMuted, fontSize: FONT_SIZES.sm,
+    color: colors.textMuted, fontSize: FONT_SIZES.sm,
   },
-});
+  });
+}

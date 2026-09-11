@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, ActivityIndicator,
@@ -8,23 +8,26 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { getMyAchievements } from '@/lib/achievements';
 import { MyAchievement } from '@/types';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS, SHADOWS, CARD
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme, Colors
 } from '@/constants/theme';
 
 // Matches the category strings seeded in
 // supabase/migrations/20260815010000_achievements.sql. 'streak' color
 // reuses neonOrange to match the flame iconography already established on
 // the Dashboard streak card and the Leaderboard's Streak tab.
-const CATEGORY_META: Record<string, { label: string; color: string }> = {
-  strength:    { label: 'Strength',    color: COLORS.accent },
-  cardio:      { label: 'Cardio',      color: COLORS.neonGreen },
-  nutrition:   { label: 'Nutrition',   color: COLORS.neonYellow },
-  hydration:   { label: 'Hydration',   color: COLORS.neonBlue },
-  consistency: { label: 'Consistency', color: COLORS.neonOrange },
-  level:       { label: 'Level',       color: COLORS.primary },
-};
+function getCategoryMeta(colors: Colors): Record<string, { label: string; color: string }> {
+  return {
+    strength:    { label: 'Strength',    color: colors.accent },
+    cardio:      { label: 'Cardio',      color: colors.neonGreen },
+    nutrition:   { label: 'Nutrition',   color: colors.neonYellow },
+    hydration:   { label: 'Hydration',   color: colors.neonBlue },
+    consistency: { label: 'Consistency', color: colors.neonOrange },
+    level:       { label: 'Level',       color: colors.primary },
+  };
+}
 
 function formatUnlockedDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -32,6 +35,10 @@ function formatUnlockedDate(iso: string): string {
 
 export default function AchievementsScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const CATEGORY_META = useMemo(() => getCategoryMeta(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [achievements, setAchievements] = useState<MyAchievement[]>([]);
 
@@ -54,7 +61,7 @@ export default function AchievementsScreen() {
 
         {/* Header */}
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backRow}>
-          <Ionicons name="chevron-back" size={18} color={COLORS.primary} />
+          <Ionicons name="chevron-back" size={18} color={colors.primary} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.screenTitle}>Achievements</Text>
@@ -62,14 +69,14 @@ export default function AchievementsScreen() {
 
         {loading ? (
           <View style={styles.loadingWrap}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
+            <ActivityIndicator size="small" color={colors.primary} />
           </View>
         ) : (
           <>
             {/* Summary */}
             <View style={styles.summaryCard}>
               <View style={styles.summaryHeader}>
-                <Ionicons name="trophy" size={22} color={COLORS.neonYellow} />
+                <Ionicons name="trophy" size={22} color={colors.neonYellow} />
                 <Text style={styles.summaryText}>{unlockedCount} of {achievements.length} unlocked</Text>
               </View>
               <View style={styles.summaryTrack}>
@@ -79,7 +86,7 @@ export default function AchievementsScreen() {
 
             {/* Grouped by category */}
             {categories.map(cat => {
-              const meta = CATEGORY_META[cat] ?? { label: cat, color: COLORS.textMuted };
+              const meta = CATEGORY_META[cat] ?? { label: cat, color: colors.textMuted };
               const rows = achievements.filter(a => a.category === cat);
               return (
                 <View key={cat}>
@@ -93,12 +100,12 @@ export default function AchievementsScreen() {
                           <View style={styles.row}>
                             <View style={[
                               styles.badgeIcon,
-                              { borderColor: unlocked ? meta.color : COLORS.borderDefault },
+                              { borderColor: unlocked ? meta.color : colors.borderDefault },
                             ]}>
                               <Ionicons
                                 name={a.icon as keyof typeof Ionicons.glyphMap}
                                 size={18}
-                                color={unlocked ? meta.color : COLORS.textMuted}
+                                color={unlocked ? meta.color : colors.textMuted}
                               />
                             </View>
                             <View style={{ flex: 1 }}>
@@ -107,11 +114,11 @@ export default function AchievementsScreen() {
                             </View>
                             {unlocked ? (
                               <View style={styles.unlockedBadge}>
-                                <Ionicons name="checkmark" size={12} color={COLORS.neonGreen} />
+                                <Ionicons name="checkmark" size={12} color={colors.neonGreen} />
                                 <Text style={styles.unlockedText}>{formatUnlockedDate(a.unlocked_at!)}</Text>
                               </View>
                             ) : (
-                              <Ionicons name="lock-closed-outline" size={16} color={COLORS.textMuted} />
+                              <Ionicons name="lock-closed-outline" size={16} color={colors.textMuted} />
                             )}
                           </View>
                         </View>
@@ -129,27 +136,29 @@ export default function AchievementsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
+function makeStyles(theme: Theme) {
+  const { colors, CARD, SHADOWS } = theme;
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxxl },
 
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: SPACING.sm, alignSelf: 'flex-start' },
-  backText: { color: COLORS.primary, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 1 },
-  screenTitle: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary, letterSpacing: 0.5, marginBottom: SPACING.sm },
-  dividerLine: { height: 1, backgroundColor: COLORS.primary, width: 40, marginBottom: SPACING.xl },
+  backText: { color: colors.primary, fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, letterSpacing: 1 },
+  screenTitle: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary, letterSpacing: 0.5, marginBottom: SPACING.sm },
+  dividerLine: { height: 1, backgroundColor: colors.primary, width: 40, marginBottom: SPACING.xl },
 
   loadingWrap: { paddingVertical: SPACING.xxxl, alignItems: 'center' },
 
   summaryCard: { ...CARD.default, ...SHADOWS.purple, marginBottom: SPACING.xl },
   summaryHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
-  summaryText: { fontSize: FONT_SIZES.md, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary },
-  summaryTrack: { height: 8, backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.full, overflow: 'hidden' },
-  summaryFill: { height: '100%', backgroundColor: COLORS.neonYellow, borderRadius: RADIUS.full },
+  summaryText: { fontSize: FONT_SIZES.md, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary },
+  summaryTrack: { height: 8, backgroundColor: colors.bgTertiary, borderRadius: RADIUS.full, overflow: 'hidden' },
+  summaryFill: { height: '100%', backgroundColor: colors.neonYellow, borderRadius: RADIUS.full },
 
   sectionTitle: {
     fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 1,
     marginBottom: SPACING.sm,
   },
@@ -162,7 +171,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.sm,
   },
-  rowDivider: { height: 1, backgroundColor: COLORS.borderDefault },
+  rowDivider: { height: 1, backgroundColor: colors.borderDefault },
 
   badgeIcon: {
     width: 36,
@@ -172,10 +181,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  achName: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textPrimary },
-  achNameLocked: { color: COLORS.textMuted },
-  achDescription: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 2 },
+  achName: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: colors.textPrimary },
+  achNameLocked: { color: colors.textMuted },
+  achDescription: { fontSize: FONT_SIZES.xs, color: colors.textMuted, marginTop: 2 },
 
   unlockedBadge: { alignItems: 'flex-end', gap: 2 },
-  unlockedText: { fontSize: 10, color: COLORS.textMuted, fontWeight: FONT_WEIGHTS.medium },
-});
+  unlockedText: { fontSize: 10, color: colors.textMuted, fontWeight: FONT_WEIGHTS.medium },
+  });
+}

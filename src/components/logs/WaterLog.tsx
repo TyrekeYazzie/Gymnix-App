@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Modal, Alert, Dimensions,
@@ -13,9 +13,10 @@ import { awardXP, XP_WATER } from '@/lib/xp';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
 import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
 import { UnlockedAchievement } from '@/types';
+import { useTheme } from '@/context/ThemeContext';
 import {
-  COLORS, FONT_SIZES, FONT_WEIGHTS,
-  SPACING, RADIUS
+  FONT_SIZES, FONT_WEIGHTS,
+  SPACING, RADIUS, Theme
 } from '@/constants/theme';
 
 // slide the sheet fully past the bottom edge regardless of device height or sheet content length
@@ -56,6 +57,9 @@ interface Props {
 export default function WaterLog({ visible, onClose, onSaved }: Props) {
   const { user } = useAuth();
   const { isImperial, refreshProfile } = useProfile();
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   // always stored as ml internally
   const [amountMl, setAmountMl] = useState(250);
@@ -81,7 +85,7 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
   const quickAmounts = isImperial ? QUICK_AMOUNTS_IMPERIAL : QUICK_AMOUNTS_METRIC;
 
   const progressPercent = Math.min((todayTotalMl / DAILY_GOAL_ML) * 100, 100);
-  const progressColor = progressPercent >= 100 ? COLORS.neonGreen : progressPercent >= 60 ? COLORS.neonBlue : COLORS.accent;
+  const progressColor = progressPercent >= 100 ? colors.neonGreen : progressPercent >= 60 ? colors.neonBlue : colors.accent;
 
   const panResponder = useRef(
     PanResponder.create({
@@ -295,17 +299,17 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
               {quickAmounts.map((q) => (
                 <TouchableOpacity
                   key={q.value}
-                  style={[styles.quickCard, amountMl === q.value && { borderColor: COLORS.neonBlue, backgroundColor: COLORS.neonBlue + '22' }]}
+                  style={[styles.quickCard, amountMl === q.value && { borderColor: colors.neonBlue, backgroundColor: colors.neonBlue + '22' }]}
                   onPress={() => setAmountMl(q.value)}
                   activeOpacity={0.7}
                 >
                   <Ionicons
                     name={WATER_ICON}
                     size={22}
-                    color={amountMl === q.value ? COLORS.neonBlue : COLORS.textSecondary}
+                    color={amountMl === q.value ? colors.neonBlue : colors.textSecondary}
                     style={styles.quickIcon}
                   />
-                  <Text style={[styles.quickLabel, amountMl === q.value && { color: COLORS.neonBlue }]}>{q.label}</Text>
+                  <Text style={[styles.quickLabel, amountMl === q.value && { color: colors.neonBlue }]}>{q.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -319,9 +323,9 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
               step={isImperial ? 1 : 50}
               value={displayAmount}
               onValueChange={(val) => setAmountMl(Math.round(fromDisplay(val)))}
-              minimumTrackTintColor={COLORS.neonBlue}
-              maximumTrackTintColor={COLORS.borderDefault}
-              thumbTintColor={COLORS.neonBlue}
+              minimumTrackTintColor={colors.neonBlue}
+              maximumTrackTintColor={colors.borderDefault}
+              thumbTintColor={colors.neonBlue}
             />
             <View style={[styles.sliderRangeRow, { marginBottom: SPACING.lg }]}>
               <Text style={styles.sliderRangeText}>{isImperial ? '1 fl oz' : '50 ml'}</Text>
@@ -350,7 +354,7 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
                         accessibilityRole="button"
                         accessibilityLabel={`Delete ${formatDisplay(entry.amount_ml)} water entry`}
                       >
-                        <Ionicons name="trash-outline" size={16} color={COLORS.accent} />
+                        <Ionicons name="trash-outline" size={16} color={colors.accent} />
                       </TouchableOpacity>
                     </View>
                   </TouchableOpacity>
@@ -377,62 +381,65 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.bgOverlay },
+function makeStyles(theme: Theme) {
+  const { colors } = theme;
+  return StyleSheet.create({
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bgOverlay },
   sheet: {
-    backgroundColor: COLORS.bgSecondary, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
-    borderWidth: 1, borderColor: COLORS.neonBlue + '88', borderBottomWidth: 0,
+    backgroundColor: colors.bgSecondary, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
+    borderWidth: 1, borderColor: colors.neonBlue + '88', borderBottomWidth: 0,
     maxHeight: '85%', paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxxl,
   },
   handleArea: { alignItems: 'center', paddingVertical: SPACING.md },
-  handleBar: { width: 40, height: 4, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full },
+  handleBar: { width: 40, height: 4, backgroundColor: colors.borderDefault, borderRadius: RADIUS.full },
   title: {
-    fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary,
+    fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary,
   },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cancelEditLink: { fontSize: FONT_SIZES.xs, color: COLORS.neonBlue, fontWeight: FONT_WEIGHTS.bold },
+  cancelEditLink: { fontSize: FONT_SIZES.xs, color: colors.neonBlue, fontWeight: FONT_WEIGHTS.bold },
   progressCard: {
-    backgroundColor: COLORS.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
-    marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDefault,
+    backgroundColor: colors.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
+    marginBottom: SPACING.lg, borderWidth: 1, borderColor: colors.borderDefault,
   },
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.sm },
-  progressLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, letterSpacing: 1 },
+  progressLabel: { fontSize: FONT_SIZES.xs, color: colors.textMuted, letterSpacing: 1 },
   progressValue: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold },
-  progressTrack: { height: 6, backgroundColor: COLORS.borderDefault, borderRadius: RADIUS.full, overflow: 'hidden', marginBottom: SPACING.xs },
+  progressTrack: { height: 6, backgroundColor: colors.borderDefault, borderRadius: RADIUS.full, overflow: 'hidden', marginBottom: SPACING.xs },
   progressFill: { height: '100%', borderRadius: RADIUS.full },
-  progressPercent: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, textAlign: 'center' },
+  progressPercent: { fontSize: FONT_SIZES.xs, color: colors.textMuted, textAlign: 'center' },
   label: {
-    fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: COLORS.textMuted,
+    fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: colors.textMuted,
     letterSpacing: 1.5, marginBottom: SPACING.sm,
   },
   quickRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
   quickCard: {
-    flex: 1, backgroundColor: COLORS.bgTertiary, borderColor: COLORS.borderDefault,
+    flex: 1, backgroundColor: colors.bgTertiary, borderColor: colors.borderDefault,
     borderWidth: 1, borderRadius: RADIUS.md, alignItems: 'center', paddingVertical: SPACING.md,
   },
   quickIcon: { marginBottom: 4 },
-  quickLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.bold, marginTop: 2 },
+  quickLabel: { fontSize: FONT_SIZES.xs, color: colors.textSecondary, fontWeight: FONT_WEIGHTS.bold, marginTop: 2 },
   slider: { width: '100%', height: 40 },
   sliderThick: { transform: [{ scaleY: 1.4 }] },
   sliderRangeRow: {
     flexDirection: 'row', justifyContent: 'space-between',
     marginTop: -SPACING.xs,
   },
-  sliderRangeText: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted },
+  sliderRangeText: { fontSize: FONT_SIZES.xs, color: colors.textMuted },
   historyRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.borderDefault,
+    paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: colors.borderDefault,
   },
-  historyRowActive: { backgroundColor: COLORS.glowBlue },
+  historyRowActive: { backgroundColor: colors.glowBlue },
   historyRightGroup: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   historyDeleteBtn: {
     width: 32, height: 32, borderRadius: RADIUS.full,
     alignItems: 'center', justifyContent: 'center',
   },
-  historyAmount: { fontSize: FONT_SIZES.sm, color: COLORS.textPrimary, fontWeight: FONT_WEIGHTS.medium },
-  historyTime: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted },
-  saveButton: { backgroundColor: COLORS.neonBlue + 'dd', borderRadius: RADIUS.md, padding: SPACING.lg, alignItems: 'center', marginBottom: SPACING.sm },
-  saveText: { color: COLORS.textInverse, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md, letterSpacing: 0.5 },
+  historyAmount: { fontSize: FONT_SIZES.sm, color: colors.textPrimary, fontWeight: FONT_WEIGHTS.medium },
+  historyTime: { fontSize: FONT_SIZES.xs, color: colors.textMuted },
+  saveButton: { backgroundColor: colors.neonBlue + 'dd', borderRadius: RADIUS.md, padding: SPACING.lg, alignItems: 'center', marginBottom: SPACING.sm },
+  saveText: { color: colors.textInverse, fontWeight: FONT_WEIGHTS.black, fontSize: FONT_SIZES.md, letterSpacing: 0.5 },
   cancelButton: { padding: SPACING.lg, alignItems: 'center' },
-  cancelText: { color: COLORS.textMuted, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm, letterSpacing: 0.5 },
-});
+  cancelText: { color: colors.textMuted, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm, letterSpacing: 0.5 },
+  });
+}
