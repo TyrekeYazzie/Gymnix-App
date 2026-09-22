@@ -8,7 +8,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.tyrekeyazzie.fitnessapp"
     },
     "android": {
@@ -29,8 +29,8 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Allow FitnessApp to access your camera to take a photo of your gym session.",
-          "photosPermission": "Allow FitnessApp to access your photos to attach one to a workout.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to use your camera to take a profile photo or a photo of your workout.",
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos so you can choose a profile photo or attach one to a workout.",
           "microphonePermission": false
         }
       ],
