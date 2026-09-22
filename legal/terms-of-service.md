@@ -1,6 +1,6 @@
 # Terms of Service
 
-**Last updated: August 12, 2026**
+**Last updated: September 22, 2026**
 
 These Terms of Service ("Terms") govern your use of FitnessApp ("the App,"
 "we," "us"). FitnessApp is a working title — if the app is renamed before
@@ -36,11 +36,16 @@ You agree not to:
 
 We may suspend or terminate accounts that violate these Terms.
 
-## Leaderboard and User Content
+## Leaderboards and User Content
 
-Any content you choose to share via optional features (such as your
-display name on the Leaderboard) is visible to other users of the App.
-Don't share anything there you wouldn't want other users to see.
+Every account appears on the App's leaderboards. Your display name and, if
+you add one, your profile photo are visible to other users there (see the
+Privacy Policy for exactly what's shown). Don't use a name or photo you
+wouldn't want other users to see.
+
+Your display name and profile photo must not be offensive, sexually
+explicit, hateful, harassing, or impersonate someone else. We may remove a
+name or photo, or suspend an account, that breaks this rule.
 
 ## No Warranty
 

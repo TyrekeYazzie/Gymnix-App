@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: August 12, 2026**
+**Last updated: September 22, 2026**
 
 This Privacy Policy explains how FitnessApp ("the App," "we," "us") collects,
 uses, and protects your information. FitnessApp is a working title — if the
@@ -17,17 +17,29 @@ goals, and activity level; workout logs (exercise, sets, reps, duration,
 calories); cardio session logs; water intake; body-weight entries over time;
 meal and calorie/macro logs, including any custom meals you save.
 
-**Photos:** an optional photo you attach to a workout session. This is
-stored in a private location and is never shared publicly or with other
-users.
+**Photos:**
+- *Workout photos* — an optional photo you attach to a workout session. These
+  are stored privately and are never shared with other users.
+- *Profile photo* — an optional picture you add to your profile. Unlike
+  workout photos, your profile photo is **visible to other users** (next to
+  your name on the leaderboards) and can be viewed by anyone who has its
+  link. Before upload, the App crops and resizes it and removes embedded
+  metadata such as the photo's GPS location and device details. You can
+  remove or replace it at any time from your Profile.
 
 **Basic usage data inherent to the App's operation**, such as the timestamps
 of your own log entries — used only to power your own dashboard, streaks,
 and rank/XP calculations.
 
-We do not collect your location, contacts, or browsing history, and this
-version of the App contains no advertising or third-party analytics
-trackers.
+**Crash and performance reports:** if the App crashes or hits an error, a
+diagnostic report (error details, device model, operating system and App
+version, and the screens involved) may be sent to our crash-reporting
+provider, Sentry. These reports do not include your name, email address, IP
+address, or login tokens, and web addresses are stripped of their query
+details before sending.
+
+We do not collect your location, contacts, or browsing history, and the App
+contains no advertising, no ad tracking, and no marketing analytics.
 
 ## How We Use Your Information
 
@@ -35,9 +47,14 @@ trackers.
   weight, and progress over time, and calculating your rank/XP.
 - To calculate personalized calorie and macro targets from the data you
   provide.
-- To power the opt-in Leaderboard, which shares only your display name and
-  a single aggregate stat (your level, or a session count) with other
-  users — never your weight, age, goals, notes, or photos.
+- To power the Leaderboards. **Every account appears on the leaderboards**,
+  which show other users your display name, your profile photo (if you've
+  added one), and a single aggregate stat for that board — your level/XP,
+  your number of strength or cardio sessions logged, or your current workout
+  streak. They never show your weight, age, goals, notes, meals, or workout
+  photos. If you'd rather not be identifiable there, you can use a nickname
+  as your display name and leave your profile photo empty.
+- To diagnose crashes and errors and improve the App's reliability.
 - To respond to support requests you send us.
 
 ## How We Store and Protect Your Data
@@ -50,6 +67,9 @@ trackers.
   storage, not as plain text.
 - Workout photos are kept in a private storage bucket and are only ever
   made viewable to you through short-lived, expiring links.
+- Profile photos are kept in a separate storage bucket that is publicly
+  readable (so other users can see them), but only you can upload, replace,
+  or delete yours. Deleting your account deletes your profile photo.
 
 ## Your Choices and Rights
 
@@ -63,9 +83,13 @@ trackers.
 
 ## Data Sharing
 
-We do not sell your personal data. We share data only with Supabase, our
-infrastructure provider, and only as necessary to operate the App on our
-behalf.
+We do not sell your personal data. We share data only with these service
+providers, and only as necessary to operate the App on our behalf:
+
+- **Supabase** — database, authentication, and file storage.
+- **Sentry** — crash and error reporting, as described above.
+
+Other users can see only what's described in the Leaderboards section above.
 
 ## Data Retention
 
