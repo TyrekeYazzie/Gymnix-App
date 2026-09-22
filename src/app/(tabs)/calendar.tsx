@@ -480,7 +480,7 @@ function makeStyles(theme: Theme) {
   emptyText: { color: colors.textMuted, fontSize: FONT_SIZES.sm },
 
   // Photo viewer
-  viewerBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bgOverlay },
+  viewerBackdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.bgOverlay },
   viewerCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },
   viewerDate: {
     color: colors.textInverse,

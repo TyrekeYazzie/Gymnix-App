@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/context/ThemeContext';
 import { FONT_SIZES, FONT_WEIGHTS, RADIUS, SPACING, Theme } from '@/constants/theme';
@@ -113,13 +113,13 @@ export default function TabBar({ state, descriptors, navigation, onPressCenter }
             accessibilityLabel="Log new entry"
             accessibilityHint="Opens the menu to log a workout, cardio, meal, water, or weight entry"
           >
-            <BlurView intensity={50} tint={blurTint} style={StyleSheet.absoluteFillObject} />
+            <BlurView intensity={50} tint={blurTint} style={StyleSheet.absoluteFill} />
             <View style={styles.centerTint} />
             <LinearGradient
               colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
               start={{ x: 0.15, y: 0 }}
               end={{ x: 0.9, y: 0.95 }}
-              style={StyleSheet.absoluteFillObject}
+              style={StyleSheet.absoluteFill}
             />
             <Text style={styles.centerIcon}>+</Text>
           </TouchableOpacity>
@@ -140,13 +140,13 @@ export default function TabBar({ state, descriptors, navigation, onPressCenter }
               },
             ]}
           >
-            <BlurView intensity={45} tint={blurTint} style={StyleSheet.absoluteFillObject} />
+            <BlurView intensity={45} tint={blurTint} style={StyleSheet.absoluteFill} />
             <View style={styles.sliderTint} />
             <LinearGradient
               colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
               start={{ x: 0.15, y: 0 }}
               end={{ x: 0.9, y: 0.95 }}
-              style={StyleSheet.absoluteFillObject}
+              style={StyleSheet.absoluteFill}
             />
           </Animated.View>
         )}
@@ -209,7 +209,7 @@ function makeStyles(theme: Theme) {
       borderColor: 'rgba(255, 255, 255, 0.6)',
     },
     sliderTint: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: colors.primary + '26',
     },
 
@@ -245,7 +245,7 @@ function makeStyles(theme: Theme) {
     // Sage tint over the blur — keeps the button's brand color readable as
     // "colored glass" instead of a flat frosted circle.
     centerTint: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: colors.primaryDark + '80',
     },
     centerIcon: {

@@ -425,7 +425,7 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
 function makeStyles(theme: Theme) {
   const { colors, SHADOWS } = theme;
   return StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bgOverlay },
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: colors.bgOverlay },
   sheet: {
     backgroundColor: colors.bgSecondary,
     borderTopLeftRadius: RADIUS.xl,

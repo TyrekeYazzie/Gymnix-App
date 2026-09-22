@@ -149,12 +149,12 @@ export default function QuickLogMenu({ visible, onClose, onSelect }: Props) {
                 onPress={() => handleOrbPress(orb.key)}
                 activeOpacity={0.8}
               >
-                <BlurView intensity={45} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFillObject} />
+                <BlurView intensity={45} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
                 <LinearGradient
                   colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
                   start={{ x: 0.2, y: 0.05 }}
                   end={{ x: 0.85, y: 0.9 }}
-                  style={StyleSheet.absoluteFillObject}
+                  style={StyleSheet.absoluteFill}
                 />
                 <Ionicons name={orb.icon} size={24} color={orb.color} />
               </TouchableOpacity>
@@ -171,7 +171,7 @@ function makeStyles(theme: Theme) {
   const { colors } = theme;
   return StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.bgOverlay,
   },
   orbsAnchor: {

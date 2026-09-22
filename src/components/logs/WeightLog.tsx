@@ -386,7 +386,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
 function makeStyles(theme: Theme) {
   const { colors, SHADOWS } = theme;
   return StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bgOverlay },
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: colors.bgOverlay },
   sheet: {
     backgroundColor: colors.bgSecondary, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
     borderWidth: 1, borderColor: colors.accent + '88', borderBottomWidth: 0,

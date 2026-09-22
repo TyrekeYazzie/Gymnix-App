@@ -619,7 +619,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
 function makeStyles(theme: Theme) {
   const { colors, SHADOWS } = theme;
   return StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bgOverlay },
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: colors.bgOverlay },
   sheet: {
     backgroundColor: colors.bgSecondary,
     borderTopLeftRadius: 24,

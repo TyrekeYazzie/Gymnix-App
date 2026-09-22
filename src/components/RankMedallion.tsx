@@ -66,7 +66,7 @@ export default function RankMedallion({ rank, size = 64, locked = false, emphasi
           opacity={locked ? 0.3 : 0.5}
         />
       </Svg>
-      <View style={[StyleSheet.absoluteFillObject, styles.iconWrap]} pointerEvents="none">
+      <View style={[StyleSheet.absoluteFill, styles.iconWrap]} pointerEvents="none">
         <Ionicons name={rank.icon} size={size * 0.36} color={color} />
       </View>
       {locked && (

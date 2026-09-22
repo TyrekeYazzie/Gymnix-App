@@ -526,7 +526,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
 function makeStyles(theme: Theme) {
   const { colors } = theme;
   return StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bgOverlay },
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: colors.bgOverlay },
   sheet: {
     backgroundColor: colors.bgSecondary, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
     borderWidth: 1, borderColor: colors.neonYellow + '88', borderBottomWidth: 0,
