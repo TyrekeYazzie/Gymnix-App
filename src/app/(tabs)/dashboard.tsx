@@ -99,7 +99,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { profile } = useProfile();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const { colors } = theme;
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const TASKS = useMemo(() => getTasks(colors), [colors]);
@@ -263,7 +263,7 @@ export default function DashboardScreen() {
               ) : (
                 <BlurView
                   intensity={30}
-                  tint="light"
+                  tint={isDark ? 'dark' : 'light'}
                   style={[styles.weekCircle, day.isFuture && styles.weekCircleFuture]}
                 >
                   {!day.isFuture && (
@@ -374,14 +374,14 @@ export default function DashboardScreen() {
         <Text style={styles.sectionTitle}>Recent workouts</Text>
 
         {recentWorkouts.length === 0 ? (
-          <BlurView intensity={25} tint="light" style={styles.workoutCard}>
+          <BlurView intensity={25} tint={isDark ? 'dark' : 'light'} style={styles.workoutCard}>
             <Text style={styles.workoutCategory}>No workouts logged yet</Text>
           </BlurView>
         ) : (
           <View style={styles.recentWorkoutsBox}>
             <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
               {recentWorkouts.map((workout) => (
-                <BlurView key={workout.id} intensity={25} tint="light" style={styles.workoutCard}>
+                <BlurView key={workout.id} intensity={25} tint={isDark ? 'dark' : 'light'} style={styles.workoutCard}>
                   <View style={styles.workoutLeft}>
                     <Text style={styles.workoutName}>{workout.name}</Text>
                     <Text style={styles.workoutCategory}>{workout.category}</Text>
