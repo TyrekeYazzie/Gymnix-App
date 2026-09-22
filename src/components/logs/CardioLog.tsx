@@ -130,6 +130,30 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
     })
   ).current;
 
+  // Tracks the form ScrollView's own offset so the swipe-to-close gesture
+  // below only engages when the form is scrolled to the very top — lets a
+  // downward swipe close the sheet from anywhere in the body without
+  // hijacking an in-progress scroll further down the form.
+  const scrollOffsetY = useRef(0);
+  const bodyPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponderCapture: () => false,
+      // Capture (not the plain/bubble variant) so this claims the gesture
+      // ahead of the ScrollView's own responder when the conditions match,
+      // instead of losing the negotiation to it.
+      onMoveShouldSetPanResponderCapture: (_, g) =>
+        scrollOffsetY.current <= 2 && g.dy > 8 && g.dy > Math.abs(g.dx),
+      onPanResponderMove: (_, g) => { if (g.dy > 0) slideAnim.setValue(g.dy); },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 100 || g.vy > 0.5) {
+          animateClose();
+        } else {
+          Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }).start();
+        }
+      },
+    })
+  ).current;
+
   useEffect(() => {
     if (visible) {
       if (editEntry) {
@@ -290,6 +314,7 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1, justifyContent: 'flex-end' }}
+        pointerEvents="box-none"
       >
         <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
           {/* Drag handle + title — swipe down anywhere here to close */}
@@ -317,7 +342,13 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
 
           <AchievementUnlockBanner achievements={unlockedAchievements} />
 
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <View {...bodyPanResponder.panHandlers}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            onScroll={(e) => { scrollOffsetY.current = e.nativeEvent.contentOffset.y; }}
+            scrollEventThrottle={16}
+          >
 
             {/* Type selector */}
             <Text style={styles.label}>Type</Text>
@@ -416,6 +447,7 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
             </TouchableOpacity>
 
           </ScrollView>
+          </View>
         </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
