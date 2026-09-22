@@ -151,7 +151,7 @@ export default function QuickLogMenu({ visible, onClose, onSelect }: Props) {
               >
                 <BlurView intensity={45} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
                 <LinearGradient
-                  colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+                  colors={[colors.glassHighlight, 'rgba(255,255,255,0)']}
                   start={{ x: 0.2, y: 0.05 }}
                   end={{ x: 0.85, y: 0.9 }}
                   style={StyleSheet.absoluteFill}
@@ -210,7 +210,7 @@ function makeStyles(theme: Theme) {
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 0.5,
     marginTop: 6,
-    color: colors.textInverse,
+    color: colors.textOnOverlay,
     textShadowColor: 'rgba(0,0,0,0.55)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,

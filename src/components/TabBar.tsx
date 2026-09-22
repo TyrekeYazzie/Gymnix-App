@@ -116,7 +116,7 @@ export default function TabBar({ state, descriptors, navigation, onPressCenter }
             <BlurView intensity={50} tint={blurTint} style={StyleSheet.absoluteFill} />
             <View style={styles.centerTint} />
             <LinearGradient
-              colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
+              colors={[colors.glassHighlight, 'rgba(255,255,255,0)']}
               start={{ x: 0.15, y: 0 }}
               end={{ x: 0.9, y: 0.95 }}
               style={StyleSheet.absoluteFill}
@@ -143,7 +143,7 @@ export default function TabBar({ state, descriptors, navigation, onPressCenter }
             <BlurView intensity={45} tint={blurTint} style={StyleSheet.absoluteFill} />
             <View style={styles.sliderTint} />
             <LinearGradient
-              colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
+              colors={[colors.glassHighlight, 'rgba(255,255,255,0)']}
               start={{ x: 0.15, y: 0 }}
               end={{ x: 0.9, y: 0.95 }}
               style={StyleSheet.absoluteFill}
@@ -206,7 +206,7 @@ function makeStyles(theme: Theme) {
       borderRadius: RADIUS.lg,
       overflow: 'hidden',
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.6)',
+      borderColor: colors.glassBorder,
     },
     sliderTint: {
       ...StyleSheet.absoluteFill,
@@ -240,7 +240,7 @@ function makeStyles(theme: Theme) {
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1.5,
-      borderColor: 'rgba(255, 255, 255, 0.6)',
+      borderColor: colors.glassBorder,
     },
     // Sage tint over the blur — keeps the button's brand color readable as
     // "colored glass" instead of a flat frosted circle.
@@ -249,7 +249,7 @@ function makeStyles(theme: Theme) {
       backgroundColor: colors.primaryDark + '80',
     },
     centerIcon: {
-      color: colors.textInverse,
+      color: colors.textOnOverlay,
       fontSize: 28,
       fontWeight: FONT_WEIGHTS.black,
       lineHeight: 32,

@@ -51,6 +51,7 @@ export const LIGHT_COLORS = {
   textSecondary:    '#6b5f4f',   // warm brown-grey
   textMuted:        '#a89b85',   // faded pencil
   textInverse:      '#f7f3e9',   // cream, for filled buttons
+  textOnOverlay:    '#f7f3e9',   // over photos, modal washes, the + button
   textAccent:       '#4a6b5a',
   textNeon:         '#5b8266',
 
@@ -90,91 +91,103 @@ export const LIGHT_COLORS = {
   glowBlue:         'rgba(91, 124, 153, 0.10)',
   pixelBorder:      '#4a6b5a',
   scanline:         'rgba(43, 38, 32, 0.04)',
+
+  // ── GLASS (tab bar, + button, quick-log orbs) ───────────────
+  glassHighlight:   'rgba(255, 255, 255, 0.55)',
+  glassBorder:      'rgba(255, 255, 255, 0.6)',
 }
 
 // Night mode — same "fountain pen on paper" identity, dark espresso paper
-// instead of cream, parchment ink instead of soft-black ink. Every accent
-// hue keeps its light-theme counterpart's identity but is lightened enough
-// to stay legible (and not eye-searing) against a dark background.
+// instead of cream, parchment ink instead of soft-black ink. Tuned for
+// low-light reading: body text sits around 11:1 on the page (instead of a
+// glaring ~15:1), accents are desaturated so nothing "glows", and muted text
+// stays above 4:1 so it's still readable rather than just dim.
 export const DARK_COLORS = {
   // ── BACKGROUNDS ──────────────────────────────────────────
-  bgPrimary:        '#1c1815',   // page — deep warm espresso
-  bgSecondary:      '#221d18',   // panel
-  bgTertiary:       '#2a2420',   // well — inputs, tertiary surfaces
-  bgElevated:       '#2f2921',   // sheet — raised card
+  bgPrimary:        '#1b1815',   // page — deep warm espresso
+  bgSecondary:      '#201c18',   // panel
+  bgTertiary:       '#2a2520',   // well — inputs, tertiary surfaces
+  bgElevated:       '#26211c',   // sheet — raised card
   bgOverlay:        'rgba(0, 0, 0, 0.6)',
 
   // ── BORDERS ──────────────────────────────────────────────
-  borderDefault:    '#3a332b',
-  borderFocus:      '#7a9284',
-  borderAccent:     '#c97b5c',
+  borderDefault:    '#36302a',
+  borderFocus:      '#7f9888',
+  borderAccent:     '#c08264',
 
   // ── PRIMARY — SAGE INK ─────────────────────────────────────
-  primary:          '#7a9284',   // lightened sage — legible on dark paper
-  primaryLight:     '#9db3a5',
+  primary:          '#7f9888',   // soft sage — legible on dark paper
+  primaryLight:     '#9fb2a5',
   primaryDark:      '#4a6b5a',
-  primaryGlow:      'rgba(122, 146, 132, 0.18)',
+  primaryGlow:      'rgba(127, 152, 136, 0.16)',
 
   // ── ACCENT — RED PEN ───────────────────────────────────────
-  accent:           '#c97b5c',   // lightened terracotta
-  accentLight:      '#dba084',
-  accentDark:       '#a8452f',
-  accentGlow:       'rgba(201, 123, 92, 0.18)',
+  accent:           '#c08264',   // soft terracotta
+  accentLight:      '#d4a287',
+  accentDark:       '#b0664c',
+  accentGlow:       'rgba(192, 130, 100, 0.16)',
 
   // ── INK — SIGNAL COLORS ─────────────────────────────────
-  neonGreen:        '#7fa88c',
-  neonBlue:         '#7fa0bf',
-  neonYellow:       '#d9b84f',
-  neonOrange:       '#d18a5c',
+  neonGreen:        '#83a28c',
+  neonBlue:         '#8098b0',
+  neonYellow:       '#c4a85e',
+  neonOrange:       '#c08f6a',
 
   // ── TEXT ─────────────────────────────────────────────────
-  textPrimary:      '#f0e9d8',   // warm parchment
-  textSecondary:    '#bfb29c',
-  textMuted:        '#7a6f5e',
-  // NOT literally "inverse of textPrimary" — this sits on top of filled,
-  // saturated buttons/badges (primary/accent/category colors), which stay
-  // roughly as dark in both themes, so it stays light in both too. Flipping
-  // it to a dark color here would make button/badge text disappear.
-  textInverse:      '#f7f3e9',
-  textAccent:       '#7a9284',
-  textNeon:         '#7fa88c',
+  textPrimary:      '#d9cfbc',   // soft parchment — not bright white
+  textSecondary:    '#a89c88',
+  textMuted:        '#877c6b',
+  // Text/icons ON filled buttons, chips and badges (primary/accent/category
+  // fills). Those fills are light-ish sage/terracotta at night, so the ink
+  // goes dark here — cream on them was only ~2.7:1, espresso is ~5.6:1.
+  // Anything drawn over a photo, modal wash or the dark + button uses
+  // textOnOverlay instead, which stays light in both themes.
+  textInverse:      '#1b1815',
+  textOnOverlay:    '#f3ecdd',
+  textAccent:       '#7f9888',
+  textNeon:         '#83a28c',
 
   // ── GAME UI ──────────────────────────────────────────────
-  healthFull:       '#7fa88c',
-  healthMid:        '#d9b84f',
-  healthLow:        '#d18a5c',
-  energyBar:        '#7fa0bf',
-  expBar:           '#7a9284',
-  bossBar:          '#c97b5c',
+  healthFull:       '#83a28c',
+  healthMid:        '#c4a85e',
+  healthLow:        '#c08f6a',
+  energyBar:        '#8098b0',
+  expBar:           '#7f9888',
+  bossBar:          '#c08264',
 
   // ── GRAPH / CHART ────────────────────────────────────────
-  graphLine:        '#7a9284',
-  graphFill:        'rgba(122, 146, 132, 0.14)',
-  graphDot:         '#7fa0bf',
-  graphDotToday:    '#c97b5c',
-  graphGrid:        '#332c24',
-  graphGoalLine:    '#d9b84f',
-  graphAxisText:    '#7a6f5e',
+  graphLine:        '#7f9888',
+  graphFill:        'rgba(127, 152, 136, 0.12)',
+  graphDot:         '#8098b0',
+  graphDotToday:    '#c08264',
+  graphGrid:        '#312b25',
+  graphGoalLine:    '#c4a85e',
+  graphAxisText:    '#877c6b',
 
   // ── CIRCLE PROGRESS ──────────────────────────────────────
-  circleTrack:      '#332c24',
-  circleFill:       '#7a9284',
-  circleComplete:   '#7fa88c',
-  circleOver:       '#c97b5c',
+  circleTrack:      '#312b25',
+  circleFill:       '#7f9888',
+  circleComplete:   '#83a28c',
+  circleOver:       '#c08264',
 
   // ── STATUS ───────────────────────────────────────────────
-  success:          '#7fa88c',
-  warning:          '#d9b84f',
-  error:            '#c97b5c',
-  info:             '#7fa0bf',
+  success:          '#83a28c',
+  warning:          '#c4a85e',
+  error:            '#c08264',
+  info:             '#8098b0',
 
   // ── SPECIAL EFFECTS — soft tints, no glow ─────────────────
-  glowAmber:        'rgba(122, 146, 132, 0.10)',
-  glowCrimson:      'rgba(201, 123, 92, 0.10)',
-  glowMint:         'rgba(127, 168, 140, 0.10)',
-  glowBlue:         'rgba(127, 160, 191, 0.10)',
-  pixelBorder:      '#7a9284',
+  glowAmber:        'rgba(127, 152, 136, 0.10)',
+  glowCrimson:      'rgba(192, 130, 100, 0.10)',
+  glowMint:         'rgba(131, 162, 140, 0.10)',
+  glowBlue:         'rgba(128, 152, 176, 0.10)',
+  pixelBorder:      '#7f9888',
   scanline:         'rgba(0, 0, 0, 0.08)',
+
+  // ── GLASS (tab bar, + button, quick-log orbs) ───────────────
+  // A faint parchment sheen instead of the day theme's bright white glare.
+  glassHighlight:   'rgba(217, 207, 188, 0.08)',
+  glassBorder:      'rgba(217, 207, 188, 0.16)',
 }
 
 export type Colors = typeof LIGHT_COLORS;

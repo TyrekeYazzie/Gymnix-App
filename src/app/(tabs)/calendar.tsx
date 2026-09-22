@@ -483,7 +483,7 @@ function makeStyles(theme: Theme) {
   viewerBackdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.bgOverlay },
   viewerCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },
   viewerDate: {
-    color: colors.textInverse,
+    color: colors.textOnOverlay,
     fontSize: FONT_SIZES.sm,
     fontWeight: FONT_WEIGHTS.bold,
     letterSpacing: 0.5,
@@ -503,6 +503,6 @@ function makeStyles(theme: Theme) {
   viewerImage: { width: '100%', height: '100%' },
   viewerDots: { flexDirection: 'row', gap: 6, marginTop: SPACING.lg },
   viewerDot: { width: 6, height: 6, borderRadius: RADIUS.full, backgroundColor: 'rgba(247, 243, 233, 0.35)' },
-  viewerDotActive: { backgroundColor: colors.textInverse, width: 16 },
+  viewerDotActive: { backgroundColor: colors.textOnOverlay, width: 16 },
   });
 }
