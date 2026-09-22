@@ -216,7 +216,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {(profile?.daily_quotes_enabled ?? true) && <DailyQuote />}
+        {(profile?.daily_quotes_enabled ?? false) && <DailyQuote />}
 
         {/* Hero circle */}
         <View style={styles.heroWrapper}>

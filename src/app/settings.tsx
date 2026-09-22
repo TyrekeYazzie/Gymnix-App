@@ -262,7 +262,7 @@ export default function Settings() {
             subtext="Show a quote of the day on your Dashboard"
             control={
               <Toggle
-                value={profile?.daily_quotes_enabled ?? true}
+                value={profile?.daily_quotes_enabled ?? false}
                 onValueChange={handleQuotesToggle}
                 disabled={savingQuotes}
                 label="Daily quotes"
