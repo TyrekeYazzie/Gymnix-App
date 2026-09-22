@@ -23,12 +23,10 @@ async function launchCamera(): Promise<string | null> {
   return result.canceled ? null : (result.assets[0]?.uri ?? null);
 }
 
+// No media-library permission request: the system photo picker only returns
+// the image the user taps, so none is needed for images (see Expo's
+// ImagePicker docs) — requesting it just blocked users who'd denied access.
 async function launchLibrary(): Promise<string | null> {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    Alert.alert('Photo access needed', 'Enable photo library access in Settings to attach a photo.');
-    return null;
-  }
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     allowsEditing: true,
