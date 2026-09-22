@@ -13,7 +13,10 @@ import { useProfile } from '@/context/ProfileContext';
 import CardioLog, { getCardioTypes, KM_TO_MI, CardioEntry as CardioEditEntry } from '@/components/logs/CardioLog';
 import { DAILY_GOAL_ML } from '@/components/logs/WaterLog';
 import { topSetWeight } from '@/lib/workouts';
-import { weeklyCardioMinutes, weeklyWindowStart } from '@/lib/cardioTrends';
+import {
+  weeklyCardioMinutes, weeklyWindowStart,
+  PACE_TYPES, pickPaceType, paceTrend, formatPace,
+} from '@/lib/cardioTrends';
 import { useTheme } from '@/context/ThemeContext';
 import {
   FONT_SIZES, FONT_WEIGHTS,
@@ -210,6 +213,19 @@ export default function Progress() {
   const lastWeekMin = cardioWeeks[cardioWeeks.length - 2].minutes;
   const cardioWeekDelta = thisWeekMin - lastWeekMin;
   const cardioBarColor = cardioFilter === 'ALL' ? colors.neonGreen : getCardioType(cardioFilter)?.color ?? colors.neonGreen;
+
+  // Pace follows the filter when it's a distance activity; on "All" it uses
+  // your most-logged one. Swim/HIIT have no per-mile pace, so no chart.
+  // Plotted negated so faster (smaller) paces sit higher — "up is progress".
+  const paceType = cardioFilter === 'ALL'
+    ? pickPaceType(cardioEntries)
+    : PACE_TYPES.includes(cardioFilter) ? cardioFilter : null;
+  const pace = paceType ? paceTrend(cardioEntries, paceType, isImperial, 12) : { paces: [], average: null };
+  const pacePoints = linePoints(pace.paces.map(v => -v), CHART_WIDTH, CHART_HEIGHT);
+  const pacePolyline = pacePoints.map(p => `${p.x},${p.y}`).join(' ');
+  const paceDelta = pace.paces.length > 1 ? pace.paces[pace.paces.length - 1] - pace.paces[0] : null;
+  const paceUnit = isImperial ? '/mi' : '/km';
+  const paceColor = paceType ? getCardioType(paceType)?.color ?? colors.neonGreen : colors.neonGreen;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -573,6 +589,39 @@ export default function Progress() {
               </View>
             </View>
 
+            {paceType && pace.paces.length > 0 && (
+              <View style={[CARD.default, styles.chartCard]}>
+                <View style={styles.chartHeader}>
+                  <Text style={styles.chartHeaderValue}>
+                    {formatPace(pace.average!)} <Text style={styles.chartHeaderUnit}>{paceUnit} avg {paceType} pace</Text>
+                  </Text>
+                  {paceDelta !== null && Math.abs(paceDelta) >= 1 / 60 && (
+                    <Text style={[styles.chartHeaderDelta, { color: paceDelta < 0 ? colors.neonGreen : colors.accent }]}>
+                      {paceDelta < 0 ? '−' : '+'}{formatPace(paceDelta)} {paceDelta < 0 ? 'faster' : 'slower'}
+                    </Text>
+                  )}
+                </View>
+                <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
+                  {[0, 0.5, 1].map((f) => (
+                    <Line key={f} x1={0} x2={CHART_WIDTH} y1={CHART_HEIGHT * f} y2={CHART_HEIGHT * f} stroke={colors.graphGrid} strokeWidth={1} />
+                  ))}
+                  {pacePoints.length > 1 && (
+                    <Polyline points={pacePolyline} fill="none" stroke={paceColor} strokeWidth={2} />
+                  )}
+                  {pacePoints.map((p, i) => (
+                    <Circle
+                      key={i}
+                      cx={p.x}
+                      cy={p.y}
+                      r={i === pacePoints.length - 1 ? 4 : 3}
+                      fill={i === pacePoints.length - 1 ? paceColor : colors.graphDot}
+                    />
+                  ))}
+                </Svg>
+                <Text style={styles.chartFootnote}>Last {pace.paces.length} {paceType} session{pace.paces.length === 1 ? '' : 's'} with a distance · higher is faster</Text>
+              </View>
+            )}
+
             <Text style={styles.sectionTitle}>
               {cardioFilter === 'ALL' ? 'Recent sessions' : cardioFilter}
             </Text>
@@ -665,6 +714,7 @@ function makeStyles(theme: Theme) {
   chartHeaderValue: { fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary },
   chartHeaderUnit: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.medium, color: colors.textMuted },
   chartHeaderDelta: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold },
+  chartFootnote: { width: CHART_WIDTH, marginTop: SPACING.xs, fontSize: FONT_SIZES.xs, color: colors.textMuted },
 
   filterRow: { flexDirection: 'row', gap: SPACING.sm },
   filterPill: {

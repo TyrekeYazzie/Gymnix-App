@@ -2,10 +2,10 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Svg, { Polyline, Circle, Rect } from 'react-native-svg';
+import Svg, { Polyline, Circle } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
 import { topSetWeight, mostLoggedExercise } from '@/lib/workouts';
-import { weeklyCardioMinutes, weeklyWindowStart, WeekBucket } from '@/lib/cardioTrends';
+import { pickPaceType, paceTrend, formatPace } from '@/lib/cardioTrends';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -25,8 +25,10 @@ import {
 //   - Strength: top-set weight for your most-logged exercise (line) — the
 //               same measure the Progress screen charts per exercise. Summed
 //               volume across mixed exercises was too noisy to read.
-//   - Cardio:   total minutes per week over the last 8 weeks (bars), since
-//               single sessions vary too much by type to trend.
+//   - Cardio:   pace (min per mile/km) for your most-logged distance
+//               activity, per session (line). The line is drawn inverted so
+//               a faster pace plots HIGHER — "up is progress", same as
+//               Strength. The Progress screen also has weekly minutes.
 type Metric = 'weight' | 'strength' | 'cardio';
 
 function getTabs(colors: Colors): { key: Metric; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
@@ -42,11 +44,12 @@ const POINTS_LIMIT = 10;
 // Enough recent workouts to reliably find the most-logged exercise and still
 // have up to POINTS_LIMIT sessions of it to chart.
 const WORKOUT_FETCH_LIMIT = 60;
-const CARDIO_WEEKS = 8;
+// Same idea for cardio — enough to find the main activity's recent sessions.
+const CARDIO_FETCH_LIMIT = 60;
 
 interface WeightRow { weight_kg: number; created_at: string; }
 interface WorkoutRow { name: string; sets: { reps: number; weight: number }[]; created_at: string; }
-interface CardioRow { duration: string | null; created_at: string; }
+interface CardioRow { type: string; distance_km: number | null; duration: string | null; created_at: string; }
 
 // maps values onto an evenly-spaced x axis within [0, width], scaled to fit
 // [0, height] with a little breathing room — same approach as progress.tsx's
@@ -81,7 +84,7 @@ export default function ProgressPreviewCard() {
   const [weightVals, setWeightVals] = useState<number[]>([]);
   const [strengthVals, setStrengthVals] = useState<number[]>([]);
   const [strengthExercise, setStrengthExercise] = useState<string | null>(null);
-  const [cardioWeeks, setCardioWeeks] = useState<WeekBucket[]>([]);
+  const [cardioRows, setCardioRows] = useState<CardioRow[]>([]);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -90,7 +93,7 @@ export default function ProgressPreviewCard() {
     const [w, s, c] = await Promise.all([
       supabase.from('weight_logs').select('weight_kg, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(POINTS_LIMIT),
       supabase.from('workouts').select('name, sets, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(WORKOUT_FETCH_LIMIT),
-      supabase.from('cardio_logs').select('duration, created_at').eq('user_id', user.id).gte('created_at', weeklyWindowStart(CARDIO_WEEKS)),
+      supabase.from('cardio_logs').select('type, distance_km, duration, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(CARDIO_FETCH_LIMIT),
     ]);
 
     if (w.error) console.error('Failed to load weight trend:', w.error.message);
@@ -111,44 +114,47 @@ export default function ProgressPreviewCard() {
     }
 
     if (c.error) console.error('Failed to load cardio trend:', c.error.message);
-    else setCardioWeeks(weeklyCardioMinutes(c.data as CardioRow[] ?? [], CARDIO_WEEKS));
+    else setCardioRows(c.data as CardioRow[] ?? []);
   }, [user, isImperial]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const activeTab = TABS.find(t => t.key === metric)!;
   const isCardio = metric === 'cardio';
-  const cardioMinutes = cardioWeeks.map(w => w.minutes);
-  const values = metric === 'weight' ? weightVals : metric === 'strength' ? strengthVals : cardioMinutes;
-  const hasData = isCardio ? cardioMinutes.some(m => m > 0) : values.length > 0;
-  const points = isCardio ? [] : linePoints(values, cardWidth, SPARK_HEIGHT);
+  const paceType = useMemo(() => pickPaceType(cardioRows), [cardioRows]);
+  const pace = useMemo(
+    () => paceType ? paceTrend(cardioRows, paceType, isImperial, POINTS_LIMIT) : { paces: [], average: null },
+    [cardioRows, paceType, isImperial],
+  );
+
+  const values = metric === 'weight' ? weightVals : metric === 'strength' ? strengthVals : pace.paces;
+  // Pace is plotted negated so faster (smaller) paces sit higher on the line.
+  const points = linePoints(isCardio ? values.map(v => -v) : values, cardWidth, SPARK_HEIGHT);
   const polyline = points.map(p => `${p.x},${p.y}`).join(' ');
 
-  // Weight/strength compare against the first point shown; cardio compares
-  // this week against last week, which is what "am I doing more?" means there.
+  // Every metric compares its latest point against the first one shown.
   const current = values[values.length - 1];
-  const baseline = isCardio ? values[values.length - 2] : values[0];
-  const delta = current !== undefined && baseline !== undefined ? current - baseline : null;
+  const first = values[0];
+  const delta = current !== undefined && first !== undefined ? current - first : null;
 
-  // Strength/cardio trend up reads as improvement; bodyweight trending down
-  // does — matches the same convention progress.tsx already uses for its
-  // Weight and Strength tabs.
-  const deltaIsGood = delta !== null && (metric === 'weight' ? delta <= 0 : delta >= 0);
+  // Strength trending up is improvement; bodyweight and pace trending DOWN
+  // are (lighter, faster) — matches the convention progress.tsx uses.
+  const deltaIsGood = delta !== null && (metric === 'strength' ? delta >= 0 : delta <= 0);
   const deltaColor = delta === null || delta === 0 ? colors.textMuted : deltaIsGood ? colors.neonGreen : colors.accent;
 
   const weightUnit = isImperial ? 'lbs' : 'kg';
-  const unit = isCardio ? 'min' : weightUnit;
-  const currentLabel =
-    metric === 'strength' ? `top set · ${strengthExercise ?? ''}` :
-    isCardio              ? 'this week' :
-    null;
-  const deltaSuffix = isCardio ? 'vs last week' : 'since first';
-
-  const barSlot = cardWidth / CARDIO_WEEKS;
-  const barWidth = barSlot * 0.55;
-  const barMax = Math.max(...cardioMinutes, 1);
-
+  const paceUnit = isImperial ? '/mi' : '/km';
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 1 });
+
+  const headline = isCardio
+    ? { value: pace.average !== null ? formatPace(pace.average) : '—', unit: paceUnit, label: `avg ${paceType ?? ''} pace` }
+    : { value: current !== undefined ? fmt(current) : '—', unit: weightUnit, label: metric === 'strength' ? `top set · ${strengthExercise ?? ''}` : null };
+  const deltaText = delta === null ? '' : isCardio
+    ? `${delta > 0 ? '+' : '−'}${formatPace(delta)} ${paceUnit} ${delta < 0 ? 'faster' : 'slower'} since first`
+    : `${delta > 0 ? '+' : ''}${fmt(delta)} ${weightUnit} since first`;
+  const emptyText = isCardio
+    ? 'Log a run, walk, ride or row with a distance to see your pace'
+    : `No ${activeTab.label.toLowerCase()} logs yet`;
 
   return (
     <View style={styles.card}>
@@ -179,64 +185,39 @@ export default function ProgressPreviewCard() {
         })}
       </View>
 
-      {!hasData ? (
+      {values.length === 0 ? (
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>
-            {isCardio ? `No cardio in the last ${CARDIO_WEEKS} weeks` : `No ${activeTab.label.toLowerCase()} logs yet`}
-          </Text>
+          <Text style={styles.emptyText}>{emptyText}</Text>
         </View>
       ) : (
         <>
           <View style={styles.statsRow}>
             <Text style={styles.currentValue}>
-              {fmt(current!)} <Text style={styles.unit}>{unit}</Text>
+              {headline.value} <Text style={styles.unit}>{headline.unit}</Text>
             </Text>
-            {currentLabel && (
-              <Text style={styles.currentLabel} numberOfLines={1}>{currentLabel}</Text>
+            {headline.label && (
+              <Text style={styles.currentLabel} numberOfLines={1}>{headline.label}</Text>
             )}
           </View>
-          {delta !== null && delta !== 0 && (
-            <Text style={[styles.delta, { color: deltaColor }]}>
-              {delta > 0 ? '+' : ''}{fmt(delta)} {unit} {deltaSuffix}
-            </Text>
+          {delta !== null && Math.abs(delta) >= (isCardio ? 1 / 60 : 0.05) && (
+            <Text style={[styles.delta, { color: deltaColor }]}>{deltaText}</Text>
           )}
 
           <View style={styles.sparkWrap} onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}>
             {cardWidth > 0 && (
               <Svg width={cardWidth} height={SPARK_HEIGHT}>
-                {isCardio
-                  ? cardioMinutes.map((m, i) => {
-                      const h = Math.max((m / barMax) * SPARK_HEIGHT, 2);
-                      const isThisWeek = i === cardioMinutes.length - 1;
-                      return (
-                        <Rect
-                          key={i}
-                          x={barSlot * i + (barSlot - barWidth) / 2}
-                          y={SPARK_HEIGHT - h}
-                          width={barWidth}
-                          height={h}
-                          rx={3}
-                          fill={isThisWeek ? activeTab.color : colors.graphDot}
-                          opacity={m === 0 ? 0.35 : 1}
-                        />
-                      );
-                    })
-                  : (
-                    <>
-                      {points.length > 1 && (
-                        <Polyline points={polyline} fill="none" stroke={activeTab.color} strokeWidth={2} />
-                      )}
-                      {points.map((p, i) => (
-                        <Circle
-                          key={i}
-                          cx={p.x}
-                          cy={p.y}
-                          r={i === points.length - 1 ? 4 : 2.5}
-                          fill={i === points.length - 1 ? activeTab.color : colors.graphDot}
-                        />
-                      ))}
-                    </>
-                  )}
+                {points.length > 1 && (
+                  <Polyline points={polyline} fill="none" stroke={activeTab.color} strokeWidth={2} />
+                )}
+                {points.map((p, i) => (
+                  <Circle
+                    key={i}
+                    cx={p.x}
+                    cy={p.y}
+                    r={i === points.length - 1 ? 4 : 2.5}
+                    fill={i === points.length - 1 ? activeTab.color : colors.graphDot}
+                  />
+                ))}
               </Svg>
             )}
           </View>
