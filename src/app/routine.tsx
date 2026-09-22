@@ -8,7 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
-import { WORKOUT_CATEGORIES } from '@/constants/workoutCategories';
+import { getWorkoutCategories } from '@/constants/workoutCategories';
 import { toDayCategories } from '@/utils/routine';
 import { DayOfWeek, WeeklyRoutine } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
@@ -39,6 +39,7 @@ export default function Routine() {
   const { profile, setProfile } = useProfile();
   const { theme } = useTheme();
   const { colors } = theme;
+  const WORKOUT_CATEGORIES = useMemo(() => getWorkoutCategories(colors), [colors]);
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [routine, setRoutine] = useState<WeeklyRoutine>(() => normalizeRoutine(profile?.weekly_routine));
   const [expandedDay, setExpandedDay] = useState<DayOfWeek | null>(null);

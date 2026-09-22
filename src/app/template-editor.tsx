@@ -8,7 +8,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { WORKOUT_CATEGORIES } from '@/constants/workoutCategories';
+import { getWorkoutCategories } from '@/constants/workoutCategories';
 import { COMMON_EXERCISES } from '@/constants/exercises';
 import { TemplateExercise } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
@@ -22,6 +22,7 @@ export default function TemplateEditor() {
   const { user } = useAuth();
   const { theme } = useTheme();
   const { colors } = theme;
+  const WORKOUT_CATEGORIES = useMemo(() => getWorkoutCategories(colors), [colors]);
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEditing = !!id;

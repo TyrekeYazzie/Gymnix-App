@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
-import { WORKOUT_CATEGORIES } from '@/constants/workoutCategories';
+import { getWorkoutCategories } from '@/constants/workoutCategories';
 import { getCardioTypes } from '@/components/logs/CardioLog';
 import { getSignedPhotoUrls } from '@/utils/workoutPhotos';
 import { Workout, CardioLogEntry, WaterLogEntry, WeightLogEntry, Meal } from '@/types';
@@ -55,6 +55,7 @@ export default function CalendarScreen() {
   const { isImperial } = useProfile();
   const { theme } = useTheme();
   const { colors, CARD } = theme;
+  const WORKOUT_CATEGORIES = useMemo(() => getWorkoutCategories(colors), [colors]);
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const LOG_TYPE_COLORS = useMemo(() => getLogTypeColors(colors), [colors]);
   const CARDIO_TYPES = useMemo(() => getCardioTypes(colors), [colors]);

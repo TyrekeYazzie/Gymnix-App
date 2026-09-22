@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import WorkoutLog from '@/components/logs/WorkoutLog';
-import { WORKOUT_CATEGORIES as categories } from '@/constants/workoutCategories';
+import { getWorkoutCategories } from '@/constants/workoutCategories';
 import { Workout, TemplateExercise } from '@/types';
 import {
   FONT_SIZES, FONT_WEIGHTS,
@@ -32,6 +32,7 @@ export default function Workouts() {
   const { user } = useAuth();
   const { theme } = useTheme();
   const { colors } = theme;
+  const categories = useMemo(() => getWorkoutCategories(colors), [colors]);
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [modalVisible, setModalVisible] = useState(false);

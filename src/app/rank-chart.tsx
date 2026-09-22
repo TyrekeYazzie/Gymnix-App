@@ -9,7 +9,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useProfile } from '@/context/ProfileContext';
 import { xpProgress } from '@/lib/xp';
 import { XP_MEAL, XP_WATER, XP_WEIGHT } from '@/lib/xp';
-import { RANKS, getRankIndex } from '@/constants/ranks';
+import { getRanks, getRankIndex } from '@/constants/ranks';
 import RankMedallion from '@/components/RankMedallion';
 import { useTheme } from '@/context/ThemeContext';
 import {
@@ -34,6 +34,7 @@ export default function RankChartScreen() {
   const { profile } = useProfile();
   const { theme } = useTheme();
   const { colors } = theme;
+  const RANKS = useMemo(() => getRanks(colors), [colors]);
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const XP_SOURCES = useMemo(() => getXpSources(colors), [colors]);
 

@@ -12,7 +12,7 @@ import { useProfile } from '@/context/ProfileContext';
 import { awardXP, calcWorkoutXP } from '@/lib/xp';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
 import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
-import { WORKOUT_CATEGORIES as CATEGORIES } from '@/constants/workoutCategories';
+import { getWorkoutCategories } from '@/constants/workoutCategories';
 import { COMMON_EXERCISES } from '@/constants/exercises';
 import { getTodayKey, toDayCategories } from '@/utils/routine';
 import { pickWorkoutPhoto, uploadWorkoutPhoto } from '@/utils/workoutPhotos';
@@ -51,6 +51,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
   const { profile, isImperial, refreshProfile } = useProfile();
   const { theme } = useTheme();
   const { colors } = theme;
+  const CATEGORIES = useMemo(() => getWorkoutCategories(colors), [colors]);
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const weightUnit = isImperial ? 'lbs' : 'kg';
 

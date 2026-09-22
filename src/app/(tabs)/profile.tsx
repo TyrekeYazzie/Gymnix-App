@@ -42,7 +42,7 @@ export default function Profile() {
   const swipeHandlers = useSwipeTabs()
 
   const xp = xpProgress(profile?.total_xp ?? 0)
-  const rank = getRank(xp.level)
+  const rank = getRank(xp.level, colors)
 
   const handleLogout = async () => {
     await supabase.auth.signOut()

@@ -293,7 +293,7 @@ export default function DashboardScreen() {
         {(() => {
           const totalXP = profile?.total_xp ?? 0;
           const xp = xpProgress(totalXP);
-          const rank = getRank(xp.level);
+          const rank = getRank(xp.level, colors);
           return (
             <TouchableOpacity
               style={[styles.xpCard, { borderColor: rank.color + '55' }]}
