@@ -13,6 +13,7 @@ import { useProfile } from '@/context/ProfileContext';
 import CardioLog, { getCardioTypes, KM_TO_MI, CardioEntry as CardioEditEntry } from '@/components/logs/CardioLog';
 import { DAILY_GOAL_ML } from '@/components/logs/WaterLog';
 import { topSetWeight } from '@/lib/workouts';
+import { weeklyCardioMinutes, weeklyWindowStart } from '@/lib/cardioTrends';
 import { useTheme } from '@/context/ThemeContext';
 import {
   FONT_SIZES, FONT_WEIGHTS,
@@ -28,11 +29,13 @@ type Tab = typeof TABS[number];
 
 const CHART_WIDTH = Dimensions.get('window').width - (SPACING.lg + STATIC_CARD.default.padding) * 2;
 const CHART_HEIGHT = 140;
+const CARDIO_WEEKS = 8;
 
 interface WeightEntry { id: string; weight_kg: number; created_at: string; }
 interface WaterEntry { amount_ml: number; created_at: string; }
 interface CardioEntry { id: string; type: string; distance_km: number | null; duration: string | null; calories: number | null; created_at: string; }
 interface WorkoutEntry { id: string; name: string; sets: { reps: number; weight: number }[]; created_at: string; }
+interface CardioTrendEntry { type: string; duration: string | null; created_at: string; }
 
 // maps values onto an evenly-spaced x axis within [0, width], scaled to fit [0, height] with a little breathing room
 function linePoints(values: number[], width: number, height: number): { x: number; y: number }[] {
@@ -72,6 +75,9 @@ export default function Progress() {
   const [weightEntries, setWeightEntries] = useState<WeightEntry[]>([]);
   const [waterEntries, setWaterEntries] = useState<WaterEntry[]>([]);
   const [cardioEntries, setCardioEntries] = useState<CardioEntry[]>([]);
+  // Separate from cardioEntries (which is capped at the 30 most recent for
+  // the list) so the weekly chart always covers the full 8-week window.
+  const [cardioTrend, setCardioTrend] = useState<CardioTrendEntry[]>([]);
   const [workoutEntries, setWorkoutEntries] = useState<WorkoutEntry[]>([]);
   const [cardioFilter, setCardioFilter] = useState('ALL');
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
@@ -82,11 +88,12 @@ export default function Progress() {
   const loadAll = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [weightRes, waterRes, cardioRes, workoutRes] = await Promise.all([
+    const [weightRes, waterRes, cardioRes, workoutRes, cardioTrendRes] = await Promise.all([
       supabase.from('weight_logs').select('id,weight_kg,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(30),
       supabase.from('water_logs').select('amount_ml,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(300),
       supabase.from('cardio_logs').select('id,type,distance_km,duration,calories,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(30),
       supabase.from('workouts').select('id,name,sets,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(200),
+      supabase.from('cardio_logs').select('type,duration,created_at').eq('user_id', user.id).gte('created_at', weeklyWindowStart(CARDIO_WEEKS)),
     ]);
     if (weightRes.error) console.error('Failed to load weight history:', weightRes.error.message);
     else setWeightEntries(weightRes.data ?? []);
@@ -96,6 +103,8 @@ export default function Progress() {
     else setCardioEntries(cardioRes.data ?? []);
     if (workoutRes.error) console.error('Failed to load workout history:', workoutRes.error.message);
     else setWorkoutEntries(workoutRes.data ?? []);
+    if (cardioTrendRes.error) console.error('Failed to load cardio trend:', cardioTrendRes.error.message);
+    else setCardioTrend(cardioTrendRes.data ?? []);
     setLoading(false);
   }, [user]);
 
@@ -190,6 +199,17 @@ export default function Progress() {
   const totalDistanceKm = cardioEntries.reduce((s, e) => s + (e.distance_km ?? 0), 0);
   const totalDurationMin = cardioEntries.reduce((s, e) => s + (parseInt(e.duration ?? '0', 10) || 0), 0);
   const getCardioType = (t: string) => CARDIO_TYPES.find(c => c.name === t);
+  // Weekly minutes follow the type filter, so picking "Running" shows just
+  // your running trend.
+  const cardioWeeks = weeklyCardioMinutes(
+    cardioTrend.filter(e => cardioFilter === 'ALL' || e.type === cardioFilter),
+    CARDIO_WEEKS,
+  );
+  const cardioWeekMax = Math.max(...cardioWeeks.map(w => w.minutes), 1) * 1.1;
+  const thisWeekMin = cardioWeeks[cardioWeeks.length - 1].minutes;
+  const lastWeekMin = cardioWeeks[cardioWeeks.length - 2].minutes;
+  const cardioWeekDelta = thisWeekMin - lastWeekMin;
+  const cardioBarColor = cardioFilter === 'ALL' ? colors.neonGreen : getCardioType(cardioFilter)?.color ?? colors.neonGreen;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -510,6 +530,49 @@ export default function Progress() {
               </View>
             </ScrollView>
 
+            <View style={[CARD.default, styles.chartCard]}>
+              <View style={styles.chartHeader}>
+                <Text style={styles.chartHeaderValue}>
+                  {thisWeekMin} <Text style={styles.chartHeaderUnit}>min this week</Text>
+                </Text>
+                {cardioWeekDelta !== 0 && (
+                  <Text style={[styles.chartHeaderDelta, { color: cardioWeekDelta > 0 ? colors.neonGreen : colors.accent }]}>
+                    {cardioWeekDelta > 0 ? '+' : ''}{cardioWeekDelta} vs last week
+                  </Text>
+                )}
+              </View>
+              <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
+                {[0, 0.5, 1].map((f) => (
+                  <Line key={f} x1={0} x2={CHART_WIDTH} y1={CHART_HEIGHT * f} y2={CHART_HEIGHT * f} stroke={colors.graphGrid} strokeWidth={1} />
+                ))}
+                {cardioWeeks.map((w, i) => {
+                  const slot = CHART_WIDTH / CARDIO_WEEKS;
+                  const barWidth = slot * 0.5;
+                  const barHeight = Math.max((w.minutes / cardioWeekMax) * CHART_HEIGHT, 2);
+                  const isThisWeek = i === cardioWeeks.length - 1;
+                  return (
+                    <Rect
+                      key={i}
+                      x={slot * i + (slot - barWidth) / 2}
+                      y={CHART_HEIGHT - barHeight}
+                      width={barWidth}
+                      height={barHeight}
+                      rx={3}
+                      fill={isThisWeek ? cardioBarColor : colors.graphDot}
+                      opacity={w.minutes === 0 ? 0.35 : 1}
+                    />
+                  );
+                })}
+              </Svg>
+              <View style={styles.weekdayRow}>
+                {cardioWeeks.map((w, i) => (
+                  <Text key={i} style={styles.weekdayLabel}>
+                    {i === cardioWeeks.length - 1 ? 'Now' : `${w.start.getMonth() + 1}/${w.start.getDate()}`}
+                  </Text>
+                ))}
+              </View>
+            </View>
+
             <Text style={styles.sectionTitle}>
               {cardioFilter === 'ALL' ? 'Recent sessions' : cardioFilter}
             </Text>
@@ -598,6 +661,10 @@ function makeStyles(theme: Theme) {
   chartCard: { marginBottom: SPACING.lg, alignItems: 'center' },
   weekdayRow: { flexDirection: 'row', width: CHART_WIDTH, marginTop: SPACING.xs },
   weekdayLabel: { flex: 1, textAlign: 'center', fontSize: FONT_SIZES.xs, color: colors.textMuted },
+  chartHeader: { width: CHART_WIDTH, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: SPACING.sm },
+  chartHeaderValue: { fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary },
+  chartHeaderUnit: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.medium, color: colors.textMuted },
+  chartHeaderDelta: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold },
 
   filterRow: { flexDirection: 'row', gap: SPACING.sm },
   filterPill: {
