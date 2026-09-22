@@ -1,13 +1,17 @@
 import React, { useMemo, useState } from 'react'
 import {
   View, Text, ScrollView,
-  TouchableOpacity, StyleSheet
+  TouchableOpacity, StyleSheet,
+  ActivityIndicator, Alert
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'expo-router'
 import { useSwipeTabs } from '@/hooks/useSwipeTabs'
 import { useProfile } from '@/context/ProfileContext'
+import { useAuth } from '@/hooks/useAuth'
+import { pickAvatar, uploadAvatar, deleteAllAvatars } from '@/utils/avatar'
+import Avatar from '@/components/Avatar'
 import { useTheme } from '@/context/ThemeContext'
 import EditProfile from '@/components/EditProfile'
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -34,11 +38,13 @@ function DataRow({ label, value, valueColor }: { label: string; value: string; v
 
 export default function Profile() {
   const router = useRouter()
-  const { profile, isImperial } = useProfile()
+  const { profile, setProfile, isImperial } = useProfile()
+  const { user } = useAuth()
   const { theme } = useTheme()
   const { colors } = theme
   const styles = useMemo(() => makeStyles(theme), [theme])
   const [editing, setEditing] = useState(false)
+  const [savingAvatar, setSavingAvatar] = useState(false)
   const swipeHandlers = useSwipeTabs()
 
   const xp = xpProgress(profile?.total_xp ?? 0)
@@ -49,9 +55,32 @@ export default function Profile() {
     router.replace('/(auth)/login')
   }
 
-  const initials = profile?.full_name
-    ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
-    : '??'
+  const handleAvatarPress = async () => {
+    if (!user || !profile || savingAvatar) return
+    const choice = await pickAvatar(!!profile.avatar_path)
+    if (!choice) return
+    setSavingAvatar(true)
+    try {
+      let newPath: string | null = null
+      if (choice.action === 'set') {
+        newPath = await uploadAvatar(user.id, choice)
+        if (!newPath) { Alert.alert('Upload failed', 'Could not upload your photo. Please try again.'); return }
+      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ avatar_path: newPath })
+        .eq('id', user.id)
+        .select()
+        .single()
+      if (error) { Alert.alert('Error', 'Could not update your profile photo'); return }
+      if (data) setProfile(data)
+      // Only now that the profile points at the new file (or at nothing) is
+      // it safe to drop the old one(s).
+      await deleteAllAvatars(user.id, newPath ?? undefined)
+    } finally {
+      setSavingAvatar(false)
+    }
+  }
 
   const heightDisplay = (() => {
     if (!profile?.height_cm) return '—'
@@ -109,11 +138,25 @@ export default function Profile() {
           <View style={styles.hudInner}>
             {/* Avatar panel */}
             <View style={styles.avatarPanel}>
-              <View style={styles.avatarFrame}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{initials}</Text>
-                </View>
-              </View>
+              <TouchableOpacity
+                style={styles.avatarFrame}
+                onPress={handleAvatarPress}
+                activeOpacity={0.8}
+                disabled={savingAvatar}
+                accessibilityRole="button"
+                accessibilityLabel={profile?.avatar_path ? 'Change profile photo' : 'Add profile photo'}
+              >
+                <Avatar path={profile?.avatar_path} name={profile?.full_name} size={68} radius={RADIUS.sm} />
+                {savingAvatar ? (
+                  <View style={styles.avatarBusy}>
+                    <ActivityIndicator color={colors.textOnOverlay} />
+                  </View>
+                ) : (
+                  <View style={styles.avatarBadge}>
+                    <Ionicons name="camera" size={12} color={colors.textInverse} />
+                  </View>
+                )}
+              </TouchableOpacity>
             </View>
 
             {/* Data panel */}
@@ -342,19 +385,27 @@ function makeStyles(theme: Theme) {
     justifyContent: 'center',
     padding: 6,
   },
-  avatar: {
+  avatarBusy: {
+    position: 'absolute',
     width: 68,
     height: 68,
-    backgroundColor: colors.bgTertiary,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
+    borderRadius: RADIUS.sm,
+    backgroundColor: colors.bgOverlay,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    color: colors.primary,
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: FONT_WEIGHTS.black,
+  avatarBadge: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 24,
+    height: 24,
+    borderRadius: RADIUS.full,
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.bgSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dataPanel: { flex: 1, gap: 2 },
   dataRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5 },

@@ -34,6 +34,7 @@ export interface Profile {
   reminders_enabled: boolean;
   dark_mode_enabled: boolean;
   daily_quotes_enabled: boolean;
+  avatar_path: string | null;     // storage path in the public 'avatars' bucket
   total_xp: number;
   weekly_routine: WeeklyRoutine;
   created_at: string;
@@ -108,6 +109,7 @@ export interface CustomMeal {
 export interface LevelLeaderboardEntry {
   user_id: string;
   full_name: string | null;
+  avatar_path: string | null;
   total_xp: number;
   level: number;
   rnk: number;
@@ -119,6 +121,7 @@ export interface LevelLeaderboardEntry {
 export interface LogCountLeaderboardEntry {
   user_id: string;
   full_name: string | null;
+  avatar_path: string | null;
   log_count: number;
   rnk: number;
 }
@@ -137,6 +140,7 @@ export interface WorkoutStreak {
 export interface StreakLeaderboardEntry {
   user_id: string;
   full_name: string | null;
+  avatar_path: string | null;
   current_streak: number;
   rnk: number;
 }

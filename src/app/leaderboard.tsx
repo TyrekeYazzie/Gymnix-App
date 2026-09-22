@@ -17,6 +17,7 @@ import {
 } from '@/lib/leaderboard';
 import { LevelLeaderboardEntry, LogCountLeaderboardEntry, StreakLeaderboardEntry } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
+import Avatar from '@/components/Avatar';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme, Colors
@@ -32,12 +33,6 @@ function getTabs(colors: Colors): { key: TabKey; label: string; icon: keyof type
     { key: 'cardio',   label: 'Cardio',   icon: 'heart-outline',   color: colors.neonGreen },
     { key: 'streak',   label: 'Streak',   icon: 'flame-outline',   color: colors.neonOrange },
   ];
-}
-
-function getInitials(name: string | null | undefined): string {
-  if (!name) return '?';
-  const parts = name.trim().split(/\s+/);
-  return parts.slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('') || '?';
 }
 
 // Gold/silver/bronze for the podium, muted for everyone else.
@@ -194,9 +189,7 @@ export default function LeaderboardScreen() {
                   {i > 0 && <View style={styles.rowDivider} />}
                   <View style={[styles.row, isMe && { backgroundColor: activeTabDef.color + '10' }]}>
                     <Text style={[styles.rank, { color: medalColor(colors, row.rnk) }]}>#{row.rnk}</Text>
-                    <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>{getInitials(row.full_name)}</Text>
-                    </View>
+                    <Avatar path={row.avatar_path} name={row.full_name} size={32} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.name} numberOfLines={1}>
                         {row.full_name || 'Anonymous'}{isMe ? ' (You)' : ''}
@@ -217,9 +210,7 @@ export default function LeaderboardScreen() {
             <View style={[styles.card, { borderColor: activeTabDef.color }]}>
               <View style={styles.row}>
                 <Text style={[styles.rank, { color: activeTabDef.color }]}>#{myRank.rnk}</Text>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{getInitials(profile?.full_name)}</Text>
-                </View>
+                <Avatar path={profile?.avatar_path} name={profile?.full_name} size={32} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{profile?.full_name || 'You'} (You)</Text>
                 </View>
@@ -309,21 +300,6 @@ function makeStyles(theme: Theme) {
   rank: {
     width: 34,
     fontSize: FONT_SIZES.sm,
-    fontWeight: FONT_WEIGHTS.black,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: RADIUS.full,
-    backgroundColor: colors.bgTertiary,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: colors.primary,
-    fontSize: FONT_SIZES.xs,
     fontWeight: FONT_WEIGHTS.black,
   },
   name: {

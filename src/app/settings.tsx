@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { useTheme } from '@/context/ThemeContext';
 import { deleteAllWorkoutPhotos } from '@/utils/workoutPhotos';
+import { deleteAllAvatars } from '@/utils/avatar';
 import { FONT_SIZES, FONT_WEIGHTS, SPACING, RADIUS, Theme } from '@/constants/theme';
 
 const SUPPORT_EMAIL = 'ifitsupportcenter@gmail.com';
@@ -143,6 +144,7 @@ export default function Settings() {
     // Best-effort: storage objects aren't covered by the cascade the RPC
     // below relies on, so clean those up first (see deleteAllWorkoutPhotos).
     await deleteAllWorkoutPhotos(user.id);
+    await deleteAllAvatars(user.id);
     const { error } = await supabase.rpc('delete_user');
     if (error) {
       setDeletingAccount(false);
