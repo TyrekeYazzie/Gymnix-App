@@ -111,9 +111,15 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
     setCalories(estimateCardioCalories(type, distanceKm, duration, profile?.weight_kg));
   }, [type, distanceKm, duration, profile?.weight_kg, caloriesOverridden]);
 
+  // Rounds to whole seconds first so e.g. 4.999 min shows "5:00", not "4:60".
+  const formatPace = (minutes: number) => {
+    const totalSec = Math.round(minutes * 60);
+    return `${Math.floor(totalSec / 60)}:${String(totalSec % 60).padStart(2, '0')}`;
+  };
+  // Swim pace is per 100m (1 km = 10 × 100m); everything else per display unit.
   const pace = type === 'Swim'
-    ? `${Math.floor(duration / distanceKm)}:${String(Math.round(((duration / distanceKm) % 1) * 60)).padStart(2, '0')} /100m`
-    : `${Math.floor(duration / displayDistance)}:${String(Math.round(((duration / displayDistance) % 1) * 60)).padStart(2, '0')} /${isImperial ? 'mi' : 'km'}`;
+    ? `${formatPace(duration / (distanceKm * 10))} /100m`
+    : `${formatPace(duration / displayDistance)} /${isImperial ? 'mi' : 'km'}`;
 
   const panResponder = useRef(
     PanResponder.create({
