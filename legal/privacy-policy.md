@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: September 22, 2026**
+**Last updated: September 23, 2026**
 
 This Privacy Policy explains how FitnessApp ("the App," "we," "us") collects,
 uses, and protects your information. FitnessApp is a working title — if the
@@ -54,6 +54,11 @@ contains no advertising, no ad tracking, and no marketing analytics.
   streak. They never show your weight, age, goals, notes, meals, or workout
   photos. If you'd rather not be identifiable there, you can use a nickname
   as your display name and leave your profile photo empty.
+- To keep the leaderboards safe. If you report another user, we store the
+  report (who you reported, the reason you picked, and the name and profile
+  photo shown at that moment) so we can review it; the reported user is
+  never told who reported them. If you block someone, we store that so you
+  and they no longer see each other on the leaderboards.
 - To diagnose crashes and errors and improve the App's reliability.
 - To respond to support requests you send us.
 
@@ -95,7 +100,9 @@ Other users can see only what's described in the Leaderboards section above.
 
 We retain your data for as long as your account is active. If you delete
 your account, your data is deleted immediately and permanently, with the
-exception of anything we're legally required to retain.
+exception of anything we're legally required to retain. Reports you filed
+about other users are kept (without your identity attached) so we can
+finish reviewing them.
 
 ## Children's Privacy
 

@@ -1,6 +1,6 @@
 # Terms of Service
 
-**Last updated: September 22, 2026**
+**Last updated: September 23, 2026**
 
 These Terms of Service ("Terms") govern your use of FitnessApp ("the App,"
 "we," "us"). FitnessApp is a working title — if the app is renamed before
@@ -44,8 +44,16 @@ Privacy Policy for exactly what's shown). Don't use a name or photo you
 wouldn't want other users to see.
 
 Your display name and profile photo must not be offensive, sexually
-explicit, hateful, harassing, or impersonate someone else. We may remove a
-name or photo, or suspend an account, that breaks this rule.
+explicit, hateful, harassing, or impersonate someone else. **We have zero
+tolerance for objectionable content or abusive users.** We may remove a
+name or photo, hide an account from the leaderboards, or suspend an
+account that breaks this rule.
+
+If you see a name or photo that breaks these rules, tap ••• next to it on
+the leaderboard to report or block that user. We review reports within 24
+hours. Blocking hides you and that user from each other on the
+leaderboards; you can unblock them any time in **Settings → Blocked
+Users**.
 
 ## No Warranty
 
