@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import {
   View, Text, ScrollView,
   TouchableOpacity, StyleSheet,
@@ -6,7 +6,8 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
+import { getMyFriends } from '@/lib/friends'
 import { useSwipeTabs } from '@/hooks/useSwipeTabs'
 import { useProfile } from '@/context/ProfileContext'
 import { useAuth } from '@/hooks/useAuth'
@@ -46,6 +47,11 @@ export default function Profile() {
   const [editing, setEditing] = useState(false)
   const [savingAvatar, setSavingAvatar] = useState(false)
   const swipeHandlers = useSwipeTabs()
+  const [incomingRequests, setIncomingRequests] = useState(0)
+
+  useFocusEffect(useCallback(() => {
+    getMyFriends().then(rows => setIncomingRequests(rows.filter(r => r.relation === 'incoming').length))
+  }, []))
 
   const xp = xpProgress(profile?.total_xp ?? 0)
   const rank = getRank(xp.level, colors)
@@ -126,6 +132,7 @@ export default function Profile() {
             <Text style={styles.screenTitle}>
               {profile?.full_name || 'Your Profile'}
             </Text>
+            {profile?.username && <Text style={styles.usernameText}>@{profile.username}</Text>}
           </View>
           <View style={[styles.idTag, { borderColor: rank.color }]}>
             <Text style={[styles.idTagText, { color: rank.color }]}>Level {xp.level}</Text>
@@ -267,6 +274,24 @@ export default function Profile() {
           <View style={styles.dataRowDivider} />
           <TouchableOpacity
             style={styles.systemRow}
+            onPress={() => router.push('/friends')}
+            activeOpacity={0.7}
+            accessibilityLabel={incomingRequests > 0 ? `Friends, ${incomingRequests} new requests` : 'Friends'}
+          >
+            <View style={[styles.sysIcon, { borderColor: colors.accent }]}>
+              <Ionicons name="people-outline" size={14} color={colors.accent} />
+            </View>
+            <Text style={styles.systemLabel}>Friends</Text>
+            {incomingRequests > 0 && (
+              <View style={[styles.requestBadge, { backgroundColor: colors.accent }]}>
+                <Text style={[styles.requestBadgeText, { color: colors.textInverse }]}>{incomingRequests}</Text>
+              </View>
+            )}
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.dataRowDivider} />
+          <TouchableOpacity
+            style={styles.systemRow}
             onPress={() => router.push('/achievements')}
             activeOpacity={0.7}
           >
@@ -339,6 +364,7 @@ function makeStyles(theme: Theme) {
     color: colors.textPrimary,
     letterSpacing: 0.3,
   },
+  usernameText: { fontSize: FONT_SIZES.sm, color: colors.textMuted, marginTop: 2 },
   idTag: {
     borderWidth: 1,
     borderRadius: RADIUS.xs,
@@ -523,6 +549,15 @@ function makeStyles(theme: Theme) {
     color: colors.textPrimary,
     fontSize: FONT_SIZES.md,
   },
+  requestBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  requestBadgeText: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold },
 
   // Logout
   logoutButton: {
