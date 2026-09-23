@@ -205,6 +205,14 @@ export default function Settings() {
               </View>
             }
           />
+          <View style={styles.rowDivider} />
+          <SettingsRow
+            icon="ban-outline"
+            iconColor={colors.textMuted}
+            label="Blocked Users"
+            subtext="People you've blocked from the leaderboards"
+            onPress={() => router.push('/blocked-users')}
+          />
         </View>
 
         {/* Training */}
