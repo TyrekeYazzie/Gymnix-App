@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
+  ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -119,7 +119,11 @@ export default function OnboardingScreen() {
       .single();
 
     setSaving(false);
-    if (error) { console.error('Failed to save onboarding:', error.message); return; }
+    if (error) {
+      console.error('Failed to save onboarding:', error.message);
+      Alert.alert('Could not save', 'Check your connection and try again.');
+      return;
+    }
     if (data) setProfile(data);
     else await refreshProfile();
     router.replace('/(tabs)/dashboard');
