@@ -422,30 +422,28 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
               <View style={styles.handleBar} />
             </View>
 
-            {/* Header with active category accent */}
-            <View style={[styles.sheetHeader, { borderLeftColor: activeCat.color }]}>
-              <View>
-                <Text style={styles.sheetLabel}>
-                  {templateStep
-                    ? `${templateStep.templateName} · Exercise ${templateStep.index + 1} of ${templateStep.total}`
-                    : isEditing ? 'Edit workout' : 'New workout'}
-                </Text>
-                <Text style={styles.sheetTitle}>
-                  {isEditing ? 'Edit' : 'Log'} <Ionicons name={activeCat.icon} size={18} color={activeCat.color} /> {activeCat.name}
-                </Text>
+            {/* Title row — same layout as the other log sheets */}
+            <View style={styles.titleRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.title}>{isEditing ? 'Edit Workout' : 'Log Workout'}</Text>
+                {templateStep && (
+                  <Text style={styles.templateStepText}>
+                    {templateStep.templateName} · Exercise {templateStep.index + 1} of {templateStep.total}
+                  </Text>
+                )}
               </View>
               <View style={styles.headerActions}>
                 {isEditing && (
                   <TouchableOpacity
                     onPress={handleDelete}
                     disabled={deleting}
-                    style={styles.closeBtn}
+                    style={styles.deleteIconBtn}
                     activeOpacity={0.7}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     accessibilityRole="button"
                     accessibilityLabel="Delete workout"
                   >
-                    <Ionicons name="trash-outline" size={16} color={colors.accent} />
+                    <Ionicons name="trash-outline" size={18} color={colors.accent} />
                   </TouchableOpacity>
                 )}
                 <View style={styles.photoBtnWrap}>
@@ -475,16 +473,6 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                     </TouchableOpacity>
                   )}
                 </View>
-                <TouchableOpacity
-                  onPress={animateClose}
-                  style={styles.closeBtn}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityRole="button"
-                  accessibilityLabel="Close"
-                >
-                  <Ionicons name="close" size={16} color={colors.textMuted} />
-                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -642,6 +630,10 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
               </Text>
             </TouchableOpacity>
 
+            <TouchableOpacity style={styles.cancelButton} onPress={animateClose} activeOpacity={0.7}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+
           </ScrollView>
           </View>
         </Animated.View>
@@ -665,31 +657,24 @@ function makeStyles(theme: Theme) {
     paddingBottom: SPACING.xxxl,
     ...SHADOWS.purple,
   },
-  handleArea: { alignItems: 'center', paddingVertical: 12 },
-  handleBar: { width: 36, height: 4, backgroundColor: colors.borderDefault, borderRadius: RADIUS.full },
+  handleArea: { alignItems: 'center', paddingVertical: SPACING.md },
+  handleBar: { width: 40, height: 4, backgroundColor: colors.borderDefault, borderRadius: RADIUS.full },
 
-  sheetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.lg,
-    borderLeftWidth: 3,
-    marginLeft: SPACING.lg,
-    paddingLeft: SPACING.md,
-    marginBottom: SPACING.xs,
+  // Matches the title row in the other log sheets; horizontal padding lives
+  // here (not on the sheet) because the scroll content pads itself.
+  titleRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: SPACING.lg, marginBottom: SPACING.md,
   },
-  sheetLabel: {
-    fontSize: FONT_SIZES.xs,
-    color: colors.textMuted,
-    fontWeight: FONT_WEIGHTS.semibold,
-    letterSpacing: 1,
-    marginBottom: 2,
+  title: {
+    fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary,
   },
-  sheetTitle: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: FONT_WEIGHTS.black,
-    color: colors.textPrimary,
+  templateStepText: {
+    fontSize: FONT_SIZES.xs, color: colors.textMuted, marginTop: 2,
+  },
+  deleteIconBtn: {
+    width: 32, height: 32, borderRadius: RADIUS.full,
+    alignItems: 'center', justifyContent: 'center',
   },
   headerActions: {
     flexDirection: 'row',
@@ -726,14 +711,6 @@ function makeStyles(theme: Theme) {
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.bgSecondary,
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    backgroundColor: colors.bgTertiary,
-    borderRadius: RADIUS.full,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 
   scrollContent: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.lg },
@@ -872,6 +849,8 @@ function makeStyles(theme: Theme) {
     alignItems: 'center',
     marginTop: SPACING.sm,
   },
+  cancelButton: { padding: SPACING.lg, alignItems: 'center' },
+  cancelText: { color: colors.textMuted, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm, letterSpacing: 0.5 },
   saveText: {
     color: colors.textInverse,
     fontWeight: FONT_WEIGHTS.black,

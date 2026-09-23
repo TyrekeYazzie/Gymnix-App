@@ -322,8 +322,8 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
             <View style={styles.handleArea}>
               <View style={styles.handleBar} />
             </View>
-            <View style={[styles.titleRow, { justifyContent: isEditing ? 'space-between' : 'center' }]}>
-              <Text style={[styles.title, { marginBottom: 0 }]}>{isEditing ? 'Edit Cardio' : 'Log Cardio'}</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>{isEditing ? 'Edit Cardio' : 'Log Cardio'}</Text>
               {isEditing && (
                 <TouchableOpacity
                   onPress={handleDelete}
@@ -473,10 +473,9 @@ function makeStyles(theme: Theme) {
   handleArea: { alignItems: 'center', paddingVertical: SPACING.md },
   handleBar: { width: 40, height: 4, backgroundColor: colors.borderDefault, borderRadius: RADIUS.full },
   title: {
-    fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black,
-    letterSpacing: 0.5, marginBottom: SPACING.lg, textAlign: 'center',
+    fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary,
   },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.lg },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
   deleteIconBtn: {
     width: 32, height: 32, borderRadius: RADIUS.full,
     alignItems: 'center', justifyContent: 'center',

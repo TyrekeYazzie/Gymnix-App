@@ -569,7 +569,7 @@ function makeStyles(theme: Theme) {
   title: {
     fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary,
   },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
   deleteIconBtn: {
     width: 32, height: 32, borderRadius: RADIUS.full,
     alignItems: 'center', justifyContent: 'center',

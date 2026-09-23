@@ -426,7 +426,7 @@ function makeStyles(theme: Theme) {
   title: {
     fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary,
   },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
   cancelEditLink: { fontSize: FONT_SIZES.xs, color: colors.neonBlue, fontWeight: FONT_WEIGHTS.bold },
   progressCard: {
     backgroundColor: colors.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
