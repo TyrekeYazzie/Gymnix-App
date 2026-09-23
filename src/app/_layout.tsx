@@ -47,13 +47,23 @@ function Layout() {
     const inAuthGroup = segments[0] === '(auth)';
     const inTabsGroup = segments[0] === '(tabs)';
     const inOnboarding = segments[0] === 'onboarding';
-    const needsOnboarding = !!session && !profile?.onboarding_completed_at;
+    const inChooseUsername = segments[0] === 'choose-username';
+    // A password-reset deep link must be allowed to finish no matter what
+    // setup step the account is on.
+    const inResetPassword = segments[0] === 'reset-password';
+    // Username comes first (it's how friends find you), then onboarding.
+    const needsUsername = !!session && !profile?.username;
+    const needsOnboarding = !!session && !needsUsername && !profile?.onboarding_completed_at;
 
     if (!session && inTabsGroup) {
       router.replace('/(auth)/login');
+    } else if (inResetPassword) {
+      return;
+    } else if (needsUsername && !inChooseUsername) {
+      router.replace('/choose-username');
     } else if (needsOnboarding && !inOnboarding) {
       router.replace('/onboarding');
-    } else if (session && !needsOnboarding && (inAuthGroup || inOnboarding)) {
+    } else if (session && !needsUsername && !needsOnboarding && (inAuthGroup || inOnboarding || inChooseUsername)) {
       router.replace('/(tabs)/dashboard');
     }
   }, [session, loading, profileUnavailable, segments, profile]);

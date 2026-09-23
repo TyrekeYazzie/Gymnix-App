@@ -22,6 +22,7 @@ export type GoalPace = 'mild' | 'moderate' | 'aggressive';
 export interface Profile {
   id: string;
   full_name: string | null;
+  username: string | null;        // unique, lowercase [a-z0-9_]{3,20}; null until picked
   height_cm: number | null;
   weight_kg: number | null;
   age: number | null;
