@@ -6,13 +6,15 @@ import { LevelLeaderboardEntry, LogCountLeaderboardEntry, StreakLeaderboardEntry
 // SECURITY DEFINER function scoped to return only a name + a single
 // aggregate number — never raw profile/workout/cardio rows — so these
 // calls are safe to make from any authenticated user's device.
+// friendsOnly narrows a board to you + your accepted friends, ranked within
+// that group (see 20260923010000_friends_and_usernames.sql).
 
 export type MyLevelRank = { rnk: number; total_xp: number; level: number };
 export type MyLogCountRank = { rnk: number; log_count: number };
 export type MyStreakRank = { rnk: number; current_streak: number };
 
-export async function getLevelLeaderboard(limit = 50): Promise<LevelLeaderboardEntry[]> {
-  const { data, error } = await supabase.rpc('get_level_leaderboard', { limit_count: limit });
+export async function getLevelLeaderboard(limit = 50, friendsOnly = false): Promise<LevelLeaderboardEntry[]> {
+  const { data, error } = await supabase.rpc('get_level_leaderboard', { limit_count: limit, friends_only: friendsOnly });
   if (error) { console.error('Failed to load level leaderboard:', error.message); return []; }
   return data ?? [];
 }
@@ -23,8 +25,8 @@ export async function getMyLevelRank(): Promise<MyLevelRank | null> {
   return data?.[0] ?? null;
 }
 
-export async function getStrengthLeaderboard(limit = 50): Promise<LogCountLeaderboardEntry[]> {
-  const { data, error } = await supabase.rpc('get_strength_leaderboard', { limit_count: limit });
+export async function getStrengthLeaderboard(limit = 50, friendsOnly = false): Promise<LogCountLeaderboardEntry[]> {
+  const { data, error } = await supabase.rpc('get_strength_leaderboard', { limit_count: limit, friends_only: friendsOnly });
   if (error) { console.error('Failed to load strength leaderboard:', error.message); return []; }
   return data ?? [];
 }
@@ -35,8 +37,8 @@ export async function getMyStrengthRank(): Promise<MyLogCountRank | null> {
   return data?.[0] ?? null;
 }
 
-export async function getCardioLeaderboard(limit = 50): Promise<LogCountLeaderboardEntry[]> {
-  const { data, error } = await supabase.rpc('get_cardio_leaderboard', { limit_count: limit });
+export async function getCardioLeaderboard(limit = 50, friendsOnly = false): Promise<LogCountLeaderboardEntry[]> {
+  const { data, error } = await supabase.rpc('get_cardio_leaderboard', { limit_count: limit, friends_only: friendsOnly });
   if (error) { console.error('Failed to load cardio leaderboard:', error.message); return []; }
   return data ?? [];
 }
@@ -47,8 +49,8 @@ export async function getMyCardioRank(): Promise<MyLogCountRank | null> {
   return data?.[0] ?? null;
 }
 
-export async function getStreakLeaderboard(limit = 50): Promise<StreakLeaderboardEntry[]> {
-  const { data, error } = await supabase.rpc('get_streak_leaderboard', { limit_count: limit });
+export async function getStreakLeaderboard(limit = 50, friendsOnly = false): Promise<StreakLeaderboardEntry[]> {
+  const { data, error } = await supabase.rpc('get_streak_leaderboard', { limit_count: limit, friends_only: friendsOnly });
   if (error) { console.error('Failed to load streak leaderboard:', error.message); return []; }
   return data ?? [];
 }

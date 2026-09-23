@@ -19,12 +19,14 @@ import { LevelLeaderboardEntry, LogCountLeaderboardEntry, StreakLeaderboardEntry
 import { useTheme } from '@/context/ThemeContext';
 import Avatar from '@/components/Avatar';
 import { REPORT_REASONS, ReportReason, reportUser, blockUser } from '@/lib/moderation';
+import { Relation, getMyFriends, sendFriendRequest, respondToFriendRequest, removeFriend } from '@/lib/friends';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme, Colors
 } from '@/constants/theme';
 
 type TabKey = 'level' | 'strength' | 'cardio' | 'streak';
+type Scope = 'everyone' | 'friends';
 type Row = LevelLeaderboardEntry | LogCountLeaderboardEntry | StreakLeaderboardEntry;
 
 function getTabs(colors: Colors): { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
@@ -54,7 +56,11 @@ export default function LeaderboardScreen() {
   const TABS = useMemo(() => getTabs(colors), [colors]);
 
   const [tab, setTab] = useState<TabKey>('level');
+  const [scope, setScope] = useState<Scope>('everyone');
   const [loading, setLoading] = useState(true);
+  // Your relation to each user you have a friendship/request with, for the
+  // ••• menu's friend action. Absent = no relation.
+  const [relations, setRelations] = useState<Record<string, Relation>>({});
 
   const [levelEntries, setLevelEntries] = useState<LevelLeaderboardEntry[]>([]);
   const [strengthEntries, setStrengthEntries] = useState<LogCountLeaderboardEntry[]>([]);
@@ -106,6 +112,41 @@ export default function LeaderboardScreen() {
     );
   };
 
+  const handleFriendAction = async (row: Row) => {
+    const relation = relations[row.user_id];
+    if (relation === 'friends') {
+      setActionRow(null);
+      router.push({ pathname: '/friend-profile', params: { id: row.user_id } });
+      return;
+    }
+    setActionBusy(true);
+    // undefined = no relation anymore, null = the call failed
+    let next: Relation | null | undefined;
+    if (relation === 'outgoing') {
+      next = (await removeFriend(row.user_id)) ? undefined : null;
+    } else if (relation === 'incoming') {
+      next = (await respondToFriendRequest(row.user_id, true)) ? 'friends' : null;
+    } else {
+      next = await sendFriendRequest(row.user_id);
+    }
+    setActionBusy(false);
+    if (next === null) { Alert.alert('Error', 'Something went wrong. Please try again.'); return; }
+    setRelations(p => {
+      const copy = { ...p };
+      if (next) copy[row.user_id] = next; else delete copy[row.user_id];
+      return copy;
+    });
+    setActionRow(null);
+  };
+
+  const friendActionLabel = (row: Row | null): { label: string; icon: keyof typeof Ionicons.glyphMap } => {
+    const relation = row ? relations[row.user_id] : undefined;
+    if (relation === 'friends') return { label: 'View profile', icon: 'person-outline' };
+    if (relation === 'outgoing') return { label: 'Cancel friend request', icon: 'close-circle-outline' };
+    if (relation === 'incoming') return { label: 'Accept friend request', icon: 'checkmark-circle-outline' };
+    return { label: 'Add friend', icon: 'person-add-outline' };
+  };
+
   const submitReport = async (reason: ReportReason) => {
     if (!actionRow) return;
     const row = actionRow;
@@ -124,29 +165,36 @@ export default function LeaderboardScreen() {
     );
   };
 
-  const load = useCallback(async (which: TabKey) => {
+  const loadRelations = useCallback(async () => {
+    const friends = await getMyFriends();
+    setRelations(Object.fromEntries(friends.map(f => [f.user_id, f.relation])));
+  }, []);
+
+  const load = useCallback(async (which: TabKey, whichScope: Scope) => {
     setLoading(true);
+    const friendsOnly = whichScope === 'friends';
+    loadRelations();
     if (which === 'level') {
-      const [entries, mine] = await Promise.all([getLevelLeaderboard(50), getMyLevelRank()]);
+      const [entries, mine] = await Promise.all([getLevelLeaderboard(50, friendsOnly), getMyLevelRank()]);
       setLevelEntries(entries);
       setMyLevelRank(mine);
     } else if (which === 'strength') {
-      const [entries, mine] = await Promise.all([getStrengthLeaderboard(50), getMyStrengthRank()]);
+      const [entries, mine] = await Promise.all([getStrengthLeaderboard(50, friendsOnly), getMyStrengthRank()]);
       setStrengthEntries(entries);
       setMyStrengthRank(mine);
     } else if (which === 'cardio') {
-      const [entries, mine] = await Promise.all([getCardioLeaderboard(50), getMyCardioRank()]);
+      const [entries, mine] = await Promise.all([getCardioLeaderboard(50, friendsOnly), getMyCardioRank()]);
       setCardioEntries(entries);
       setMyCardioRank(mine);
     } else {
-      const [entries, mine] = await Promise.all([getStreakLeaderboard(50), getMyStreakRank()]);
+      const [entries, mine] = await Promise.all([getStreakLeaderboard(50, friendsOnly), getMyStreakRank()]);
       setStreakEntries(entries);
       setMyStreakRank(mine);
     }
     setLoading(false);
-  }, []);
+  }, [loadRelations]);
 
-  useFocusEffect(useCallback(() => { load(tab); }, [tab, load]));
+  useFocusEffect(useCallback(() => { load(tab, scope); }, [tab, scope, load]));
 
   const activeTabDef = TABS.find(t => t.key === tab)!;
   const rows: Row[] =
@@ -158,6 +206,8 @@ export default function LeaderboardScreen() {
     tab === 'strength' ? myStrengthRank :
     tab === 'cardio' ? myCardioRank : myStreakRank;
   const myRankInList = rows.some(r => r.user_id === user?.id);
+  // In Friends view, a board with only you on it means you haven't added anyone yet.
+  const noFriendsYet = scope === 'friends' && rows.every(r => r.user_id === user?.id);
 
   const renderValue = (row: Row) => {
     if (tab === 'level') {
@@ -220,6 +270,27 @@ export default function LeaderboardScreen() {
           })}
         </View>
 
+        {/* Everyone / Friends */}
+        <View style={styles.scopeRow}>
+          {(['everyone', 'friends'] as Scope[]).map(sc => {
+            const active = scope === sc;
+            return (
+              <TouchableOpacity
+                key={sc}
+                style={[styles.scopeButton, active && { backgroundColor: activeTabDef.color + '22', borderColor: activeTabDef.color }]}
+                onPress={() => setScope(sc)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+              >
+                <Text style={[styles.scopeLabel, active && { color: activeTabDef.color, fontWeight: FONT_WEIGHTS.bold }]}>
+                  {sc === 'everyone' ? 'Everyone' : 'Friends'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         {(tab === 'strength' || tab === 'cardio') && (
           <Text style={styles.explainer}>
             Ranked by sessions logged, not weight lifted or pace — consistency wins.
@@ -253,6 +324,9 @@ export default function LeaderboardScreen() {
                       <Text style={styles.name} numberOfLines={1}>
                         {row.full_name || 'Anonymous'}{isMe ? ' (You)' : ''}
                       </Text>
+                      {!isMe && relations[row.user_id] === 'friends' && scope === 'everyone' && (
+                        <Text style={styles.friendTag}>Friend</Text>
+                      )}
                     </View>
                     <Text style={styles.value}>{renderValue(row)}</Text>
                     {!isMe && (
@@ -273,8 +347,18 @@ export default function LeaderboardScreen() {
           </View>
         )}
 
+        {!loading && noFriendsYet && (
+          <TouchableOpacity style={styles.card} onPress={() => router.push('/friends')} activeOpacity={0.8}>
+            <View style={styles.row}>
+              <Ionicons name="people-outline" size={20} color={activeTabDef.color} />
+              <Text style={[styles.name, { flex: 1 }]}>Add friends to compete with them here</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* Pinned "your rank" card when you're outside the visible top 50 */}
-        {!loading && myRank && !myRankInList && (
+        {!loading && scope === 'everyone' && myRank && !myRankInList && (
           <>
             <Text style={styles.sectionTitle}>Your rank</Text>
             <View style={[styles.card, { borderColor: activeTabDef.color }]}>
@@ -300,6 +384,10 @@ export default function LeaderboardScreen() {
             </Text>
             {actionStep === 'menu' ? (
               <>
+                <TouchableOpacity style={styles.sheetOption} onPress={() => actionRow && handleFriendAction(actionRow)} activeOpacity={0.7} disabled={actionBusy}>
+                  <Ionicons name={friendActionLabel(actionRow).icon} size={18} color={colors.primary} />
+                  <Text style={[styles.sheetOptionText, { color: colors.primary }]}>{friendActionLabel(actionRow).label}</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.sheetOption} onPress={() => setActionStep('report')} activeOpacity={0.7} disabled={actionBusy}>
                   <Ionicons name="flag-outline" size={18} color={colors.textPrimary} />
                   <Text style={styles.sheetOptionText}>Report</Text>
@@ -417,6 +505,17 @@ function makeStyles(theme: Theme) {
     color: colors.textSecondary,
     fontWeight: FONT_WEIGHTS.bold,
   },
+
+  scopeRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
+  scopeButton: {
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: RADIUS.full,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.lg,
+  },
+  scopeLabel: { fontSize: FONT_SIZES.xs, color: colors.textMuted },
+  friendTag: { fontSize: FONT_SIZES.xs, color: colors.neonGreen, marginTop: 1 },
 
   sheetOverlay: { flex: 1, backgroundColor: colors.bgOverlay, justifyContent: 'flex-end' },
   sheet: {
