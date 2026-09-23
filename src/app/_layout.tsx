@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 import { useFonts } from 'expo-font';
 import { CormorantGaramond_500Medium_Italic } from '@expo-google-fonts/cormorant-garamond';
 import { Cinzel_600SemiBold } from '@expo-google-fonts/cinzel';
-import { SPACING } from '@/constants/theme';
+import { SPACING, RADIUS, FONT_SIZES, FONT_WEIGHTS } from '@/constants/theme';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ProfileProvider, useProfile } from '@/context/ProfileContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
@@ -20,17 +20,29 @@ function Layout() {
   // this can read profile.onboarding_completed_at here — it couldn't when
   // ProfileProvider was rendered from inside Layout's own return, since that
   // put Layout's hooks outside the provider's subtree.
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, loading: profileLoading, loadFailed, refreshProfile } = useProfile();
   const { theme } = useTheme();
   const [fontsLoaded] = useFonts({ CormorantGaramond_500Medium_Italic, Cinzel_600SemiBold });
+  const [retrying, setRetrying] = useState(false);
   // Only wait on the profile fetch once there's a session to fetch one for —
   // profileLoading never resolves to false until a user exists (see
   // ProfileContext), so gating on it unconditionally would hang the loading
   // screen forever on the logged-out login/signup screens.
   const loading = authLoading || !fontsLoaded || (!!session && profileLoading);
+  // Signed in but the profile fetch failed (offline, Supabase down/paused).
+  // Must not fall through to the onboarding redirect below — a missing
+  // profile there means "never onboarded", and re-running onboarding would
+  // overwrite the real profile with whatever the user re-enters.
+  const profileUnavailable = !loading && !!session && !profile && loadFailed;
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    await refreshProfile();
+    setRetrying(false);
+  };
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || profileUnavailable) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inTabsGroup = segments[0] === '(tabs)';
@@ -44,7 +56,7 @@ function Layout() {
     } else if (session && !needsOnboarding && (inAuthGroup || inOnboarding)) {
       router.replace('/(tabs)/dashboard');
     }
-  }, [session, loading, segments, profile]);
+  }, [session, loading, profileUnavailable, segments, profile]);
 
   // Always wrap everything in SafeAreaProvider
   // including the loading screen
@@ -64,6 +76,37 @@ function Layout() {
           }}>
             Loading...
           </Text>
+        </View>
+      ) : profileUnavailable ? (
+        <View style={{
+          flex: 1,
+          backgroundColor: theme.colors.bgPrimary,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: SPACING.xl,
+        }}>
+          <Text style={{ color: theme.colors.textPrimary, fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, marginBottom: SPACING.sm }}>
+            Couldn't load your profile
+          </Text>
+          <Text style={{ color: theme.colors.textSecondary, textAlign: 'center', marginBottom: SPACING.xl }}>
+            Check your connection and try again.
+          </Text>
+          <TouchableOpacity
+            onPress={handleRetry}
+            disabled={retrying}
+            activeOpacity={0.8}
+            style={{
+              backgroundColor: theme.colors.primary,
+              borderRadius: RADIUS.md,
+              paddingVertical: SPACING.md,
+              paddingHorizontal: SPACING.xxl,
+              opacity: retrying ? 0.6 : 1,
+            }}
+          >
+            {retrying
+              ? <ActivityIndicator color={theme.colors.textInverse} />
+              : <Text style={{ color: theme.colors.textInverse, fontWeight: FONT_WEIGHTS.bold }}>Try again</Text>}
+          </TouchableOpacity>
         </View>
       ) : (
         // A real Stack (rather than a bare Slot) keeps (tabs) — and whichever
