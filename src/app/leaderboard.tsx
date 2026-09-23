@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator,
+  StyleSheet, ActivityIndicator, Modal, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -18,6 +18,7 @@ import {
 import { LevelLeaderboardEntry, LogCountLeaderboardEntry, StreakLeaderboardEntry } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
 import Avatar from '@/components/Avatar';
+import { REPORT_REASONS, ReportReason, reportUser, blockUser } from '@/lib/moderation';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme, Colors
@@ -64,6 +65,64 @@ export default function LeaderboardScreen() {
   const [myStrengthRank, setMyStrengthRank] = useState<MyLogCountRank | null>(null);
   const [myCardioRank, setMyCardioRank] = useState<MyLogCountRank | null>(null);
   const [myStreakRank, setMyStreakRank] = useState<MyStreakRank | null>(null);
+
+  // Report/block sheet for another user's row (Guideline 1.2).
+  const [actionRow, setActionRow] = useState<Row | null>(null);
+  const [actionStep, setActionStep] = useState<'menu' | 'report'>('menu');
+  const [actionBusy, setActionBusy] = useState(false);
+
+  const openActions = (row: Row) => { setActionRow(row); setActionStep('menu'); };
+  const closeActions = () => { if (!actionBusy) setActionRow(null); };
+
+  // Blocks hide in both directions server-side; drop the row from every
+  // cached tab now so it disappears without a refetch.
+  const removeFromLists = (userId: string) => {
+    setLevelEntries(p => p.filter(r => r.user_id !== userId));
+    setStrengthEntries(p => p.filter(r => r.user_id !== userId));
+    setCardioEntries(p => p.filter(r => r.user_id !== userId));
+    setStreakEntries(p => p.filter(r => r.user_id !== userId));
+  };
+
+  const confirmBlock = (row: Row) => {
+    const name = row.full_name || 'this user';
+    Alert.alert(
+      `Block ${name}?`,
+      "You won't see each other on the leaderboards. You can unblock them in Settings.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: async () => {
+            setActionBusy(true);
+            const ok = await blockUser(row.user_id);
+            setActionBusy(false);
+            if (!ok) { Alert.alert('Error', 'Could not block this user. Please try again.'); return; }
+            setActionRow(null);
+            removeFromLists(row.user_id);
+          },
+        },
+      ]
+    );
+  };
+
+  const submitReport = async (reason: ReportReason) => {
+    if (!actionRow) return;
+    const row = actionRow;
+    setActionBusy(true);
+    const ok = await reportUser(row.user_id, reason, { name: row.full_name, avatarPath: row.avatar_path });
+    setActionBusy(false);
+    if (!ok) { Alert.alert('Error', 'Could not send your report. Please try again.'); return; }
+    setActionRow(null);
+    Alert.alert(
+      'Report sent',
+      "Thanks — we review reports within 24 hours. Do you also want to block this user?",
+      [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Block', style: 'destructive', onPress: () => confirmBlock(row) },
+      ]
+    );
+  };
 
   const load = useCallback(async (which: TabKey) => {
     setLoading(true);
@@ -196,6 +255,17 @@ export default function LeaderboardScreen() {
                       </Text>
                     </View>
                     <Text style={styles.value}>{renderValue(row)}</Text>
+                    {!isMe && (
+                      <TouchableOpacity
+                        onPress={() => openActions(row)}
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`More options for ${row.full_name || 'this user'}`}
+                      >
+                        <Ionicons name="ellipsis-horizontal" size={16} color={colors.textMuted} />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
               );
@@ -221,6 +291,41 @@ export default function LeaderboardScreen() {
         )}
 
       </ScrollView>
+
+      <Modal visible={!!actionRow} transparent animationType="fade" onRequestClose={closeActions}>
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={closeActions}>
+          <TouchableOpacity activeOpacity={1} style={styles.sheet}>
+            <Text style={styles.sheetTitle} numberOfLines={1}>
+              {actionStep === 'menu' ? (actionRow?.full_name || 'Anonymous') : 'Why are you reporting?'}
+            </Text>
+            {actionStep === 'menu' ? (
+              <>
+                <TouchableOpacity style={styles.sheetOption} onPress={() => setActionStep('report')} activeOpacity={0.7} disabled={actionBusy}>
+                  <Ionicons name="flag-outline" size={18} color={colors.textPrimary} />
+                  <Text style={styles.sheetOptionText}>Report</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.sheetOption} onPress={() => actionRow && confirmBlock(actionRow)} activeOpacity={0.7} disabled={actionBusy}>
+                  <Ionicons name="ban-outline" size={18} color={colors.accent} />
+                  <Text style={[styles.sheetOptionText, { color: colors.accent }]}>Block</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              REPORT_REASONS.map(r => (
+                <TouchableOpacity key={r.key} style={styles.sheetOption} onPress={() => submitReport(r.key)} activeOpacity={0.7} disabled={actionBusy}>
+                  <Text style={styles.sheetOptionText}>{r.label}</Text>
+                </TouchableOpacity>
+              ))
+            )}
+            {actionBusy
+              ? <ActivityIndicator style={{ marginTop: SPACING.md }} color={colors.primary} />
+              : (
+                <TouchableOpacity style={styles.sheetCancel} onPress={closeActions} activeOpacity={0.7}>
+                  <Text style={styles.sheetCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              )}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -312,5 +417,31 @@ function makeStyles(theme: Theme) {
     color: colors.textSecondary,
     fontWeight: FONT_WEIGHTS.bold,
   },
+
+  sheetOverlay: { flex: 1, backgroundColor: colors.bgOverlay, justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: colors.bgSecondary,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    paddingBottom: SPACING.xxxl,
+  },
+  sheetTitle: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.black,
+    color: colors.textPrimary,
+    marginBottom: SPACING.md,
+  },
+  sheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+  },
+  sheetOptionText: { fontSize: FONT_SIZES.md, color: colors.textPrimary },
+  sheetCancel: { padding: SPACING.lg, alignItems: 'center', marginTop: SPACING.sm },
+  sheetCancelText: { color: colors.textMuted, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.sm },
   });
 }
