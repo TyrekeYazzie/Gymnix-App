@@ -54,6 +54,13 @@ contains no advertising, no ad tracking, and no marketing analytics.
   streak. They never show your weight, age, goals, notes, meals, or workout
   photos. If you'd rather not be identifiable there, you can use a nickname
   as your display name and leave your profile photo empty.
+- To power Friends. You choose a unique username, which other users can
+  search for to send you a friend request. Friend requests need your
+  approval. Once you accept, that friend can see your username, display
+  name, profile photo, level/XP, current workout streak, number of workouts
+  and cardio sessions logged, and which achievements you've unlocked — never
+  your weight, age, goals, notes, meals, or workout photos. You can remove a
+  friend at any time.
 - To keep the leaderboards safe. If you report another user, we store the
   report (who you reported, the reason you picked, and the name and profile
   photo shown at that moment) so we can review it; the reported user is
@@ -94,7 +101,8 @@ providers, and only as necessary to operate the App on our behalf:
 - **Supabase** — database, authentication, and file storage.
 - **Sentry** — crash and error reporting, as described above.
 
-Other users can see only what's described in the Leaderboards section above.
+Other users can see only what's described in the Leaderboards and Friends
+sections above.
 
 ## Data Retention
 
