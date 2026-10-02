@@ -83,6 +83,8 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const unlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The real double-submit guard — see the same ref in WorkoutLog.
+  const savingRef = useRef(false);
 
   useEffect(() => {
     return () => { if (unlockTimeoutRef.current) clearTimeout(unlockTimeoutRef.current); };
@@ -255,12 +257,43 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
       return;
     }
     if (!user) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
+    // Set when the achievement banner holds the sheet open; its timer
+    // finishes the save, so `finally` must not release the guard early.
+    let heldOpen = false;
 
-    if (isEditing && editEntry) {
+    try {
+      if (isEditing && editEntry) {
+        const { data, error } = await supabase
+          .from('calorie_logs')
+          .update({
+            meal_name: mealName,
+            meal_type: mealType,
+            calories,
+            protein_g: protein,
+            carbs_g: carbs,
+            fat_g: fat,
+          })
+          .eq('id', editEntry.id)
+          .select()
+          .single();
+
+        if (error) { Alert.alert('Error', error.message); return; }
+        if (data) {
+          // Flat XP-per-meal (XP_MEAL) doesn't depend on the calorie value, so
+          // an edit never changes how much XP was already earned — no award here.
+          setTodayCalories(p => p - (editEntry.calories ?? 0) + calories);
+          onSaved(data); reset(); onClose();
+        }
+        return;
+      }
+
       const { data, error } = await supabase
         .from('calorie_logs')
-        .update({
+        .insert({
+          user_id: user.id,
           meal_name: mealName,
           meal_type: mealType,
           calories,
@@ -268,56 +301,36 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
           carbs_g: carbs,
           fat_g: fat,
         })
-        .eq('id', editEntry.id)
         .select()
         .single();
 
-      setSaving(false);
       if (error) { Alert.alert('Error', error.message); return; }
       if (data) {
-        // Flat XP-per-meal (XP_MEAL) doesn't depend on the calorie value, so
-        // an edit never changes how much XP was already earned — no award here.
-        setTodayCalories(p => p - (editEntry.calories ?? 0) + calories);
+        await awardXP(user.id, XP_MEAL);
+        await refreshProfile();
+        setTodayCalories(p => p + calories);
+
+        // Achievement check is new-logs-only, matching the same reasoning as
+        // WorkoutLog's PR check — see supabase/migrations/20260815010000_achievements.sql.
+        const newlyUnlocked = await checkAndUnlockAchievements();
+        if (newlyUnlocked.length > 0) {
+          setUnlockedAchievements(newlyUnlocked);
+          heldOpen = true;
+          unlockTimeoutRef.current = setTimeout(() => {
+            savingRef.current = false;
+            setSaving(false);
+            onSaved(data); reset(); onClose();
+          }, 1400);
+          return;
+        }
+
         onSaved(data); reset(); onClose();
       }
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('calorie_logs')
-      .insert({
-        user_id: user.id,
-        meal_name: mealName,
-        meal_type: mealType,
-        calories,
-        protein_g: protein,
-        carbs_g: carbs,
-        fat_g: fat,
-      })
-      .select()
-      .single();
-
-    setSaving(false);
-    if (error) { Alert.alert('Error', error.message); return; }
-    if (data) {
-      await awardXP(user.id, XP_MEAL);
-      await refreshProfile();
-      setTodayCalories(p => p + calories);
-
-      // Achievement check is new-logs-only, matching the same reasoning as
-      // WorkoutLog's PR check — see supabase/migrations/20260815010000_achievements.sql.
-      const newlyUnlocked = await checkAndUnlockAchievements();
-      if (newlyUnlocked.length > 0) {
-        setUnlockedAchievements(newlyUnlocked);
-        setSaving(true);
-        unlockTimeoutRef.current = setTimeout(() => {
-          setSaving(false);
-          onSaved(data); reset(); onClose();
-        }, 1400);
-        return;
-      }
-
-      onSaved(data); reset(); onClose();
+    } catch (err) {
+      console.error('Failed to save meal:', err);
+      Alert.alert('Error', "Something went wrong while saving. Check today's meals before trying again.");
+    } finally {
+      if (!heldOpen) { savingRef.current = false; setSaving(false); }
     }
   };
 
@@ -334,12 +347,16 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
           onPress: async () => {
             if (!user) return;
             setDeleting(true);
-            const { error } = await supabase.from('calorie_logs').delete().eq('id', editEntry.id);
+            const { data: removed, error } = await supabase.from('calorie_logs').delete().eq('id', editEntry.id).select('id');
             if (error) { setDeleting(false); Alert.alert('Error', error.message); return; }
-            await awardXP(user.id, -XP_MEAL);
+            // Only reverse the XP and today's total if this call actually
+            // removed the row — a second, queued confirm deletes nothing.
+            if (removed?.length) {
+              await awardXP(user.id, -XP_MEAL);
+              setTodayCalories(p => p - (editEntry.calories ?? 0));
+            }
             await refreshProfile();
             setDeleting(false);
-            setTodayCalories(p => p - (editEntry.calories ?? 0));
             onDeleted?.(editEntry.id);
             reset(); onClose();
           },

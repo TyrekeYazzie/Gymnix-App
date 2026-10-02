@@ -73,6 +73,8 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const unlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The real double-submit guard — see the same ref in WorkoutLog.
+  const savingRef = useRef(false);
 
   useEffect(() => {
     return () => { if (unlockTimeoutRef.current) clearTimeout(unlockTimeoutRef.current); };
@@ -180,10 +182,11 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
           onPress: async () => {
             if (!user) return;
             setDeletingId(entry.id);
-            const { error } = await supabase.from('water_logs').delete().eq('id', entry.id);
+            const { data: removed, error } = await supabase.from('water_logs').delete().eq('id', entry.id).select('id');
             setDeletingId(null);
             if (error) { Alert.alert('Error', error.message); return; }
-            await awardXP(user.id, -XP_WATER);
+            // Only take the XP back if this call actually removed the row.
+            if (removed?.length) await awardXP(user.id, -XP_WATER);
             await refreshProfile();
             if (editingEntry?.id === entry.id) cancelEditingEntry();
             await loadTodayTotal();
@@ -211,59 +214,70 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
 
   const handleSave = async () => {
     if (!user) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
+    // Set when the achievement banner holds the sheet open; its timer
+    // finishes the save, so `finally` must not release the guard early.
+    let heldOpen = false;
 
-    if (editingEntry) {
-      const { data, error } = await supabase
-        .from('water_logs')
-        .update({ amount_ml: amountMl })
-        .eq('id', editingEntry.id)
-        .select()
-        .single();
+    try {
+      if (editingEntry) {
+        const { data, error } = await supabase
+          .from('water_logs')
+          .update({ amount_ml: amountMl })
+          .eq('id', editingEntry.id)
+          .select()
+          .single();
 
-      setSaving(false);
-      if (error) { Alert.alert('Error', error.message); return; }
-      if (data) {
-        // Flat XP_WATER doesn't depend on the amount, so editing never
-        // changes how much was already earned — no award here.
-        onSaved(data);
-        setEditingEntry(null);
-        setAmountMl(250);
-        onClose();
-      }
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('water_logs')
-      .insert({ user_id: user.id, amount_ml: amountMl })
-      .select()
-      .single();
-
-    setSaving(false);
-    if (error) { Alert.alert('Error', error.message); return; }
-    if (data) {
-      await awardXP(user.id, XP_WATER);
-      await refreshProfile();
-      setTodayTotalMl(p => p + amountMl);
-      setTodayEntries(p => [data, ...p]);
-
-      // Achievement check is new-logs-only, matching the same reasoning as
-      // WorkoutLog's PR check — see supabase/migrations/20260815010000_achievements.sql.
-      const newlyUnlocked = await checkAndUnlockAchievements();
-      if (newlyUnlocked.length > 0) {
-        setUnlockedAchievements(newlyUnlocked);
-        setSaving(true);
-        unlockTimeoutRef.current = setTimeout(() => {
-          setSaving(false);
-          onSaved(data); setAmountMl(250); onClose();
-        }, 1400);
+        if (error) { Alert.alert('Error', error.message); return; }
+        if (data) {
+          // Flat XP_WATER doesn't depend on the amount, so editing never
+          // changes how much was already earned — no award here.
+          onSaved(data);
+          setEditingEntry(null);
+          setAmountMl(250);
+          onClose();
+        }
         return;
       }
 
-      onSaved(data);
-      setAmountMl(250);
-      onClose();
+      const { data, error } = await supabase
+        .from('water_logs')
+        .insert({ user_id: user.id, amount_ml: amountMl })
+        .select()
+        .single();
+
+      if (error) { Alert.alert('Error', error.message); return; }
+      if (data) {
+        await awardXP(user.id, XP_WATER);
+        await refreshProfile();
+        setTodayTotalMl(p => p + amountMl);
+        setTodayEntries(p => [data, ...p]);
+
+        // Achievement check is new-logs-only, matching the same reasoning as
+        // WorkoutLog's PR check — see supabase/migrations/20260815010000_achievements.sql.
+        const newlyUnlocked = await checkAndUnlockAchievements();
+        if (newlyUnlocked.length > 0) {
+          setUnlockedAchievements(newlyUnlocked);
+          heldOpen = true;
+          unlockTimeoutRef.current = setTimeout(() => {
+            savingRef.current = false;
+            setSaving(false);
+            onSaved(data); setAmountMl(250); onClose();
+          }, 1400);
+          return;
+        }
+
+        onSaved(data);
+        setAmountMl(250);
+        onClose();
+      }
+    } catch (err) {
+      console.error('Failed to save water:', err);
+      Alert.alert('Error', "Something went wrong while saving. Check today's entries before trying again.");
+    } finally {
+      if (!heldOpen) { savingRef.current = false; setSaving(false); }
     }
   };
 

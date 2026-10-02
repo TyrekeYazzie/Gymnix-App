@@ -70,6 +70,10 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const prTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The real double-submit guard. `saving` state only disables the button
+  // after a re-render, so two taps in the same frame would both get through;
+  // a ref flips synchronously on the first one.
+  const savingRef = useRef(false);
 
   useEffect(() => {
     return () => { if (prTimeoutRef.current) clearTimeout(prTimeoutRef.current); };
@@ -259,6 +263,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
   const activeCat = CATEGORIES.find(c => c.name === category)!;
 
   const handleSave = async () => {
+    if (savingRef.current) return;
     if (!finalName.trim()) { Alert.alert('Missing Exercise', 'Tap an exercise or type a custom name.'); return; }
     if (!user) return;
 
@@ -271,22 +276,57 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
+    // Set when the PR/achievement banner holds the sheet open; its timer
+    // finishes the save, so `finally` must not release the guard early.
+    let heldOpen = false;
 
-    if (isEditing && editEntry) {
+    try {
+      if (isEditing && editEntry) {
+        const { data, error } = await supabase
+          .from('workouts')
+          .update({ name: finalName.trim(), category, duration: `${duration} min`, sets: cleanSets })
+          .eq('id', editEntry.id)
+          .select()
+          .single();
+
+        if (error) { Alert.alert('Error', error.message); return; }
+        if (data) {
+          // Workout XP depends on the sets logged, so an edit can change how much
+          // was earned — reconcile with just the delta instead of a flat award.
+          const delta = calcWorkoutXP(cleanSets) - calcWorkoutXP(editEntry.sets);
+          if (delta !== 0) await awardXP(user.id, delta);
+          await refreshProfile();
+
+          let saved = data;
+          if (photoUri) {
+            const photoPath = await uploadWorkoutPhoto(user.id, data.id, photoUri);
+            if (photoPath) {
+              const { data: updated } = await supabase
+                .from('workouts')
+                .update({ photo_path: photoPath })
+                .eq('id', data.id)
+                .select()
+                .single();
+              if (updated) saved = updated;
+            }
+          }
+          onSaved(saved); reset(); onClose();
+        }
+        return;
+      }
+
       const { data, error } = await supabase
         .from('workouts')
-        .update({ name: finalName.trim(), category, duration: `${duration} min`, sets: cleanSets })
-        .eq('id', editEntry.id)
+        .insert({ user_id: user.id, name: finalName.trim(), category, duration: `${duration} min`, calories: 0, sets: cleanSets })
         .select()
         .single();
 
-      if (error) { setSaving(false); Alert.alert('Error', error.message); return; }
+      if (error) { Alert.alert('Error', error.message); return; }
       if (data) {
-        // Workout XP depends on the sets logged, so an edit can change how much
-        // was earned — reconcile with just the delta instead of a flat award.
-        const delta = calcWorkoutXP(cleanSets) - calcWorkoutXP(editEntry.sets);
-        if (delta !== 0) await awardXP(user.id, delta);
+        const xp = calcWorkoutXP(cleanSets);
+        await awardXP(user.id, xp);
         await refreshProfile();
 
         let saved = data;
@@ -301,79 +341,52 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
               .single();
             if (updated) saved = updated;
           }
+          // Upload failures are logged inside uploadWorkoutPhoto but shouldn't
+          // block the workout itself from being saved — the sets are the point.
         }
-        setSaving(false);
-        onSaved(saved); reset(); onClose();
-      } else {
-        setSaving(false);
-      }
-      return;
-    }
 
-    const { data, error } = await supabase
-      .from('workouts')
-      .insert({ user_id: user.id, name: finalName.trim(), category, duration: `${duration} min`, calories: 0, sets: cleanSets })
-      .select()
-      .single();
-    setSaving(false);
-
-    if (error) { Alert.alert('Error', error.message); return; }
-    if (data) {
-      const xp = calcWorkoutXP(cleanSets);
-      await awardXP(user.id, xp);
-      await refreshProfile();
-
-      let saved = data;
-      if (photoUri) {
-        const photoPath = await uploadWorkoutPhoto(user.id, data.id, photoUri);
-        if (photoPath) {
-          const { data: updated } = await supabase
+        // PR check is scoped to new logs only, not edits — v1. Fetches every
+        // prior row for this exact exercise name (no limit — a partial
+        // history could produce a false "New PR!" claim, which would be a
+        // trust-eroding bug) and compares against the session just saved.
+        const currentTop = topSetWeight(cleanSets);
+        let isPR = false;
+        if (currentTop > 0) {
+          const { data: priorRows } = await supabase
             .from('workouts')
-            .update({ photo_path: photoPath })
-            .eq('id', data.id)
-            .select()
-            .single();
-          if (updated) saved = updated;
+            .select('sets')
+            .eq('user_id', user.id)
+            .eq('name', finalName.trim())
+            .neq('id', data.id);
+          const previousBest = (priorRows ?? []).reduce((max, w) => Math.max(max, topSetWeight(w.sets)), 0);
+          if (currentTop > previousBest) {
+            isPR = true;
+            setPrBanner({ weight: currentTop, name: finalName.trim() });
+          }
         }
-        // Upload failures are logged inside uploadWorkoutPhoto but shouldn't
-        // block the workout itself from being saved — the sets are the point.
-      }
 
-      // PR check is scoped to new logs only, not edits — v1. Fetches every
-      // prior row for this exact exercise name (no limit — a partial
-      // history could produce a false "New PR!" claim, which would be a
-      // trust-eroding bug) and compares against the session just saved.
-      const currentTop = topSetWeight(cleanSets);
-      let isPR = false;
-      if (currentTop > 0) {
-        const { data: priorRows } = await supabase
-          .from('workouts')
-          .select('sets')
-          .eq('user_id', user.id)
-          .eq('name', finalName.trim())
-          .neq('id', data.id);
-        const previousBest = (priorRows ?? []).reduce((max, w) => Math.max(max, topSetWeight(w.sets)), 0);
-        if (currentTop > previousBest) {
-          isPR = true;
-          setPrBanner({ weight: currentTop, name: finalName.trim() });
+        // Achievement check is also new-logs-only, same reasoning as the PR
+        // check above. Runs regardless of whether this save was a PR.
+        const newlyUnlocked = await checkAndUnlockAchievements();
+
+        if (isPR || newlyUnlocked.length > 0) {
+          setUnlockedAchievements(newlyUnlocked);
+          heldOpen = true;
+          prTimeoutRef.current = setTimeout(() => {
+            savingRef.current = false;
+            setSaving(false);
+            onSaved(saved); reset(); onClose();
+          }, 1400);
+          return;
         }
+
+        onSaved(saved); reset(); onClose();
       }
-
-      // Achievement check is also new-logs-only, same reasoning as the PR
-      // check above. Runs regardless of whether this save was a PR.
-      const newlyUnlocked = await checkAndUnlockAchievements();
-
-      if (isPR || newlyUnlocked.length > 0) {
-        setUnlockedAchievements(newlyUnlocked);
-        setSaving(true);
-        prTimeoutRef.current = setTimeout(() => {
-          setSaving(false);
-          onSaved(saved); reset(); onClose();
-        }, 1400);
-        return;
-      }
-
-      onSaved(saved); reset(); onClose();
+    } catch (err) {
+      console.error('Failed to save workout:', err);
+      Alert.alert('Error', 'Something went wrong while saving. Check your workout list before trying again.');
+    } finally {
+      if (!heldOpen) { savingRef.current = false; setSaving(false); }
     }
   };
 
@@ -390,10 +403,12 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
           onPress: async () => {
             if (!user) return;
             setDeleting(true);
-            const { error } = await supabase.from('workouts').delete().eq('id', editEntry.id);
+            const { data: removed, error } = await supabase.from('workouts').delete().eq('id', editEntry.id).select('id');
             if (error) { setDeleting(false); Alert.alert('Error', error.message); return; }
+            // Only take the XP back if this call actually removed the row — a
+            // second, queued confirm deletes nothing and must not deduct again.
             const xp = calcWorkoutXP(editEntry.sets);
-            if (xp !== 0) await awardXP(user.id, -xp);
+            if (removed?.length && xp !== 0) await awardXP(user.id, -xp);
             await refreshProfile();
             setDeleting(false);
             onDeleted?.(editEntry.id);

@@ -51,6 +51,8 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const unlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The real double-submit guard — see the same ref in WorkoutLog.
+  const savingRef = useRef(false);
 
   useEffect(() => {
     return () => { if (unlockTimeoutRef.current) clearTimeout(unlockTimeoutRef.current); };
@@ -160,10 +162,11 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
           onPress: async () => {
             if (!user) return;
             setDeletingId(entry.id!);
-            const { error } = await supabase.from('weight_logs').delete().eq('id', entry.id);
+            const { data: removed, error } = await supabase.from('weight_logs').delete().eq('id', entry.id).select('id');
             setDeletingId(null);
             if (error) { Alert.alert('Error', error.message); return; }
-            await awardXP(user.id, -XP_WEIGHT);
+            // Only take the XP back if this call actually removed the row.
+            if (removed?.length) await awardXP(user.id, -XP_WEIGHT);
             await refreshProfile();
             if (editingEntry?.id === entry.id) cancelEditingEntry();
             await loadLastEntry();
@@ -186,58 +189,69 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
 
   const handleSave = async () => {
     if (!user) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
+    // Set when the achievement banner holds the sheet open; its timer
+    // finishes the save, so `finally` must not release the guard early.
+    let heldOpen = false;
 
-    if (editingEntry) {
-      const { data, error } = await supabase
-        .from('weight_logs')
-        .update({ weight_kg: weightKg, notes })
-        .eq('id', editingEntry.id)
-        .select()
-        .single();
+    try {
+      if (editingEntry) {
+        const { data, error } = await supabase
+          .from('weight_logs')
+          .update({ weight_kg: weightKg, notes })
+          .eq('id', editingEntry.id)
+          .select()
+          .single();
 
-      setSaving(false);
-      if (error) { Alert.alert('Error', error.message); return; }
-      if (data) {
-        // Flat XP_WEIGHT doesn't depend on the value, so editing never
-        // changes how much was already earned — no award here.
-        onSaved(data);
-        setEditingEntry(null);
-        setNotes('');
-        onClose();
-      }
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('weight_logs')
-      .insert({ user_id: user.id, weight_kg: weightKg, notes })
-      .select()
-      .single();
-
-    setSaving(false);
-    if (error) { Alert.alert('Error', error.message); return; }
-    if (data) {
-      await awardXP(user.id, XP_WEIGHT);
-      await refreshProfile();
-      setRecentEntries(p => [data, ...p].slice(0, 5));
-
-      // Achievement check is new-logs-only, matching the same reasoning as
-      // WorkoutLog's PR check — see supabase/migrations/20260815010000_achievements.sql.
-      const newlyUnlocked = await checkAndUnlockAchievements();
-      if (newlyUnlocked.length > 0) {
-        setUnlockedAchievements(newlyUnlocked);
-        setSaving(true);
-        unlockTimeoutRef.current = setTimeout(() => {
-          setSaving(false);
-          onSaved(data); setNotes(''); onClose();
-        }, 1400);
+        if (error) { Alert.alert('Error', error.message); return; }
+        if (data) {
+          // Flat XP_WEIGHT doesn't depend on the value, so editing never
+          // changes how much was already earned — no award here.
+          onSaved(data);
+          setEditingEntry(null);
+          setNotes('');
+          onClose();
+        }
         return;
       }
 
-      onSaved(data);
-      setNotes('');
-      onClose();
+      const { data, error } = await supabase
+        .from('weight_logs')
+        .insert({ user_id: user.id, weight_kg: weightKg, notes })
+        .select()
+        .single();
+
+      if (error) { Alert.alert('Error', error.message); return; }
+      if (data) {
+        await awardXP(user.id, XP_WEIGHT);
+        await refreshProfile();
+        setRecentEntries(p => [data, ...p].slice(0, 5));
+
+        // Achievement check is new-logs-only, matching the same reasoning as
+        // WorkoutLog's PR check — see supabase/migrations/20260815010000_achievements.sql.
+        const newlyUnlocked = await checkAndUnlockAchievements();
+        if (newlyUnlocked.length > 0) {
+          setUnlockedAchievements(newlyUnlocked);
+          heldOpen = true;
+          unlockTimeoutRef.current = setTimeout(() => {
+            savingRef.current = false;
+            setSaving(false);
+            onSaved(data); setNotes(''); onClose();
+          }, 1400);
+          return;
+        }
+
+        onSaved(data);
+        setNotes('');
+        onClose();
+      }
+    } catch (err) {
+      console.error('Failed to save weight:', err);
+      Alert.alert('Error', 'Something went wrong while saving. Check your recent entries before trying again.');
+    } finally {
+      if (!heldOpen) { savingRef.current = false; setSaving(false); }
     }
   };
 

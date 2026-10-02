@@ -90,6 +90,8 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
   const slideAnim = useRef(new Animated.Value(SLIDE_DISTANCE)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const unlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The real double-submit guard — see the same ref in WorkoutLog.
+  const savingRef = useRef(false);
 
   useEffect(() => {
     return () => { if (unlockTimeoutRef.current) clearTimeout(unlockTimeoutRef.current); };
@@ -217,69 +219,79 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
       return;
     }
     if (!user) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
+    // Set when the achievement banner holds the sheet open; its timer
+    // finishes the save, so `finally` must not release the guard early.
+    let heldOpen = false;
 
-    if (isEditing && editEntry) {
-      const { data, error } = await supabase
-        .from('cardio_logs')
-        .update({ type, distance_km: distanceKm, duration: `${duration} min`, calories })
-        .eq('id', editEntry.id)
-        .select()
-        .single();
+    try {
+      if (isEditing && editEntry) {
+        const { data, error } = await supabase
+          .from('cardio_logs')
+          .update({ type, distance_km: distanceKm, duration: `${duration} min`, calories })
+          .eq('id', editEntry.id)
+          .select()
+          .single();
 
-      setSaving(false);
-      if (error) { Alert.alert('Error', error.message); return; }
-      if (data) {
-        // Cardio XP depends on duration, so an edit can change how much was
-        // earned — reconcile with just the delta instead of a flat award.
-        const oldDuration = parseInt(editEntry.duration ?? '0', 10) || 0;
-        const delta = calcCardioXP(duration) - calcCardioXP(oldDuration);
-        if (delta !== 0) await awardXP(user.id, delta);
-        await refreshProfile();
-        onSaved(data); reset(); onClose();
-      }
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('cardio_logs')
-      .insert({
-        user_id: user.id,
-        type,
-        distance_km: distanceKm,
-        duration: `${duration} min`,
-        calories,
-      })
-      .select()
-      .single();
-
-    setSaving(false);
-
-    if (error) {
-      console.log('Cardio save error:', JSON.stringify(error));
-      Alert.alert('Error', error.message);
-      return;
-    }
-
-    if (data) {
-      const xp = calcCardioXP(duration);
-      await awardXP(user.id, xp);
-      await refreshProfile();
-
-      // Achievement check is new-logs-only, matching the same reasoning as
-      // WorkoutLog's PR check — see supabase/migrations/20260815010000_achievements.sql.
-      const newlyUnlocked = await checkAndUnlockAchievements();
-      if (newlyUnlocked.length > 0) {
-        setUnlockedAchievements(newlyUnlocked);
-        setSaving(true);
-        unlockTimeoutRef.current = setTimeout(() => {
-          setSaving(false);
+        if (error) { Alert.alert('Error', error.message); return; }
+        if (data) {
+          // Cardio XP depends on duration, so an edit can change how much was
+          // earned — reconcile with just the delta instead of a flat award.
+          const oldDuration = parseInt(editEntry.duration ?? '0', 10) || 0;
+          const delta = calcCardioXP(duration) - calcCardioXP(oldDuration);
+          if (delta !== 0) await awardXP(user.id, delta);
+          await refreshProfile();
           onSaved(data); reset(); onClose();
-        }, 1400);
+        }
         return;
       }
 
-      onSaved(data); reset(); onClose();
+      const { data, error } = await supabase
+        .from('cardio_logs')
+        .insert({
+          user_id: user.id,
+          type,
+          distance_km: distanceKm,
+          duration: `${duration} min`,
+          calories,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.log('Cardio save error:', JSON.stringify(error));
+        Alert.alert('Error', error.message);
+        return;
+      }
+
+      if (data) {
+        const xp = calcCardioXP(duration);
+        await awardXP(user.id, xp);
+        await refreshProfile();
+
+        // Achievement check is new-logs-only, matching the same reasoning as
+        // WorkoutLog's PR check — see supabase/migrations/20260815010000_achievements.sql.
+        const newlyUnlocked = await checkAndUnlockAchievements();
+        if (newlyUnlocked.length > 0) {
+          setUnlockedAchievements(newlyUnlocked);
+          heldOpen = true;
+          unlockTimeoutRef.current = setTimeout(() => {
+            savingRef.current = false;
+            setSaving(false);
+            onSaved(data); reset(); onClose();
+          }, 1400);
+          return;
+        }
+
+        onSaved(data); reset(); onClose();
+      }
+    } catch (err) {
+      console.error('Failed to save cardio:', err);
+      Alert.alert('Error', 'Something went wrong while saving. Check your cardio history before trying again.');
+    } finally {
+      if (!heldOpen) { savingRef.current = false; setSaving(false); }
     }
   };
 
@@ -296,11 +308,12 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
           onPress: async () => {
             if (!user) return;
             setDeleting(true);
-            const { error } = await supabase.from('cardio_logs').delete().eq('id', editEntry.id);
+            const { data: removed, error } = await supabase.from('cardio_logs').delete().eq('id', editEntry.id).select('id');
             if (error) { setDeleting(false); Alert.alert('Error', error.message); return; }
+            // Only take the XP back if this call actually removed the row.
             const oldDuration = parseInt(editEntry.duration ?? '0', 10) || 0;
             const xp = calcCardioXP(oldDuration);
-            if (xp !== 0) await awardXP(user.id, -xp);
+            if (removed?.length && xp !== 0) await awardXP(user.id, -xp);
             await refreshProfile();
             setDeleting(false);
             onDeleted?.(editEntry.id);
