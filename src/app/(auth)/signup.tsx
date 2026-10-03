@@ -1,13 +1,30 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, SafeAreaView as SafeAreaProvider,
-  ScrollView
+  StyleSheet, ActivityIndicator, ScrollView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../lib/supabase';
+import type { AuthError } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 import { COLORS } from '@/constants/theme';
 import { validateName, validateEmail, validatePassword, sanitizeInput } from '@/utils/validation';
+
+// Plain-language versions of the sign-up errors people actually hit.
+function signupErrorMessage(error: AuthError): string {
+  const msg = error.message.toLowerCase();
+  if (error.code === 'user_already_exists' || msg.includes('already registered')) {
+    return 'An account with this email already exists. Log in instead, or use "Forgot password?" on the login screen.';
+  }
+  if (error.status === 429 || msg.includes('rate limit')) {
+    return 'Too many sign-up attempts. Please wait a few minutes and try again.';
+  }
+  if (error.code === 'weak_password') return error.message;
+  if (error.name === 'AuthRetryableFetchError') {
+    return "Couldn't reach the server. Check your connection and try again.";
+  }
+  return 'Something went wrong creating your account. Please try again.';
+}
 
 export default function Signup() {
   const router = useRouter();
@@ -43,23 +60,35 @@ export default function Signup() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: cleanEmail,
-      password,
-      options: { data: { full_name: cleanName } }
-    });
-    if (error) setError(error.message);
-    else setSuccess(true);
-    setLoading(false);
+    let signedIn = false;
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: { data: { full_name: cleanName } }
+      });
+      if (error) { setError(signupErrorMessage(error)); return; }
+      // With email confirmation off, Supabase signs the new account straight
+      // in. The root layout sees the session and moves on to choosing a
+      // username, so keep the spinner up until it does instead of claiming a
+      // confirmation email was sent.
+      if (data.session) { signedIn = true; return; }
+      // Confirmation on: no session until the emailed link is tapped.
+      setSuccess(true);
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      if (!signedIn) setLoading(false);
+    }
   };
 
   if (success) {
     return (
-      <SafeAreaProvider style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <View style={styles.content}>
           <Text style={styles.title}>Check your email</Text>
           <Text style={styles.subtitle}>
-            We sent a confirmation link to {email}
+            We sent a confirmation link to {email.trim()}. Tap it, then log in.
           </Text>
           <TouchableOpacity
             style={styles.button}
@@ -68,12 +97,12 @@ export default function Signup() {
             <Text style={styles.buttonText}>Back to Login</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaProvider>
+      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaProvider style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Join FitnessApp today</Text>
@@ -123,7 +152,7 @@ export default function Signup() {
           <Text style={styles.link}>Already have an account? Login</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaProvider>
+    </SafeAreaView>
   );
 }
 
