@@ -9,7 +9,11 @@ import { useProfile } from '@/context/ProfileContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import { getWorkoutCategories } from '@/constants/workoutCategories';
-import { getCardioTypes } from '@/components/logs/CardioLog';
+import CardioLog, { getCardioTypes } from '@/components/logs/CardioLog';
+import WorkoutLog from '@/components/logs/WorkoutLog';
+import CaloriesLog from '@/components/logs/CaloriesLog';
+import WaterLog from '@/components/logs/WaterLog';
+import WeightLog from '@/components/logs/WeightLog';
 import { getSignedPhotoUrls } from '@/utils/workoutPhotos';
 import { Workout, CardioLogEntry, WaterLogEntry, WeightLogEntry, Meal } from '@/types';
 import {
@@ -24,6 +28,14 @@ const VIEWER_WIDTH = Math.min(SCREEN_WIDTH - SPACING.xl * 2, 340);
 const VIEWER_HEIGHT = Math.min(VIEWER_WIDTH * 1.25, SCREEN_HEIGHT * 0.6);
 
 type LogType = 'workout' | 'cardio' | 'water' | 'meal' | 'weight';
+
+// The entry whose log sheet is open for editing, tagged by which sheet it needs.
+type EditTarget =
+  | { type: 'workout'; entry: Workout }
+  | { type: 'cardio'; entry: CardioLogEntry }
+  | { type: 'meal'; entry: Meal }
+  | { type: 'water'; entry: WaterLogEntry }
+  | { type: 'weight'; entry: WeightLogEntry };
 
 function getLogTypeColors(colors: Colors): Record<LogType, string> {
   return {
@@ -96,6 +108,14 @@ export default function CalendarScreen() {
   }, [user, monthDate]);
 
   useFocusEffect(useCallback(() => { loadMonth(); }, [loadMonth]));
+
+  // Tapping an entry in the day list opens its log sheet in edit mode. Every
+  // close reloads the month, which covers saves, deletes and cancels alike
+  // (water/weight deletes happen inside their sheets with no callback).
+  const [editing, setEditing] = useState<EditTarget | null>(null);
+  const closeEditor = () => { setEditing(null); loadMonth(); };
+  const formatTime = (dateStr: string) =>
+    new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
   const dayTypes = useMemo(() => {
     const map = new Map<string, Set<LogType>>();
@@ -284,12 +304,22 @@ export default function CalendarScreen() {
                 {dayWorkouts.map((w) => {
                   const cat = w.category ? getWorkoutCat(w.category) : null;
                   return (
-                    <View key={w.id} style={styles.detailRow}>
+                    <TouchableOpacity
+                      key={w.id}
+                      style={styles.detailRow}
+                      onPress={() => setEditing({ type: 'workout', entry: w })}
+                      activeOpacity={0.6}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit ${w.name}`}
+                    >
                       <Text style={styles.detailRowText}>
                         <Ionicons name={cat?.icon ?? 'barbell-outline'} size={13} color={cat?.color ?? colors.primary} /> {w.name}
                       </Text>
-                      <Text style={styles.detailRowMeta}>{w.sets?.length ?? 0} sets</Text>
-                    </View>
+                      <View style={styles.detailRowRight}>
+                        <Text style={styles.detailRowMeta}>{w.sets?.length ?? 0} sets</Text>
+                        <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                      </View>
+                    </TouchableOpacity>
                   );
                 })}
               </View>
@@ -304,12 +334,22 @@ export default function CalendarScreen() {
                 {dayCardio.map((c) => {
                   const t = getCardioType(c.type);
                   return (
-                    <View key={c.id} style={styles.detailRow}>
+                    <TouchableOpacity
+                      key={c.id}
+                      style={styles.detailRow}
+                      onPress={() => setEditing({ type: 'cardio', entry: c })}
+                      activeOpacity={0.6}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit ${c.type} session`}
+                    >
                       <Text style={styles.detailRowText}>
                         <Ionicons name={t?.icon ?? 'heart-outline'} size={13} color={t?.color ?? colors.neonGreen} /> {c.type}
                       </Text>
-                      <Text style={styles.detailRowMeta}>{c.duration ?? ''}</Text>
-                    </View>
+                      <View style={styles.detailRowRight}>
+                        <Text style={styles.detailRowMeta}>{c.duration ?? ''}</Text>
+                        <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                      </View>
+                    </TouchableOpacity>
                   );
                 })}
               </View>
@@ -322,10 +362,20 @@ export default function CalendarScreen() {
                   <Text style={styles.detailTitle}>Meals · {totalCalories} kcal</Text>
                 </View>
                 {dayMeals.map((m) => (
-                  <View key={m.id} style={styles.detailRow}>
+                  <TouchableOpacity
+                    key={m.id}
+                    style={styles.detailRow}
+                    onPress={() => setEditing({ type: 'meal', entry: m })}
+                    activeOpacity={0.6}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${m.meal_name}`}
+                  >
                     <Text style={styles.detailRowText}>{m.meal_name}</Text>
-                    <Text style={styles.detailRowMeta}>{m.calories ?? 0} kcal</Text>
-                  </View>
+                    <View style={styles.detailRowRight}>
+                      <Text style={styles.detailRowMeta}>{m.calories ?? 0} kcal</Text>
+                      <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                    </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
@@ -336,7 +386,22 @@ export default function CalendarScreen() {
                   <View style={[styles.detailDot, { backgroundColor: LOG_TYPE_COLORS.water }]} />
                   <Text style={styles.detailTitle}>Water · {displayWater(totalWaterMl).toFixed(0)} {waterUnit}</Text>
                 </View>
-                <Text style={styles.detailRowMeta}>{dayWater.length} log{dayWater.length === 1 ? '' : 's'}</Text>
+                {dayWater.map((w) => (
+                  <TouchableOpacity
+                    key={w.id}
+                    style={styles.detailRow}
+                    onPress={() => setEditing({ type: 'water', entry: w })}
+                    activeOpacity={0.6}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${displayWater(w.amount_ml).toFixed(0)} ${waterUnit} water entry`}
+                  >
+                    <Text style={styles.detailRowText}>{displayWater(w.amount_ml).toFixed(0)} {waterUnit}</Text>
+                    <View style={styles.detailRowRight}>
+                      <Text style={styles.detailRowMeta}>{formatTime(w.created_at)}</Text>
+                      <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                    </View>
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
 
@@ -347,9 +412,20 @@ export default function CalendarScreen() {
                   <Text style={styles.detailTitle}>Weight</Text>
                 </View>
                 {dayWeights.map((w) => (
-                  <View key={w.id} style={styles.detailRow}>
+                  <TouchableOpacity
+                    key={w.id}
+                    style={styles.detailRow}
+                    onPress={() => setEditing({ type: 'weight', entry: w })}
+                    activeOpacity={0.6}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${displayWeight(w.weight_kg).toFixed(1)} ${weightUnit} weigh-in`}
+                  >
                     <Text style={styles.detailRowText}>{displayWeight(w.weight_kg).toFixed(1)} {weightUnit}</Text>
-                  </View>
+                    <View style={styles.detailRowRight}>
+                      <Text style={styles.detailRowMeta}>{formatTime(w.created_at)}</Text>
+                      <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                    </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
@@ -357,6 +433,41 @@ export default function CalendarScreen() {
         )}
 
       </ScrollView>
+
+      {/* Edit sheets for the selected day's entries */}
+      <WorkoutLog
+        visible={editing?.type === 'workout'}
+        editEntry={editing?.type === 'workout' ? editing.entry : null}
+        onClose={closeEditor}
+        onSaved={() => {}}
+        onDeleted={() => {}}
+      />
+      <CardioLog
+        visible={editing?.type === 'cardio'}
+        editEntry={editing?.type === 'cardio' ? editing.entry : null}
+        onClose={closeEditor}
+        onSaved={() => {}}
+        onDeleted={() => {}}
+      />
+      <CaloriesLog
+        visible={editing?.type === 'meal'}
+        editEntry={editing?.type === 'meal' ? editing.entry : null}
+        onClose={closeEditor}
+        onSaved={() => {}}
+        onDeleted={() => {}}
+      />
+      <WaterLog
+        visible={editing?.type === 'water'}
+        editEntry={editing?.type === 'water' ? editing.entry : null}
+        onClose={closeEditor}
+        onSaved={() => {}}
+      />
+      <WeightLog
+        visible={editing?.type === 'weight'}
+        editEntry={editing?.type === 'weight' ? editing.entry : null}
+        onClose={closeEditor}
+        onSaved={() => {}}
+      />
 
       {/* Photo viewer — dark backdrop closes, tapping the photo advances to the next one */}
       <Modal visible={!!viewerDay} transparent animationType="fade" onRequestClose={closeViewer}>
@@ -476,6 +587,7 @@ function makeStyles(theme: Theme) {
   },
   detailRowText: { fontSize: FONT_SIZES.sm, color: colors.textSecondary },
   detailRowMeta: { fontSize: FONT_SIZES.xs, color: colors.textMuted },
+  detailRowRight: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
 
   emptyState: { ...CARD.default, alignItems: 'center', paddingVertical: SPACING.xl },
   emptyText: { color: colors.textMuted, fontSize: FONT_SIZES.sm },
