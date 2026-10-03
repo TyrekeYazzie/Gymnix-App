@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { supabase } from '@/lib/supabase';
+import { PASSWORD_RESET_URL } from '@/constants/links';
 import { validateEmail } from '@/utils/validation';
 import { COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING, RADIUS, INPUT } from '@/constants/theme';
 
@@ -28,8 +29,11 @@ export default function ForgotPassword() {
     }
 
     setLoading(true);
+    // The email links to an https hand-off page; `to` tells it where this
+    // copy of the app listens (fitnessapp://… in a build, exp://… in Expo Go).
+    const appUrl = Linking.createURL('/reset-password');
     const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-      redirectTo: Linking.createURL('/reset-password'),
+      redirectTo: `${PASSWORD_RESET_URL}?to=${encodeURIComponent(appUrl)}`,
     });
     setLoading(false);
 
