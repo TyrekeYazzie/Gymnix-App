@@ -56,22 +56,30 @@ function Layout() {
     if (loading || profileUnavailable) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    const inTabsGroup = segments[0] === '(tabs)';
     const inOnboarding = segments[0] === 'onboarding';
     const inChooseUsername = segments[0] === 'choose-username';
-    // Username comes first (it's how friends find you), then onboarding.
-    const needsUsername = !!session && !profile?.username;
-    const needsOnboarding = !!session && !needsUsername && !profile?.onboarding_completed_at;
 
-    if (!session && inTabsGroup) {
-      router.replace('/(auth)/login');
-    } else if (inResetPassword) {
+    if (!session) {
+      // Signed out (Log Out, an expired or revoked session, a deleted
+      // account): every screen except login/sign-up and a password-reset link
+      // goes back to login. This used to cover only the tabs, which left users
+      // stranded on pushed screens like Settings or Leaderboard. The root
+      // index (no segments) already redirects to login itself.
+      if (!inAuthGroup && !inResetPassword && segments.length > 0) router.replace('/(auth)/login');
+      return;
+    }
+
+    // Username comes first (it's how friends find you), then onboarding.
+    const needsUsername = !profile?.username;
+    const needsOnboarding = !needsUsername && !profile?.onboarding_completed_at;
+
+    if (inResetPassword) {
       return;
     } else if (needsUsername && !inChooseUsername) {
       router.replace('/choose-username');
     } else if (needsOnboarding && !inOnboarding) {
       router.replace('/onboarding');
-    } else if (session && !needsUsername && !needsOnboarding && (inAuthGroup || inOnboarding || inChooseUsername)) {
+    } else if (!needsUsername && !needsOnboarding && (inAuthGroup || inOnboarding || inChooseUsername)) {
       router.replace('/(tabs)/dashboard');
     }
   }, [session, loading, profileUnavailable, segments, profile]);
