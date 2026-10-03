@@ -28,9 +28,11 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   onSaved: (log: any) => void;
+  /** When set, the sheet opens editing this entry (any day, e.g. from the Calendar) instead of logging a new one. */
+  editEntry?: WeightEntry | null;
 }
 
-export default function WeightLog({ visible, onClose, onSaved }: Props) {
+export default function WeightLog({ visible, onClose, onSaved, editEntry }: Props) {
   const { user } = useAuth();
   const { profile, isImperial, refreshProfile } = useProfile();
   const { theme } = useTheme();
@@ -88,7 +90,7 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
 
   useEffect(() => {
     if (visible) {
-      loadLastEntry();
+      loadLastEntry(!!editEntry);
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }),
         Animated.timing(overlayAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
@@ -101,7 +103,9 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
     }
   }, [visible]);
 
-  const loadLastEntry = async () => {
+  // preserveForm: the sheet opened to edit an entry, so keep the ruler on
+  // that entry's value instead of jumping to the latest weigh-in.
+  const loadLastEntry = async (preserveForm = false) => {
     if (!user) return;
     const { data, error } = await supabase
       .from('weight_logs')
@@ -118,10 +122,10 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
     setRecentEntries(data);
     if (data.length > 0) {
       setLastEntry(data[0]);
-      setWeightKg(data[0].weight_kg);
+      if (!preserveForm) setWeightKg(data[0].weight_kg);
     } else {
       setLastEntry(null);
-      setWeightKg(startKg);
+      if (!preserveForm) setWeightKg(startKg);
     }
   };
 
@@ -142,6 +146,10 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
     setWeightKg(entry.weight_kg);
     setNotes(entry.notes ?? '');
   };
+
+  useEffect(() => {
+    if (visible && editEntry) startEditingEntry(editEntry);
+  }, [visible, editEntry]);
 
   const cancelEditingEntry = () => {
     setEditingEntry(null);
@@ -168,6 +176,8 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
             // Only take the XP back if this call actually removed the row.
             if (removed?.length) await awardXP(user.id, -XP_WEIGHT);
             await refreshProfile();
+            // Deleted the one entry this sheet was opened to edit: nothing left to do here.
+            if (editEntry?.id === entry.id) { handleClose(); return; }
             if (editingEntry?.id === entry.id) cancelEditingEntry();
             await loadLastEntry();
           },
@@ -274,13 +284,26 @@ export default function WeightLog({ visible, onClose, onSaved }: Props) {
             <View style={styles.titleRow}>
               <Text style={styles.title}>{editingEntry ? 'Edit Weight' : 'Log Weight'}</Text>
               {editingEntry && (
-                <TouchableOpacity
-                  onPress={cancelEditingEntry}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={styles.cancelEditLink}>Cancel edit</Text>
-                </TouchableOpacity>
+                <View style={styles.editActions}>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteEntry(editingEntry)}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete this entry"
+                  >
+                    <Ionicons name="trash-outline" size={18} color={colors.accent} />
+                  </TouchableOpacity>
+                  {/* Opened to edit one entry (e.g. from the Calendar): cancelling
+                      closes the sheet rather than switching to logging a new one. */}
+                  <TouchableOpacity
+                    onPress={editEntry ? animateClose : cancelEditingEntry}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={styles.cancelEditLink}>Cancel edit</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
           </View>
@@ -412,6 +435,7 @@ function makeStyles(theme: Theme) {
     fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary,
   },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
+  editActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.lg },
   cancelEditLink: { fontSize: FONT_SIZES.xs, color: colors.primary, fontWeight: FONT_WEIGHTS.bold },
   lastEntry: {
     backgroundColor: colors.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,

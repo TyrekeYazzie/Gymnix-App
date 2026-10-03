@@ -52,9 +52,11 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   onSaved: (log: any) => void;
+  /** When set, the sheet opens editing this entry (any day, e.g. from the Calendar) instead of logging a new one. */
+  editEntry?: WaterEntry | null;
 }
 
-export default function WaterLog({ visible, onClose, onSaved }: Props) {
+export default function WaterLog({ visible, onClose, onSaved, editEntry }: Props) {
   const { user } = useAuth();
   const { isImperial, refreshProfile } = useProfile();
   const { theme } = useTheme();
@@ -165,6 +167,10 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
     setAmountMl(entry.amount_ml);
   };
 
+  useEffect(() => {
+    if (visible && editEntry) startEditingEntry(editEntry);
+  }, [visible, editEntry]);
+
   const cancelEditingEntry = () => {
     setEditingEntry(null);
     setAmountMl(250);
@@ -188,6 +194,8 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
             // Only take the XP back if this call actually removed the row.
             if (removed?.length) await awardXP(user.id, -XP_WATER);
             await refreshProfile();
+            // Deleted the one entry this sheet was opened to edit: nothing left to do here.
+            if (editEntry?.id === entry.id) { handleClose(); return; }
             if (editingEntry?.id === entry.id) cancelEditingEntry();
             await loadTodayTotal();
           },
@@ -304,13 +312,26 @@ export default function WaterLog({ visible, onClose, onSaved }: Props) {
             <View style={styles.titleRow}>
               <Text style={styles.title}>{editingEntry ? 'Edit Water' : 'Log Water'}</Text>
               {editingEntry && (
-                <TouchableOpacity
-                  onPress={cancelEditingEntry}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={styles.cancelEditLink}>Cancel edit</Text>
-                </TouchableOpacity>
+                <View style={styles.editActions}>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteEntry(editingEntry)}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete this entry"
+                  >
+                    <Ionicons name="trash-outline" size={18} color={colors.accent} />
+                  </TouchableOpacity>
+                  {/* Opened to edit one entry (e.g. from the Calendar): cancelling
+                      closes the sheet rather than switching to logging a new one. */}
+                  <TouchableOpacity
+                    onPress={editEntry ? animateClose : cancelEditingEntry}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={styles.cancelEditLink}>Cancel edit</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
           </View>
@@ -441,6 +462,7 @@ function makeStyles(theme: Theme) {
     fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary,
   },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
+  editActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.lg },
   cancelEditLink: { fontSize: FONT_SIZES.xs, color: colors.neonBlue, fontWeight: FONT_WEIGHTS.bold },
   progressCard: {
     backgroundColor: colors.bgTertiary, borderRadius: RADIUS.md, padding: SPACING.md,

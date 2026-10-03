@@ -338,7 +338,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
     if (!editEntry) return;
     Alert.alert(
       'Delete Meal',
-      `Remove "${editEntry.meal_name}" from today's log?`,
+      `Remove "${editEntry.meal_name}" from your log?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
