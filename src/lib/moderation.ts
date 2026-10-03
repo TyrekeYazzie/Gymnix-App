@@ -13,7 +13,7 @@ export const REPORT_REASONS: { key: ReportReason; label: string }[] = [
   { key: 'other',               label: 'Something else' },
 ];
 
-export type BlockedUser = { user_id: string; full_name: string | null; avatar_path: string | null; blocked_at: string };
+export type BlockedUser = { user_id: string; username: string | null; full_name: string | null; avatar_path: string | null; blocked_at: string };
 
 export async function reportUser(
   reportedId: string,

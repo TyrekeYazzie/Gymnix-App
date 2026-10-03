@@ -9,6 +9,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/context/ThemeContext';
 import Avatar from '@/components/Avatar';
 import { BlockedUser, getMyBlockedUsers, unblockUser } from '@/lib/moderation';
+import { displayName } from '@/lib/friends';
 import { FONT_SIZES, FONT_WEIGHTS, SPACING, RADIUS, Theme } from '@/constants/theme';
 
 // Settings > Blocked Users — lists everyone the user has blocked from the
@@ -37,7 +38,7 @@ export default function BlockedUsersScreen() {
 
   const handleUnblock = (u: BlockedUser) => {
     Alert.alert(
-      `Unblock ${u.full_name || 'this user'}?`,
+      `Unblock ${displayName(u, 'this user')}?`,
       "You'll see each other on the leaderboards again.",
       [
         { text: 'Cancel', style: 'cancel' },
@@ -83,8 +84,8 @@ export default function BlockedUsersScreen() {
               <View key={u.user_id}>
                 {i > 0 && <View style={styles.rowDivider} />}
                 <View style={styles.row}>
-                  <Avatar path={u.avatar_path} name={u.full_name} size={32} />
-                  <Text style={styles.name} numberOfLines={1}>{u.full_name || 'Anonymous'}</Text>
+                  <Avatar path={u.avatar_path} name={u.full_name ?? u.username} size={32} />
+                  <Text style={styles.name} numberOfLines={1}>{displayName(u)}</Text>
                   {unblockingId === u.user_id ? (
                     <ActivityIndicator size="small" color={colors.primary} />
                   ) : (

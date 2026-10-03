@@ -19,7 +19,7 @@ import { LevelLeaderboardEntry, LogCountLeaderboardEntry, StreakLeaderboardEntry
 import { useTheme } from '@/context/ThemeContext';
 import Avatar from '@/components/Avatar';
 import { REPORT_REASONS, ReportReason, reportUser, blockUser } from '@/lib/moderation';
-import { Relation, getMyFriends, sendFriendRequest, respondToFriendRequest, removeFriend } from '@/lib/friends';
+import { Relation, getMyFriends, sendFriendRequest, respondToFriendRequest, removeFriend, displayName } from '@/lib/friends';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme, Colors
@@ -90,7 +90,7 @@ export default function LeaderboardScreen() {
   };
 
   const confirmBlock = (row: Row) => {
-    const name = row.full_name || 'this user';
+    const name = displayName(row, 'this user');
     Alert.alert(
       `Block ${name}?`,
       "You won't see each other on the leaderboards. You can unblock them in Settings.",
@@ -151,7 +151,7 @@ export default function LeaderboardScreen() {
     if (!actionRow) return;
     const row = actionRow;
     setActionBusy(true);
-    const ok = await reportUser(row.user_id, reason, { name: row.full_name, avatarPath: row.avatar_path });
+    const ok = await reportUser(row.user_id, reason, { name: displayName(row, ''), avatarPath: row.avatar_path });
     setActionBusy(false);
     if (!ok) { Alert.alert('Error', 'Could not send your report. Please try again.'); return; }
     setActionRow(null);
@@ -319,10 +319,10 @@ export default function LeaderboardScreen() {
                   {i > 0 && <View style={styles.rowDivider} />}
                   <View style={[styles.row, isMe && { backgroundColor: activeTabDef.color + '10' }]}>
                     <Text style={[styles.rank, { color: medalColor(colors, row.rnk) }]}>#{row.rnk}</Text>
-                    <Avatar path={row.avatar_path} name={row.full_name} size={32} />
+                    <Avatar path={row.avatar_path} name={row.full_name ?? row.username} size={32} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.name} numberOfLines={1}>
-                        {row.full_name || 'Anonymous'}{isMe ? ' (You)' : ''}
+                        {displayName(row)}{isMe ? ' (You)' : ''}
                       </Text>
                       {!isMe && relations[row.user_id] === 'friends' && scope === 'everyone' && (
                         <Text style={styles.friendTag}>Friend</Text>
@@ -335,7 +335,7 @@ export default function LeaderboardScreen() {
                         activeOpacity={0.7}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         accessibilityRole="button"
-                        accessibilityLabel={`More options for ${row.full_name || 'this user'}`}
+                        accessibilityLabel={`More options for ${displayName(row, 'this user')}`}
                       >
                         <Ionicons name="ellipsis-horizontal" size={16} color={colors.textMuted} />
                       </TouchableOpacity>
@@ -380,7 +380,7 @@ export default function LeaderboardScreen() {
         <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={closeActions}>
           <TouchableOpacity activeOpacity={1} style={styles.sheet}>
             <Text style={styles.sheetTitle} numberOfLines={1}>
-              {actionStep === 'menu' ? (actionRow?.full_name || 'Anonymous') : 'Why are you reporting?'}
+              {actionStep === 'menu' ? (actionRow ? displayName(actionRow) : 'Anonymous') : 'Why are you reporting?'}
             </Text>
             {actionStep === 'menu' ? (
               <>

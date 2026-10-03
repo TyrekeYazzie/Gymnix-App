@@ -116,6 +116,8 @@ export interface CustomMeal {
 // absent from the "my rank" variant, which is always for the caller.
 export interface LevelLeaderboardEntry {
   user_id: string;
+  username: string | null;
+  /** Only present for yourself and accepted friends; null for everyone else. */
   full_name: string | null;
   avatar_path: string | null;
   total_xp: number;
@@ -128,6 +130,8 @@ export interface LevelLeaderboardEntry {
 // logged, never a weight or pace value.
 export interface LogCountLeaderboardEntry {
   user_id: string;
+  username: string | null;
+  /** Only present for yourself and accepted friends; null for everyone else. */
   full_name: string | null;
   avatar_path: string | null;
   log_count: number;
@@ -147,6 +151,8 @@ export interface WorkoutStreak {
 // current streak, not longest — matches the "day streak" shown on Dashboard.
 export interface StreakLeaderboardEntry {
   user_id: string;
+  username: string | null;
+  /** Only present for yourself and accepted friends; null for everyone else. */
   full_name: string | null;
   avatar_path: string | null;
   current_streak: number;

@@ -7,6 +7,16 @@ import { supabase } from './supabase';
 
 export const USERNAME_PATTERN = /^[a-z0-9_]{3,20}$/;
 
+/**
+ * What to call another user. The server only shares a real name with you for
+ * yourself and accepted friends (see
+ * supabase/migrations/20261003010000_usernames_on_public_boards.sql);
+ * everyone else is shown by @username.
+ */
+export function displayName(u: { full_name?: string | null; username?: string | null }, fallback = 'Anonymous'): string {
+  return u.full_name || (u.username ? `@${u.username}` : fallback);
+}
+
 /** Lowercases and strips anything that can't be in a username, as the user types. */
 export function normalizeUsername(input: string): string {
   return input.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20);

@@ -11,7 +11,7 @@ import { useProfile } from '@/context/ProfileContext';
 import Avatar from '@/components/Avatar';
 import {
   FriendEntry, Relation, UserSearchResult,
-  getMyFriends, searchUsers, sendFriendRequest, respondToFriendRequest, removeFriend,
+  getMyFriends, searchUsers, sendFriendRequest, respondToFriendRequest, removeFriend, displayName,
 } from '@/lib/friends';
 import { FONT_SIZES, FONT_WEIGHTS, SPACING, RADIUS, Theme } from '@/constants/theme';
 
@@ -77,9 +77,6 @@ export default function FriendsScreen() {
   const incoming = entries.filter(e => e.relation === 'incoming');
   const friends = entries.filter(e => e.relation === 'friends');
   const outgoing = entries.filter(e => e.relation === 'outgoing');
-
-  const displayName = (u: { full_name: string | null; username: string | null }) =>
-    u.full_name || (u.username ? `@${u.username}` : 'Anonymous');
 
   const renderAction = (userId: string, relation: Relation | null) => {
     if (busyId === userId) return <ActivityIndicator size="small" color={colors.primary} />;
@@ -158,7 +155,7 @@ export default function FriendsScreen() {
                 <View key={u.user_id}>
                   {i > 0 && <View style={styles.rowDivider} />}
                   <View style={styles.row}>
-                    <Avatar path={u.avatar_path} name={u.full_name} size={36} />
+                    <Avatar path={u.avatar_path} name={u.full_name ?? u.username} size={36} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.name} numberOfLines={1}>{u.full_name || `@${u.username}`}</Text>
                       <Text style={styles.username} numberOfLines={1}>@{u.username}</Text>
@@ -183,7 +180,7 @@ export default function FriendsScreen() {
                     <View key={u.user_id}>
                       {i > 0 && <View style={styles.rowDivider} />}
                       <View style={styles.row}>
-                        <Avatar path={u.avatar_path} name={u.full_name} size={36} />
+                        <Avatar path={u.avatar_path} name={u.full_name ?? u.username} size={36} />
                         <View style={{ flex: 1 }}>
                           <Text style={styles.name} numberOfLines={1}>{displayName(u)}</Text>
                           {u.username && <Text style={styles.username} numberOfLines={1}>@{u.username}</Text>}
@@ -227,7 +224,7 @@ export default function FriendsScreen() {
                       onPress={() => router.push({ pathname: '/friend-profile', params: { id: u.user_id } })}
                       activeOpacity={0.7}
                     >
-                      <Avatar path={u.avatar_path} name={u.full_name} size={36} />
+                      <Avatar path={u.avatar_path} name={u.full_name ?? u.username} size={36} />
                       <View style={{ flex: 1 }}>
                         <Text style={styles.name} numberOfLines={1}>{displayName(u)}</Text>
                         {u.username && <Text style={styles.username} numberOfLines={1}>@{u.username}</Text>}
@@ -247,7 +244,7 @@ export default function FriendsScreen() {
                     <View key={u.user_id}>
                       {i > 0 && <View style={styles.rowDivider} />}
                       <View style={styles.row}>
-                        <Avatar path={u.avatar_path} name={u.full_name} size={36} />
+                        <Avatar path={u.avatar_path} name={u.full_name ?? u.username} size={36} />
                         <View style={{ flex: 1 }}>
                           <Text style={styles.name} numberOfLines={1}>{displayName(u)}</Text>
                           {u.username && <Text style={styles.username} numberOfLines={1}>@{u.username}</Text>}
