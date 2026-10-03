@@ -1,11 +1,13 @@
 // On-device lockout for instant UI feedback ("try again in 45s") without a
-// network round trip. This is NOT the real security control — it only runs
-// on this device, so a client that skips the app entirely (curl straight to
-// Supabase's password grant endpoint) skips this too. The actual
-// enforcement is server-side: see
-// supabase/migrations/20260814000000_password_verification_rate_limit.sql,
-// a Postgres Auth Hook that Supabase invokes on every password verification
-// attempt regardless of client. Keep the tiers here in sync with that file.
+// network round trip. This is NOT a security control: it only runs on this
+// device, so a client that skips the app (curl straight to Supabase's
+// password grant endpoint) skips it too.
+//
+// What actually limits password guessing is Supabase Auth's own per-IP rate
+// limits (by default 30 sign-in/sign-up requests and 150 token requests per
+// 5 minutes; Dashboard > Authentication > Rate Limits). A per-account lockout
+// hook exists in supabase/migrations/20260814000000_password_verification_rate_limit.sql
+// but is NOT active: Auth Hooks need the Team/Enterprise plan (KNOWN_ISSUES.md).
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
