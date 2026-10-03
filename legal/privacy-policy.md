@@ -48,22 +48,24 @@ contains no advertising, no ad tracking, and no marketing analytics.
 - To calculate personalized calorie and macro targets from the data you
   provide.
 - To power the Leaderboards. **Every account appears on the leaderboards**,
-  which show other users your display name, your profile photo (if you've
-  added one), and a single aggregate stat for that board — your level/XP,
-  your number of strength or cardio sessions logged, or your current workout
-  streak. They never show your weight, age, goals, notes, meals, or workout
-  photos. If you'd rather not be identifiable there, you can use a nickname
-  as your display name and leave your profile photo empty.
+  which show other users your username, your profile photo (if you've added
+  one), and a single aggregate stat for that board — your level/XP, your
+  number of strength or cardio sessions logged, or your current workout
+  streak. Your display name is shown there only to you and to friends you've
+  accepted. The leaderboards never show your weight, age, goals, notes,
+  meals, or workout photos. If you'd rather not be recognizable, choose a
+  username that doesn't identify you and leave your profile photo empty.
 - To power Friends. You choose a unique username, which other users can
-  search for to send you a friend request. Friend requests need your
+  search for to send you a friend request; search results show your username
+  and profile photo, not your display name. Friend requests need your
   approval. Once you accept, that friend can see your username, display
   name, profile photo, level/XP, current workout streak, number of workouts
   and cardio sessions logged, and which achievements you've unlocked — never
   your weight, age, goals, notes, meals, or workout photos. You can remove a
   friend at any time.
 - To keep the leaderboards safe. If you report another user, we store the
-  report (who you reported, the reason you picked, and the name and profile
-  photo shown at that moment) so we can review it; the reported user is
+  report (who you reported, the reason you picked, and the name or username
+  and profile photo shown at that moment) so we can review it; the reported user is
   never told who reported them. If you block someone, we store that so you
   and they no longer see each other on the leaderboards.
 - To diagnose crashes and errors and improve the App's reliability.

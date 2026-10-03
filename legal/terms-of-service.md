@@ -39,10 +39,10 @@ We may suspend or terminate accounts that violate these Terms.
 ## Leaderboards and User Content
 
 Every account appears on the App's leaderboards and has a unique
-username that other users can search for to send a friend request. Your display name and, if
-you add one, your profile photo are visible to other users there (see the
-Privacy Policy for exactly what's shown). Don't use a name or photo you
-wouldn't want other users to see.
+username that other users can search for to send a friend request. Your username and, if
+you add one, your profile photo are visible to other users there; your display name is
+shown only to friends you accept (see the Privacy Policy for exactly what's shown). Don't
+use a username or photo you wouldn't want other users to see.
 
 Your username, display name and profile photo must not be offensive, sexually
 explicit, hateful, harassing, or impersonate someone else. **We have zero
