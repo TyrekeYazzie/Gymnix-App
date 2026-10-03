@@ -1,5 +1,5 @@
 import "react-native-url-polyfill/auto";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
@@ -51,3 +51,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     flowType: "pkce",
   },
 });
+
+// Supabase's recommended React Native setup: keep refreshing the session only
+// while the app is in the foreground. Resuming also refreshes an access
+// token that expired while the app was backgrounded, before screens use it.
+if (Platform.OS !== "web") {
+  AppState.addEventListener("change", (state) => {
+    if (state === "active") supabase.auth.startAutoRefresh();
+    else supabase.auth.stopAutoRefresh();
+  });
+}
