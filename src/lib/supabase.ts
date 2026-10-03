@@ -14,7 +14,7 @@ if (!supabaseUrl.startsWith("https://")) throw new Error("Supabase URL must use 
 // expo-secure-store has no web implementation, so fall back to AsyncStorage
 // there (only used by this project for browser-based dev preview/testing —
 // native builds always use SecureStore).
-const secureStorage = {
+export const authStorage = {
   getItem: async (key: string): Promise<string | null> => {
     if (Platform.OS === "web") return AsyncStorage.getItem(key);
     return await SecureStore.getItemAsync(key);
@@ -29,10 +29,16 @@ const secureStorage = {
   },
 };
 
+// Where the session lives in authStorage. Same value supabase-js uses by
+// default (so existing sessions carry over); spelled out so signOut() in
+// src/lib/auth.ts can clear it when the server can't be reached.
+export const AUTH_STORAGE_KEY = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`;
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     // Encrypts session tokens on device instead of plain AsyncStorage
-    storage: secureStorage,
+    storage: authStorage,
+    storageKey: AUTH_STORAGE_KEY,
     // Automatically refreshes token before it expires
     autoRefreshToken: true,
     // Saves session so user stays logged in after app restart

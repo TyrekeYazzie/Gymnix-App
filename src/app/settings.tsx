@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
+import { signOut } from '@/lib/auth';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -153,7 +154,7 @@ export default function Settings() {
     }
     // The row behind this session is gone; clear the local session too and
     // drop back to the login screen rather than leaving a dead session hanging.
-    await supabase.auth.signOut();
+    await signOut();
     router.replace('/(auth)/login');
   };
 
@@ -169,7 +170,7 @@ export default function Settings() {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     router.replace('/(auth)/login');
   };
 

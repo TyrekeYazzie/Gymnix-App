@@ -6,6 +6,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
+import { signOut } from '@/lib/auth'
 import { useRouter, useFocusEffect } from 'expo-router'
 import { getMyFriends } from '@/lib/friends'
 import { useSwipeTabs } from '@/hooks/useSwipeTabs'
@@ -57,7 +58,7 @@ export default function Profile() {
   const rank = getRank(xp.level, colors)
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    await signOut()
     router.replace('/(auth)/login')
   }
 

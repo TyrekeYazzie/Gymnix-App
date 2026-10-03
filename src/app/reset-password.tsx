@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { signOut } from '@/lib/auth';
 import { validatePassword } from '@/utils/validation';
 import { COLORS, FONT_SIZES, FONT_WEIGHTS, RADIUS, INPUT } from '@/constants/theme';
 
@@ -69,7 +70,7 @@ export default function ResetPassword() {
 
     // The recovery session is single-purpose — sign out and require a
     // fresh login with the new password rather than leaving it active.
-    await supabase.auth.signOut();
+    await signOut();
     Alert.alert('Password updated', 'Please log in with your new password.');
     router.replace('/(auth)/login');
   };
