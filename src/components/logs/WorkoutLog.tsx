@@ -16,7 +16,7 @@ import { getWorkoutCategories } from '@/constants/workoutCategories';
 import { COMMON_EXERCISES } from '@/constants/exercises';
 import { getTodayKey, toDayCategories } from '@/utils/routine';
 import { pickWorkoutPhoto, uploadWorkoutPhoto } from '@/utils/workoutPhotos';
-import { topSetWeight, setDisplayWeight } from '@/lib/workouts';
+import { topSetWeight, setDisplayWeight, parseSetRows } from '@/lib/workouts';
 import { Workout, WorkoutSet, UnlockedAchievement, TemplateExercise } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
 import {
@@ -267,14 +267,10 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
     if (!finalName.trim()) { Alert.alert('Missing Exercise', 'Tap an exercise or type a custom name.'); return; }
     if (!user) return;
 
-    const cleanSets = sets
-      .filter(s => s.reps.trim() && s.weight.trim())
-      .map(s => ({ reps: Number(s.reps), weight: Number(s.weight) }));
-
-    if (cleanSets.some(s => s.reps <= 0 || s.reps > 200 || s.weight < 0 || s.weight > 2000)) {
-      Alert.alert('Invalid Set', 'Check your reps and weight values.');
-      return;
-    }
+    // Stored in kg; a blank weight is a bodyweight set, not a dropped one.
+    const parsed = parseSetRows(sets, isImperial);
+    if ('error' in parsed) { Alert.alert('Check your sets', parsed.error); return; }
+    const cleanSets = parsed.sets;
 
     savingRef.current = true;
     setSaving(true);

@@ -44,6 +44,46 @@ export function parseDecimalInput(input: string): number {
   return /^(\d+(\.\d*)?|\.\d+)$/.test(normalized) ? Number(normalized) : NaN;
 }
 
+const MAX_REPS = 200;
+const MAX_WEIGHT_KG = 1000;
+
+/**
+ * Turns the sheet's set rows (raw text, weight in the display unit) into the
+ * sets to store: weight in kg, tagged `unit: 'kg'`. A row with neither field
+ * filled is skipped; a blank weight means bodyweight (0). Anything that
+ * can't be stored correctly comes back as an error naming the set, rather
+ * than being dropped or saved as NaN.
+ */
+export function parseSetRows(
+  rows: { reps: string; weight: string }[],
+  imperial: boolean,
+): { sets: WorkoutSet[] } | { error: string } {
+  const unit = imperial ? 'lbs' : 'kg';
+  const maxDisplay = Math.floor(kgToDisplay(MAX_WEIGHT_KG, imperial));
+  const sets: WorkoutSet[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const n = i + 1;
+    const repsText = rows[i].reps.trim();
+    const weightText = rows[i].weight.trim();
+    if (!repsText && !weightText) continue;
+
+    if (!repsText) return { error: `Set ${n}: add the number of reps.` };
+    const reps = parseDecimalInput(repsText);
+    if (!Number.isInteger(reps) || reps < 1 || reps > MAX_REPS) {
+      return { error: `Set ${n}: reps must be a whole number from 1 to ${MAX_REPS}.` };
+    }
+
+    const weight = weightText ? parseDecimalInput(weightText) : 0;
+    if (Number.isNaN(weight)) return { error: `Set ${n}: weight must be a number, like 22.5.` };
+    if (weight > maxDisplay) return { error: `Set ${n}: weight must be ${maxDisplay} ${unit} or less.` };
+
+    sets.push({ reps, weight: Math.round(displayToKg(weight, imperial) * 1000) / 1000, unit: 'kg' });
+  }
+
+  return { sets };
+}
+
 // The exercise name that shows up most often in the given workouts (ties go
 // to whichever was logged most recently, assuming newest-first input). Used
 // by the Dashboard progress card to pick one lift to chart, since mixing
