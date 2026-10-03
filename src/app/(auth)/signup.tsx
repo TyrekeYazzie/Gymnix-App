@@ -5,9 +5,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import type { AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { COLORS } from '@/constants/theme';
+import { PRIVACY_URL, TERMS_URL } from '@/constants/links';
 import { validateName, validateEmail, validatePassword, sanitizeInput } from '@/utils/validation';
 
 // Plain-language versions of the sign-up errors people actually hit.
@@ -148,6 +150,17 @@ export default function Signup() {
           }
         </TouchableOpacity>
 
+        <Text style={styles.legal}>
+          By signing up, you agree to our{' '}
+          <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)} accessibilityRole="link">
+            Terms of Service
+          </Text>
+          {' '}and{' '}
+          <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)} accessibilityRole="link">
+            Privacy Policy
+          </Text>.
+        </Text>
+
         <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
           <Text style={styles.link}>Already have an account? Login</Text>
         </TouchableOpacity>
@@ -173,5 +186,7 @@ const styles = StyleSheet.create({
   buttonText: { color: COLORS.textInverse, fontWeight: 'bold', fontSize: 16 },
   error: { color: COLORS.error, marginBottom: 16 },
   hint: { color: COLORS.textMuted, fontSize: 12, marginTop: -8, marginBottom: 16 },
-  link: { color: COLORS.primary, textAlign: 'center', marginTop: 24 }
+  link: { color: COLORS.primary, textAlign: 'center', marginTop: 24 },
+  legal: { color: COLORS.textMuted, fontSize: 12, textAlign: 'center', marginTop: 16, lineHeight: 18 },
+  legalLink: { color: COLORS.primary }
 });

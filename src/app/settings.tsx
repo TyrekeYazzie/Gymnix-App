@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Constants from 'expo-constants';
+import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '@/lib/supabase';
 import { signOut } from '@/lib/auth';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,8 +16,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { deleteAllWorkoutPhotos } from '@/utils/workoutPhotos';
 import { deleteAllAvatars } from '@/utils/avatar';
 import { FONT_SIZES, FONT_WEIGHTS, SPACING, RADIUS, Theme } from '@/constants/theme';
-
-const SUPPORT_EMAIL = 'ifitsupportcenter@gmail.com';
+import { PRIVACY_URL, TERMS_URL, SUPPORT_EMAIL } from '@/constants/links';
 
 function Toggle({ value, onValueChange, disabled, label }: { value: boolean; onValueChange: (v: boolean) => void; disabled?: boolean; label: string }) {
   const { theme } = useTheme();
@@ -305,6 +305,20 @@ export default function Settings() {
             iconColor={colors.neonGreen}
             label="Contact Support"
             onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
+          />
+          <View style={styles.rowDivider} />
+          <SettingsRow
+            icon="shield-checkmark-outline"
+            iconColor={colors.neonBlue}
+            label="Privacy Policy"
+            onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)}
+          />
+          <View style={styles.rowDivider} />
+          <SettingsRow
+            icon="document-text-outline"
+            iconColor={colors.neonBlue}
+            label="Terms of Service"
+            onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)}
           />
           <View style={styles.rowDivider} />
           <SettingsRow icon="information-circle-outline" iconColor={colors.textMuted} label="App Version" value={appVersion} />
