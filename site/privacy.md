@@ -1,11 +1,17 @@
+---
+layout: default
+title: Privacy Policy
+---
+
+<!-- FitnessApp is a working title: if the app is renamed before release,
+     replace every "FitnessApp" below with the final name. -->
+
 # Privacy Policy
 
-**Last updated: September 23, 2026**
+**Last updated: October 3, 2026**
 
 This Privacy Policy explains how FitnessApp ("the App," "we," "us") collects,
-uses, and protects your information. FitnessApp is a working title — if the
-app is renamed before release, replace every instance of "FitnessApp" below
-with the final name.
+uses, and protects your information.
 
 ## Information We Collect
 
@@ -102,6 +108,8 @@ providers, and only as necessary to operate the App on our behalf:
 
 - **Supabase** — database, authentication, and file storage.
 - **Sentry** — crash and error reporting, as described above.
+- **Google (Gmail)** — sends account emails, such as password-reset links,
+  and so receives your email address.
 
 Other users can see only what's described in the Leaderboards and Friends
 sections above.
