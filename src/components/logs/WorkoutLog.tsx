@@ -16,8 +16,8 @@ import { getWorkoutCategories } from '@/constants/workoutCategories';
 import { COMMON_EXERCISES } from '@/constants/exercises';
 import { getTodayKey, toDayCategories } from '@/utils/routine';
 import { pickWorkoutPhoto, uploadWorkoutPhoto } from '@/utils/workoutPhotos';
-import { topSetWeight } from '@/lib/workouts';
-import { Workout, UnlockedAchievement, TemplateExercise } from '@/types';
+import { topSetWeight, setDisplayWeight } from '@/lib/workouts';
+import { Workout, WorkoutSet, UnlockedAchievement, TemplateExercise } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
 import {
   FONT_SIZES, FONT_WEIGHTS,
@@ -112,7 +112,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
     }
     setSets(
       editEntry.sets && editEntry.sets.length > 0
-        ? editEntry.sets.map(s => ({ reps: String(s.reps), weight: String(s.weight) }))
+        ? editEntry.sets.map(s => ({ reps: String(s.reps), weight: String(setDisplayWeight(s, isImperial)) }))
         : [{ reps: '', weight: '' }]
     );
     setDuration(parseInt(editEntry.duration ?? '30', 10) || 30);
@@ -239,7 +239,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
       .maybeSingle();
 
     if (data?.sets?.length) {
-      setSets(data.sets.map((s: { reps: number; weight: number }) => ({ reps: String(s.reps), weight: String(s.weight) })));
+      setSets(data.sets.map((s: WorkoutSet) => ({ reps: String(s.reps), weight: String(setDisplayWeight(s, isImperial)) })));
     } else if (fallback) {
       setSets(Array.from({ length: fallback.sets }, () => ({ reps: String(fallback.reps), weight: '' })));
     } else {
@@ -295,7 +295,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
         if (data) {
           // Workout XP depends on the sets logged, so an edit can change how much
           // was earned — reconcile with just the delta instead of a flat award.
-          const delta = calcWorkoutXP(cleanSets) - calcWorkoutXP(editEntry.sets);
+          const delta = calcWorkoutXP(cleanSets, isImperial) - calcWorkoutXP(editEntry.sets, isImperial);
           if (delta !== 0) await awardXP(user.id, delta);
           await refreshProfile();
 
@@ -325,7 +325,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
 
       if (error) { Alert.alert('Error', error.message); return; }
       if (data) {
-        const xp = calcWorkoutXP(cleanSets);
+        const xp = calcWorkoutXP(cleanSets, isImperial);
         await awardXP(user.id, xp);
         await refreshProfile();
 
@@ -349,7 +349,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
         // prior row for this exact exercise name (no limit — a partial
         // history could produce a false "New PR!" claim, which would be a
         // trust-eroding bug) and compares against the session just saved.
-        const currentTop = topSetWeight(cleanSets);
+        const currentTop = topSetWeight(cleanSets, isImperial);
         let isPR = false;
         if (currentTop > 0) {
           const { data: priorRows } = await supabase
@@ -358,7 +358,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
             .eq('user_id', user.id)
             .eq('name', finalName.trim())
             .neq('id', data.id);
-          const previousBest = (priorRows ?? []).reduce((max, w) => Math.max(max, topSetWeight(w.sets)), 0);
+          const previousBest = (priorRows ?? []).reduce((max, w) => Math.max(max, topSetWeight(w.sets, isImperial)), 0);
           if (currentTop > previousBest) {
             isPR = true;
             setPrBanner({ weight: currentTop, name: finalName.trim() });
@@ -407,7 +407,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
             if (error) { setDeleting(false); Alert.alert('Error', error.message); return; }
             // Only take the XP back if this call actually removed the row — a
             // second, queued confirm deletes nothing and must not deduct again.
-            const xp = calcWorkoutXP(editEntry.sets);
+            const xp = calcWorkoutXP(editEntry.sets, isImperial);
             if (removed?.length && xp !== 0) await awardXP(user.id, -xp);
             await refreshProfile();
             setDeleting(false);

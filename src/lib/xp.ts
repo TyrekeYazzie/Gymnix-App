@@ -1,4 +1,6 @@
 import { supabase } from './supabase';
+import { setDisplayWeight } from './workouts';
+import { WorkoutSet } from '@/types';
 
 export function calcLevel(totalXP: number): number {
   return Math.floor(Math.sqrt(totalXP / 100));
@@ -18,11 +20,14 @@ export function xpProgress(totalXP: number) {
   return { level, current, needed, percent };
 }
 
-export function calcWorkoutXP(sets: { reps: number; weight: number }[]): number {
+// The weight bonus is computed on the weight in the account's display unit,
+// which is what it has always been computed on (sets used to be stored as
+// typed). Keeps XP identical to before now that sets are stored in kg.
+export function calcWorkoutXP(sets: WorkoutSet[], imperial: boolean): number {
   if (!sets || sets.length === 0) return 5;
   return sets.reduce((total, set) => {
     const base = 10;
-    const weightBonus = Math.min(Math.floor(set.weight / 10) * 2, 20);
+    const weightBonus = Math.min(Math.floor(setDisplayWeight(set, imperial) / 10) * 2, 20);
     return total + base + weightBonus;
   }, 0);
 }

@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Svg, { Polyline, Circle } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
 import { topSetWeight, mostLoggedExercise } from '@/lib/workouts';
+import { WorkoutSet } from '@/types';
 import { pickPaceType, paceTrend, formatPace } from '@/lib/cardioTrends';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
@@ -48,7 +49,7 @@ const WORKOUT_FETCH_LIMIT = 60;
 const CARDIO_FETCH_LIMIT = 60;
 
 interface WeightRow { weight_kg: number; created_at: string; }
-interface WorkoutRow { name: string; sets: { reps: number; weight: number }[]; created_at: string; }
+interface WorkoutRow { name: string; sets: WorkoutSet[]; created_at: string; }
 interface CardioRow { type: string; distance_km: number | null; duration: string | null; created_at: string; }
 
 // maps values onto an evenly-spaced x axis within [0, width], scaled to fit
@@ -109,7 +110,7 @@ export default function ProgressPreviewCard() {
           .filter(r => r.name === exercise)
           .slice(0, POINTS_LIMIT)
           .reverse()
-          .map(r => topSetWeight(r.sets))
+          .map(r => topSetWeight(r.sets, isImperial))
       );
     }
 

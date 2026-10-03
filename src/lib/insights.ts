@@ -4,10 +4,12 @@
 // insight here is a fixed comparison (this week vs last week) or a fixed
 // threshold, so the same data always produces the same insights.
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { setDisplayWeight } from './workouts';
+import { WorkoutSet } from '@/types';
 
 export interface WeekWindow { start: Date; end: Date; }
 
-interface WorkoutRow { sets: { reps: number; weight: number }[]; created_at: string; }
+interface WorkoutRow { sets: WorkoutSet[]; created_at: string; }
 interface CardioRow { duration: string | null; distance_km: number | null; created_at: string; }
 interface WaterRow { amount_ml: number; created_at: string; }
 interface MealRow { calories: number | null; created_at: string; }
@@ -15,7 +17,7 @@ interface WeightRow { weight_kg: number; created_at: string; }
 
 export interface PeriodStats {
   workoutCount: number;
-  /** reps × weight summed across every set in the period, in whatever unit was logged. */
+  /** reps × weight summed across every set in the period, in the account's display unit. */
   workoutVolume: number;
   cardioCount: number;
   cardioMinutes: number;
@@ -70,6 +72,7 @@ export function computePeriodStats(
   meals: MealRow[],
   weights: WeightRow[],
   dailyGoalMl: number,
+  imperial: boolean,
 ): PeriodStats {
   const wo = workouts.filter(w => inWindow(w.created_at, window));
   const ca = cardio.filter(c => inWindow(c.created_at, window));
@@ -96,7 +99,7 @@ export function computePeriodStats(
 
   return {
     workoutCount: wo.length,
-    workoutVolume: wo.reduce((sum, w) => sum + (w.sets ?? []).reduce((s, set) => s + set.reps * set.weight, 0), 0),
+    workoutVolume: wo.reduce((sum, w) => sum + (w.sets ?? []).reduce((s, set) => s + set.reps * setDisplayWeight(set, imperial), 0), 0),
     cardioCount: ca.length,
     cardioMinutes: ca.reduce((s, c) => s + parseMinutes(c.duration), 0),
     cardioDistanceKm: ca.reduce((s, c) => s + (c.distance_km ?? 0), 0),

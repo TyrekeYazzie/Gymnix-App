@@ -13,6 +13,7 @@ import { useProfile } from '@/context/ProfileContext';
 import CardioLog, { getCardioTypes, KM_TO_MI, CardioEntry as CardioEditEntry } from '@/components/logs/CardioLog';
 import { DAILY_GOAL_ML } from '@/components/logs/WaterLog';
 import { topSetWeight } from '@/lib/workouts';
+import { WorkoutSet } from '@/types';
 import {
   weeklyCardioMinutes, weeklyWindowStart,
   PACE_TYPES, pickPaceType, paceTrend, formatPace,
@@ -37,7 +38,7 @@ const CARDIO_WEEKS = 8;
 interface WeightEntry { id: string; weight_kg: number; created_at: string; }
 interface WaterEntry { amount_ml: number; created_at: string; }
 interface CardioEntry { id: string; type: string; distance_km: number | null; duration: string | null; calories: number | null; created_at: string; }
-interface WorkoutEntry { id: string; name: string; sets: { reps: number; weight: number }[]; created_at: string; }
+interface WorkoutEntry { id: string; name: string; sets: WorkoutSet[]; created_at: string; }
 interface CardioTrendEntry { type: string; duration: string | null; created_at: string; }
 
 // maps values onto an evenly-spaced x axis within [0, width], scaled to fit [0, height] with a little breathing room
@@ -155,7 +156,7 @@ export default function Progress() {
 
   const exerciseDesc = strengthHistory;
   const exerciseChrono = [...exerciseDesc].reverse();
-  const exerciseValues = exerciseChrono.map(w => topSetWeight(w.sets));
+  const exerciseValues = exerciseChrono.map(w => topSetWeight(w.sets, isImperial));
   const exercisePoints = linePoints(exerciseValues, CHART_WIDTH, CHART_HEIGHT);
   const exercisePolyline = exercisePoints.map(p => `${p.x},${p.y}`).join(' ');
   const currentTop = exerciseValues[exerciseValues.length - 1];
@@ -397,7 +398,7 @@ export default function Progress() {
                     <Ionicons name="barbell-outline" size={16} color={colors.primary} />
                   </View>
                   <View style={styles.listLeft}>
-                    <Text style={styles.listName}>{topSetWeight(entry.sets)} top set</Text>
+                    <Text style={styles.listName}>{topSetWeight(entry.sets, isImperial)} {weightUnit} top set</Text>
                     <Text style={styles.listMeta}>{entry.sets.length} set{entry.sets.length === 1 ? '' : 's'}</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>

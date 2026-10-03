@@ -42,6 +42,13 @@ export interface Profile {
   onboarding_completed_at: string | null;
 }
 
+/** One set in workouts.sets. `unit: 'kg'` means weight is in kg; untagged legacy sets are in the account's units (see setWeightKg). weight 0 = bodyweight. */
+export interface WorkoutSet {
+  reps: number;
+  weight: number;
+  unit?: 'kg';
+}
+
 export interface Workout {
   id: string;
   user_id: string;
@@ -50,7 +57,7 @@ export interface Workout {
   duration: string | null;
   calories: number | null;
   notes: string | null;
-  sets: { reps: number; weight: number }[];
+  sets: WorkoutSet[];
   photo_path: string | null;
   created_at: string;
 }

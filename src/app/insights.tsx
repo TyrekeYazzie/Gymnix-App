@@ -118,12 +118,12 @@ export default function InsightsScreen() {
     ]);
     [w, c, wt, m, wg].forEach(r => { if (r.error) console.error('Failed to load insights data:', r.error.message); });
 
-    setThisWeek(computePeriodStats(thisWindow, w.data ?? [], c.data ?? [], wt.data ?? [], m.data ?? [], wg.data ?? [], DAILY_GOAL_ML));
-    setLastWeek(computePeriodStats(lastWindow, w.data ?? [], c.data ?? [], wt.data ?? [], m.data ?? [], wg.data ?? [], DAILY_GOAL_ML));
+    setThisWeek(computePeriodStats(thisWindow, w.data ?? [], c.data ?? [], wt.data ?? [], m.data ?? [], wg.data ?? [], DAILY_GOAL_ML, isImperial));
+    setLastWeek(computePeriodStats(lastWindow, w.data ?? [], c.data ?? [], wt.data ?? [], m.data ?? [], wg.data ?? [], DAILY_GOAL_ML, isImperial));
 
     getMyWorkoutStreak().then(s => setStreak(s?.current_streak ?? 0));
     setLoading(false);
-  }, [user]);
+  }, [user, isImperial]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
