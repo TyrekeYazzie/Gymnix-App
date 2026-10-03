@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { View, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
+import { View, ActivityIndicator, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useFonts } from 'expo-font';
 import { CormorantGaramond_500Medium_Italic } from '@expo-google-fonts/cormorant-garamond';
 import { Cinzel_600SemiBold } from '@expo-google-fonts/cinzel';
@@ -34,6 +34,17 @@ function Layout() {
   // profile there means "never onboarded", and re-running onboarding would
   // overwrite the real profile with whatever the user re-enters.
   const profileUnavailable = !loading && !!session && !profile && loadFailed;
+  // A password-reset deep link must be allowed to finish no matter what
+  // setup step the account is on, or whether its profile loaded.
+  const inResetPassword = segments[0] === 'reset-password';
+  // The full-screen loader only stands in for the navigator until the app
+  // first becomes ready. After that the navigator must never unmount: later
+  // loading (a sign-in reloading the profile) is drawn over it instead.
+  // Unmounting it remounted every screen, which broke the password reset —
+  // the remounted reset screen re-ran its single-use code exchange and
+  // showed "link expired".
+  const [booted, setBooted] = useState(false);
+  useEffect(() => { if (!loading) setBooted(true); }, [loading]);
 
   const handleRetry = async () => {
     setRetrying(true);
@@ -48,9 +59,6 @@ function Layout() {
     const inTabsGroup = segments[0] === '(tabs)';
     const inOnboarding = segments[0] === 'onboarding';
     const inChooseUsername = segments[0] === 'choose-username';
-    // A password-reset deep link must be allowed to finish no matter what
-    // setup step the account is on.
-    const inResetPassword = segments[0] === 'reset-password';
     // Username comes first (it's how friends find you), then onboarding.
     const needsUsername = !!session && !profile?.username;
     const needsOnboarding = !!session && !needsUsername && !profile?.onboarding_completed_at;
@@ -68,63 +76,68 @@ function Layout() {
     }
   }, [session, loading, profileUnavailable, segments, profile]);
 
+  const loadingScreen = (
+    <View style={{
+      flex: 1,
+      backgroundColor: theme.colors.bgPrimary,
+      justifyContent: 'center',
+      alignItems: 'center'
+    }}>
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+      <Text style={{
+        color: theme.colors.textSecondary,
+        marginTop: SPACING.lg,
+      }}>
+        Loading...
+      </Text>
+    </View>
+  );
+
   // Always wrap everything in SafeAreaProvider
   // including the loading screen
   return (
     <SafeAreaProvider>
-      {loading ? (
-        <View style={{
-          flex: 1,
-          backgroundColor: theme.colors.bgPrimary,
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={{
-            color: theme.colors.textSecondary,
-            marginTop: SPACING.lg,
-          }}>
-            Loading...
-          </Text>
-        </View>
-      ) : profileUnavailable ? (
-        <View style={{
-          flex: 1,
-          backgroundColor: theme.colors.bgPrimary,
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: SPACING.xl,
-        }}>
-          <Text style={{ color: theme.colors.textPrimary, fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, marginBottom: SPACING.sm }}>
-            Couldn't load your profile
-          </Text>
-          <Text style={{ color: theme.colors.textSecondary, textAlign: 'center', marginBottom: SPACING.xl }}>
-            Check your connection and try again.
-          </Text>
-          <TouchableOpacity
-            onPress={handleRetry}
-            disabled={retrying}
-            activeOpacity={0.8}
-            style={{
-              backgroundColor: theme.colors.primary,
-              borderRadius: RADIUS.md,
-              paddingVertical: SPACING.md,
-              paddingHorizontal: SPACING.xxl,
-              opacity: retrying ? 0.6 : 1,
-            }}
-          >
-            {retrying
-              ? <ActivityIndicator color={theme.colors.textInverse} />
-              : <Text style={{ color: theme.colors.textInverse, fontWeight: FONT_WEIGHTS.bold }}>Try again</Text>}
-          </TouchableOpacity>
-        </View>
-      ) : (
-        // A real Stack (rather than a bare Slot) keeps (tabs) — and whichever
-        // tab was active — mounted underneath pushed screens like /templates
-        // or /achievements, so router.back() restores it instead of
-        // recreating the tabs group fresh on its first tab (Dashboard).
-        // Matches the pattern (auth)/_layout.tsx already uses one level down.
-        <Stack screenOptions={{ headerShown: false }} />
+      {!booted && loading ? loadingScreen : (
+        <>
+          {/* A real Stack (rather than a bare Slot) keeps (tabs) — and whichever
+              tab was active — mounted underneath pushed screens like /templates
+              or /achievements, so router.back() restores it instead of
+              recreating the tabs group fresh on its first tab (Dashboard).
+              Matches the pattern (auth)/_layout.tsx already uses one level down. */}
+          <Stack screenOptions={{ headerShown: false }} />
+          {loading && <View style={StyleSheet.absoluteFill}>{loadingScreen}</View>}
+          {profileUnavailable && !inResetPassword && (
+            <View style={[StyleSheet.absoluteFill, {
+              backgroundColor: theme.colors.bgPrimary,
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: SPACING.xl,
+            }]}>
+              <Text style={{ color: theme.colors.textPrimary, fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.black, marginBottom: SPACING.sm }}>
+                Couldn't load your profile
+              </Text>
+              <Text style={{ color: theme.colors.textSecondary, textAlign: 'center', marginBottom: SPACING.xl }}>
+                Check your connection and try again.
+              </Text>
+              <TouchableOpacity
+                onPress={handleRetry}
+                disabled={retrying}
+                activeOpacity={0.8}
+                style={{
+                  backgroundColor: theme.colors.primary,
+                  borderRadius: RADIUS.md,
+                  paddingVertical: SPACING.md,
+                  paddingHorizontal: SPACING.xxl,
+                  opacity: retrying ? 0.6 : 1,
+                }}
+              >
+                {retrying
+                  ? <ActivityIndicator color={theme.colors.textInverse} />
+                  : <Text style={{ color: theme.colors.textInverse, fontWeight: FONT_WEIGHTS.bold }}>Try again</Text>}
+              </TouchableOpacity>
+            </View>
+          )}
+        </>
       )}
     </SafeAreaProvider>
   );
