@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useProfile } from '@/context/ProfileContext'
 import { useTheme } from '@/context/ThemeContext'
+import { validateName, sanitizeInput } from '@/utils/validation'
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme
@@ -100,6 +101,14 @@ export default function EditProfile() {
   const saveProfile = async () => {
     if (!user) return
 
+    // Same rule as sign-up: the name shows on public leaderboards.
+    const cleanName = sanitizeInput(name)
+    const nameCheck = validateName(cleanName)
+    if (!nameCheck.isValid) {
+      Alert.alert('Invalid Name', nameCheck.error!)
+      return
+    }
+
     const ageNum = Number(age)
     if (age && (isNaN(ageNum) || ageNum < 1 || ageNum > 120)) {
       Alert.alert('Invalid Age', 'Please enter an age between 1 and 120')
@@ -118,8 +127,9 @@ export default function EditProfile() {
       .from('profiles')
       .upsert({
         id: user.id,
-        full_name: name,
-        age: Math.round(ageNum),
+        full_name: cleanName,
+        // A cleared age field means "not set", not 0.
+        age: age ? Math.round(ageNum) : null,
         // height_cm is an integer column — the imperial ft/in -> cm
         // conversion (totalIn * 2.54) almost always lands on a decimal
         // (e.g. 5'7" -> 170.18), which Postgres's integer parser rejects

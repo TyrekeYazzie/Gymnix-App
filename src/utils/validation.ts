@@ -90,10 +90,13 @@ export function validateName(name: string): { isValid: boolean; error?: string }
     return { isValid: false, error: 'Name must not exceed 50 characters' }
   }
 
-  // No special characters allowed (letters, numbers, spaces only)
-  const nameRegex = /^[a-zA-Z0-9\s]+$/
+  // Letters from any language (José, Zoë, Nguyễn, 李), digits, spaces, and the
+  // punctuation real names use: O'Brien, Mary-Jane, Jr. Must start with a
+  // letter or digit. Names show on public leaderboards, so anything else
+  // (symbols, emoji, markup) is still rejected.
+  const nameRegex = /^[\p{L}\p{N}][\p{L}\p{M}\p{N} '’.-]*$/u
   if (!nameRegex.test(trimmedName)) {
-    return { isValid: false, error: 'Name can only contain letters, numbers, and spaces' }
+    return { isValid: false, error: "Name can only contain letters, numbers, spaces, and ' - ." }
   }
 
   return { isValid: true }

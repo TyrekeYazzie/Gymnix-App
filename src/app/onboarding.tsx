@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/context/ThemeContext';
+import { validateName, sanitizeInput } from '@/utils/validation';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme, Colors
@@ -100,6 +101,13 @@ export default function OnboardingScreen() {
 
   const finish = async () => {
     if (!user) return;
+    // Optional here (sign-up already set one), but if changed it must pass the
+    // same rule as sign-up, since names show on public leaderboards.
+    const cleanName = sanitizeInput(name);
+    if (cleanName) {
+      const nameCheck = validateName(cleanName);
+      if (!nameCheck.isValid) { Alert.alert('Check your name', nameCheck.error!); return; }
+    }
     setSaving(true);
 
     const ageNum = Number(age);
@@ -107,7 +115,7 @@ export default function OnboardingScreen() {
       .from('profiles')
       .upsert({
         id: user.id,
-        full_name: name.trim() || profile?.full_name || null,
+        full_name: cleanName || profile?.full_name || null,
         age: age && !isNaN(ageNum) && ageNum > 0 && ageNum <= 120 ? Math.round(ageNum) : null,
         height_cm: Math.round(heightCm),
         weight_kg: weightKg,
