@@ -8,7 +8,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
-import { awardXP, calcCardioXP } from '@/lib/xp';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
 import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
 import { UnlockedAchievement } from '@/types';
@@ -237,11 +236,8 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
 
         if (error) { Alert.alert('Error', error.message); return; }
         if (data) {
-          // Cardio XP depends on duration, so an edit can change how much was
-          // earned — reconcile with just the delta instead of a flat award.
-          const oldDuration = parseInt(editEntry.duration ?? '0', 10) || 0;
-          const delta = calcCardioXP(duration) - calcCardioXP(oldDuration);
-          if (delta !== 0) await awardXP(user.id, delta);
+          // XP is awarded by the database when the row changes (see
+          // supabase/migrations/20261003000000_server_side_xp.sql); refresh to show it.
           await refreshProfile();
           onSaved(data); reset(); onClose();
         }
@@ -267,8 +263,6 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
       }
 
       if (data) {
-        const xp = calcCardioXP(duration);
-        await awardXP(user.id, xp);
         await refreshProfile();
 
         // Achievement check is new-logs-only, matching the same reasoning as
@@ -308,12 +302,8 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
           onPress: async () => {
             if (!user) return;
             setDeleting(true);
-            const { data: removed, error } = await supabase.from('cardio_logs').delete().eq('id', editEntry.id).select('id');
+            const { error } = await supabase.from('cardio_logs').delete().eq('id', editEntry.id);
             if (error) { setDeleting(false); Alert.alert('Error', error.message); return; }
-            // Only take the XP back if this call actually removed the row.
-            const oldDuration = parseInt(editEntry.duration ?? '0', 10) || 0;
-            const xp = calcCardioXP(oldDuration);
-            if (removed?.length && xp !== 0) await awardXP(user.id, -xp);
             await refreshProfile();
             setDeleting(false);
             onDeleted?.(editEntry.id);

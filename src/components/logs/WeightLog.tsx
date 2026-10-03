@@ -8,7 +8,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
-import { awardXP, XP_WEIGHT } from '@/lib/xp';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
 import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
 import { UnlockedAchievement } from '@/types';
@@ -170,11 +169,9 @@ export default function WeightLog({ visible, onClose, onSaved, editEntry }: Prop
           onPress: async () => {
             if (!user) return;
             setDeletingId(entry.id!);
-            const { data: removed, error } = await supabase.from('weight_logs').delete().eq('id', entry.id).select('id');
+            const { error } = await supabase.from('weight_logs').delete().eq('id', entry.id);
             setDeletingId(null);
             if (error) { Alert.alert('Error', error.message); return; }
-            // Only take the XP back if this call actually removed the row.
-            if (removed?.length) await awardXP(user.id, -XP_WEIGHT);
             await refreshProfile();
             // Deleted the one entry this sheet was opened to edit: nothing left to do here.
             if (editEntry?.id === entry.id) { handleClose(); return; }
@@ -217,8 +214,6 @@ export default function WeightLog({ visible, onClose, onSaved, editEntry }: Prop
 
         if (error) { Alert.alert('Error', error.message); return; }
         if (data) {
-          // Flat XP_WEIGHT doesn't depend on the value, so editing never
-          // changes how much was already earned — no award here.
           onSaved(data);
           setEditingEntry(null);
           setNotes('');
@@ -235,7 +230,6 @@ export default function WeightLog({ visible, onClose, onSaved, editEntry }: Prop
 
       if (error) { Alert.alert('Error', error.message); return; }
       if (data) {
-        await awardXP(user.id, XP_WEIGHT);
         await refreshProfile();
         setRecentEntries(p => [data, ...p].slice(0, 5));
 

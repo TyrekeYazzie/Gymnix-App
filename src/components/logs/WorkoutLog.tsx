@@ -9,7 +9,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
-import { awardXP, calcWorkoutXP } from '@/lib/xp';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
 import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
 import { getWorkoutCategories } from '@/constants/workoutCategories';
@@ -289,10 +288,8 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
 
         if (error) { Alert.alert('Error', error.message); return; }
         if (data) {
-          // Workout XP depends on the sets logged, so an edit can change how much
-          // was earned — reconcile with just the delta instead of a flat award.
-          const delta = calcWorkoutXP(cleanSets, isImperial) - calcWorkoutXP(editEntry.sets, isImperial);
-          if (delta !== 0) await awardXP(user.id, delta);
+          // XP is awarded by the database when the row changes (see
+          // supabase/migrations/20261003000000_server_side_xp.sql); refresh to show it.
           await refreshProfile();
 
           let saved = data;
@@ -321,8 +318,6 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
 
       if (error) { Alert.alert('Error', error.message); return; }
       if (data) {
-        const xp = calcWorkoutXP(cleanSets, isImperial);
-        await awardXP(user.id, xp);
         await refreshProfile();
 
         let saved = data;
@@ -399,12 +394,8 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
           onPress: async () => {
             if (!user) return;
             setDeleting(true);
-            const { data: removed, error } = await supabase.from('workouts').delete().eq('id', editEntry.id).select('id');
+            const { error } = await supabase.from('workouts').delete().eq('id', editEntry.id);
             if (error) { setDeleting(false); Alert.alert('Error', error.message); return; }
-            // Only take the XP back if this call actually removed the row — a
-            // second, queued confirm deletes nothing and must not deduct again.
-            const xp = calcWorkoutXP(editEntry.sets, isImperial);
-            if (removed?.length && xp !== 0) await awardXP(user.id, -xp);
             await refreshProfile();
             setDeleting(false);
             onDeleted?.(editEntry.id);

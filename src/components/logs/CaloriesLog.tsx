@@ -10,7 +10,6 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
-import { awardXP, XP_MEAL } from '@/lib/xp';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
 import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
 import { nutritionTargetsOrDefault } from '@/lib/nutrition';
@@ -282,8 +281,6 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
 
         if (error) { Alert.alert('Error', error.message); return; }
         if (data) {
-          // Flat XP-per-meal (XP_MEAL) doesn't depend on the calorie value, so
-          // an edit never changes how much XP was already earned — no award here.
           setTodayCalories(p => p - (editEntry.calories ?? 0) + calories);
           onSaved(data); reset(); onClose();
         }
@@ -306,7 +303,6 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
 
       if (error) { Alert.alert('Error', error.message); return; }
       if (data) {
-        await awardXP(user.id, XP_MEAL);
         await refreshProfile();
         setTodayCalories(p => p + calories);
 
@@ -349,12 +345,9 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
             setDeleting(true);
             const { data: removed, error } = await supabase.from('calorie_logs').delete().eq('id', editEntry.id).select('id');
             if (error) { setDeleting(false); Alert.alert('Error', error.message); return; }
-            // Only reverse the XP and today's total if this call actually
-            // removed the row — a second, queued confirm deletes nothing.
-            if (removed?.length) {
-              await awardXP(user.id, -XP_MEAL);
-              setTodayCalories(p => p - (editEntry.calories ?? 0));
-            }
+            // Only adjust today's total if this call actually removed the
+            // row — a second, queued confirm deletes nothing.
+            if (removed?.length) setTodayCalories(p => p - (editEntry.calories ?? 0));
             await refreshProfile();
             setDeleting(false);
             onDeleted?.(editEntry.id);
