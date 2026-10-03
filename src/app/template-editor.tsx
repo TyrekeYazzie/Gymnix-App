@@ -60,6 +60,9 @@ export default function TemplateEditor() {
   }, [id]);
 
   const activeCat = WORKOUT_CATEGORIES.find(c => c.name === exCategory)!;
+  const activeCatLabel = exCategory.charAt(0) + exCategory.slice(1).toLowerCase();
+  // What "Add" would add right now; the button stays disabled until there is one.
+  const pickedExercise = exCustomName.trim() || exName;
 
   const handleCategoryChange = (cat: string) => {
     setExCategory(cat);
@@ -228,6 +231,9 @@ export default function TemplateEditor() {
           {/* Add-exercise builder */}
           <Text style={styles.sectionTitle}>Add an exercise</Text>
           <View style={styles.card}>
+            {/* Two steps, labelled so the muscle groups don't read as exercises:
+                the group pills only filter the exercise chips below them. */}
+            <Text style={styles.label}>1 · Muscle group</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.md }}>
               <View style={styles.categoryRow}>
                 {WORKOUT_CATEGORIES.map((c) => (
@@ -239,6 +245,9 @@ export default function TemplateEditor() {
                     ]}
                     onPress={() => handleCategoryChange(c.name)}
                     activeOpacity={0.75}
+                    accessibilityRole="tab"
+                    accessibilityLabel={`${c.name} exercises`}
+                    accessibilityState={{ selected: exCategory === c.name }}
                   >
                     <Ionicons name={c.icon} size={14} color={exCategory === c.name ? colors.textInverse : c.color} />
                     <Text style={[styles.categoryName, exCategory === c.name && { color: colors.textInverse }]}>
@@ -249,6 +258,7 @@ export default function TemplateEditor() {
               </View>
             </ScrollView>
 
+            <Text style={styles.label}>2 · {activeCatLabel} exercises</Text>
             <View style={styles.exerciseGrid}>
               {(COMMON_EXERCISES[exCategory] ?? []).map((ex) => {
                 const isSelected = exName === ex && !exCustomName.trim();
@@ -258,6 +268,8 @@ export default function TemplateEditor() {
                     style={[styles.exerciseChip, isSelected && { backgroundColor: activeCat.color + '22', borderColor: activeCat.color }]}
                     onPress={() => { setExName(ex); setExCustomName(''); }}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
                   >
                     <Text style={[styles.exerciseChipText, isSelected && { color: activeCat.color, fontWeight: FONT_WEIGHTS.bold }]}>
                       {ex}
@@ -322,9 +334,18 @@ export default function TemplateEditor() {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.addExerciseButton} onPress={handleAddExercise} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={[styles.addExerciseButton, !pickedExercise && { opacity: 0.4 }]}
+              onPress={handleAddExercise}
+              disabled={!pickedExercise}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !pickedExercise }}
+            >
               <Ionicons name="add" size={16} color={colors.primary} />
-              <Text style={styles.addExerciseButtonText}>Add to Template</Text>
+              <Text style={styles.addExerciseButtonText} numberOfLines={1}>
+                {pickedExercise ? `Add ${pickedExercise}` : 'Pick an exercise above'}
+              </Text>
             </TouchableOpacity>
           </View>
 
