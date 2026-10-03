@@ -9,6 +9,9 @@ import { supabase } from '@/lib/supabase';
 import { validatePassword } from '@/utils/validation';
 import { COLORS, FONT_SIZES, FONT_WEIGHTS, RADIUS, INPUT } from '@/constants/theme';
 
+// Module-level so it survives this screen unmounting and remounting.
+let exchangedCode: string | null = null;
+
 export default function ResetPassword() {
   const router = useRouter();
   const { code } = useLocalSearchParams<{ code?: string }>();
@@ -26,9 +29,21 @@ export default function ResetPassword() {
         setExchanging(false);
         return;
       }
+      // The code is single-use (supabase deletes its PKCE verifier after the
+      // first exchange). If this screen remounts after exchanging it, the
+      // recovery session it created is already in place: reuse that rather
+      // than fail a second exchange and wrongly report the link as expired.
+      if (code === exchangedCode) {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) setLinkError('This reset link has expired or already been used. Request a new one from the login screen.');
+        setExchanging(false);
+        return;
+      }
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) {
         setLinkError('This reset link has expired or already been used. Request a new one from the login screen.');
+      } else {
+        exchangedCode = code;
       }
       setExchanging(false);
     })();
