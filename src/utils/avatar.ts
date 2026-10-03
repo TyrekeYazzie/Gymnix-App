@@ -3,6 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { File } from 'expo-file-system';
 import { supabase } from '@/lib/supabase';
+import { listAllInFolder, removeInBatches } from '@/utils/storageFolders';
 
 const BUCKET = 'avatars';
 
@@ -105,17 +106,12 @@ export async function uploadAvatar(userId: string, image: PickedImage): Promise<
 // deletion (storage isn't covered by the auth.users cascade — same reason
 // as deleteAllWorkoutPhotos). Best-effort: logs instead of throwing.
 export async function deleteAllAvatars(userId: string, keepPath?: string): Promise<void> {
-  const { data, error } = await supabase.storage.from(BUCKET).list(userId);
-  if (error) {
-    console.error('Failed to list avatars for cleanup:', error.message);
-    return;
-  }
-  const paths = (data ?? [])
-    .map((f) => `${userId}/${f.name}`)
+  const { names, error } = await listAllInFolder(BUCKET, userId);
+  if (error) console.error('Failed to list avatars for cleanup:', error);
+  const paths = names
+    .map((name) => `${userId}/${name}`)
     .filter((p) => p !== keepPath);
-  if (paths.length === 0) return;
-  const { error: removeError } = await supabase.storage.from(BUCKET).remove(paths);
-  if (removeError) console.error('Failed to delete old avatars:', removeError.message);
+  await removeInBatches(BUCKET, paths);
 }
 
 // Public bucket, so no signing — the path maps straight to a cacheable URL.

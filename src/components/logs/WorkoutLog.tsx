@@ -14,7 +14,7 @@ import AchievementUnlockBanner from '@/components/AchievementUnlockBanner';
 import { getWorkoutCategories } from '@/constants/workoutCategories';
 import { COMMON_EXERCISES } from '@/constants/exercises';
 import { getTodayKey, toDayCategories } from '@/utils/routine';
-import { pickWorkoutPhoto, uploadWorkoutPhoto } from '@/utils/workoutPhotos';
+import { pickWorkoutPhoto, uploadWorkoutPhoto, removeWorkoutPhoto } from '@/utils/workoutPhotos';
 import { topSetWeight, setDisplayWeight, parseSetRows } from '@/lib/workouts';
 import { Workout, WorkoutSet, UnlockedAchievement, TemplateExercise } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
@@ -396,6 +396,9 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
             setDeleting(true);
             const { error } = await supabase.from('workouts').delete().eq('id', editEntry.id);
             if (error) { setDeleting(false); Alert.alert('Error', error.message); return; }
+            // The photo lives in Storage, outside the row: delete it too so it
+            // doesn't outlive the workout it belonged to.
+            if (editEntry.photo_path) await removeWorkoutPhoto(editEntry.photo_path);
             await refreshProfile();
             setDeleting(false);
             onDeleted?.(editEntry.id);

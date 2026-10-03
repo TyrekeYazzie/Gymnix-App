@@ -2,6 +2,7 @@ import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { File } from 'expo-file-system';
 import { supabase } from '@/lib/supabase';
+import { listAllInFolder, removeInBatches } from '@/utils/storageFolders';
 
 const BUCKET = 'workout-photos';
 
@@ -85,17 +86,16 @@ export async function uploadWorkoutPhoto(
 // Best-effort: failures are logged, not thrown, so a storage hiccup never
 // blocks the user from actually deleting their account.
 export async function deleteAllWorkoutPhotos(userId: string): Promise<void> {
-  const { data, error } = await supabase.storage.from(BUCKET).list(userId);
-  if (error) {
-    console.error('Failed to list workout photos for deletion:', error.message);
-    return;
-  }
-  if (!data || data.length === 0) return;
-  const paths = data.map((file) => `${userId}/${file.name}`);
-  const { error: removeError } = await supabase.storage.from(BUCKET).remove(paths);
-  if (removeError) {
-    console.error('Failed to delete workout photos:', removeError.message);
-  }
+  const { names, error } = await listAllInFolder(BUCKET, userId);
+  if (error) console.error('Failed to list workout photos for deletion:', error);
+  // Remove whatever was listed even if a later page failed.
+  await removeInBatches(BUCKET, names.map((name) => `${userId}/${name}`));
+}
+
+// Deletes one workout's photo when the workout itself is deleted, so the
+// image doesn't outlive the log it belonged to. Best effort, like the above.
+export async function removeWorkoutPhoto(path: string): Promise<void> {
+  await removeInBatches(BUCKET, [path]);
 }
 
 // Batch-resolves storage paths to short-lived signed URLs for display.
