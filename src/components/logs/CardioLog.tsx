@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
+import { logDay, logTimestamp } from '@/utils/logDay';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
@@ -59,11 +60,13 @@ interface Props {
   /** When set, the sheet edits this session in place instead of logging a new one. */
   editEntry?: CardioEntry | null;
   onDeleted?: (id: string) => void;
+  /** From the Calendar: a new log is saved on this day (up to 7 days back) instead of now. */
+  logDate?: Date | null;
 }
 
 export const KM_TO_MI = 0.621371;
 
-export default function CardioLog({ visible, onClose, onSaved, editEntry, onDeleted }: Props) {
+export default function CardioLog({ visible, onClose, onSaved, editEntry, onDeleted, logDate }: Props) {
   const { user } = useAuth();
   const { profile, isImperial, refreshProfile } = useProfile();
   const { theme } = useTheme();
@@ -252,6 +255,7 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
           distance_km: distanceKm,
           duration: `${duration} min`,
           calories,
+          created_at: logTimestamp(logDate),
         })
         .select()
         .single();
@@ -332,7 +336,7 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
               <View style={styles.handleBar} />
             </View>
             <View style={styles.titleRow}>
-              <Text style={styles.title}>{isEditing ? 'Edit Cardio' : 'Log Cardio'}</Text>
+              <Text style={styles.title}>{isEditing ? 'Edit Cardio' : logDate ? `Log Cardio · ${logDay(logTimestamp(logDate)).label}` : 'Log Cardio'}</Text>
               {isEditing && (
                 <TouchableOpacity
                   onPress={handleDelete}

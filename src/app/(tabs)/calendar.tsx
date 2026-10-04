@@ -15,6 +15,8 @@ import WorkoutLog from '@/components/logs/WorkoutLog';
 import CaloriesLog from '@/components/logs/CaloriesLog';
 import WaterLog from '@/components/logs/WaterLog';
 import WeightLog from '@/components/logs/WeightLog';
+import QuickLogMenu from '@/components/QuickLogMenu';
+import { canLogOnDay, MAX_BACKDATE_DAYS } from '@/utils/logDay';
 import { getSignedPhotoUrls } from '@/utils/workoutPhotos';
 import { Workout, CardioLogEntry, WaterLogEntry, WeightLogEntry, Meal } from '@/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -123,7 +125,14 @@ export default function CalendarScreen() {
   // close reloads the month, which covers saves, deletes and cancels alike
   // (water/weight deletes happen inside their sheets with no callback).
   const [editing, setEditing] = useState<EditTarget | null>(null);
-  const closeEditor = () => { setEditing(null); emitLogsChanged(); };
+  // "Add log" on the selected day: pick a type in the orb menu, then that
+  // sheet opens with the day as its logDate (today or up to 7 days back).
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [adding, setAdding] = useState<LogType | null>(null);
+  const ORB_TO_TYPE: Record<string, LogType> = { workout: 'workout', cardio: 'cardio', water: 'water', weight: 'weight', calories: 'meal' };
+  const closeEditor = () => { setEditing(null); setAdding(null); emitLogsChanged(); };
+  const open = (type: LogType) => editing?.type === type || adding === type;
+  const addDate = (type: LogType) => (adding === type ? selected : null);
   const formatTime = (dateStr: string) =>
     new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
@@ -293,9 +302,25 @@ export default function CalendarScreen() {
         </View>
 
         {/* Selected day detail section title stays fixed with the grid above it */}
-        <Text style={styles.sectionTitle}>
-          {selected.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </Text>
+        <View style={styles.dayHeader}>
+          <Text style={[styles.sectionTitle, styles.dayHeaderTitle]}>
+            {selected.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </Text>
+          {canLogOnDay(selected) ? (
+            <TouchableOpacity
+              style={styles.addLogButton}
+              onPress={() => setAddMenuOpen(true)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Add a log for ${selected.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`}
+            >
+              <Ionicons name="add" size={14} color={colors.primary} />
+              <Text style={styles.addLogText}>Add log</Text>
+            </TouchableOpacity>
+          ) : selected < new Date() ? (
+            <Text style={styles.addLogHint}>Logs can be added up to {MAX_BACKDATE_DAYS} days back</Text>
+          ) : null}
+        </View>
       </View>
 
       <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
@@ -446,37 +471,48 @@ export default function CalendarScreen() {
 
       {/* Edit sheets for the selected day's entries */}
       <WorkoutLog
-        visible={editing?.type === 'workout'}
+        visible={open('workout')}
+        logDate={addDate('workout')}
         editEntry={editing?.type === 'workout' ? editing.entry : null}
         onClose={closeEditor}
         onSaved={() => {}}
         onDeleted={() => {}}
       />
       <CardioLog
-        visible={editing?.type === 'cardio'}
+        visible={open('cardio')}
+        logDate={addDate('cardio')}
         editEntry={editing?.type === 'cardio' ? editing.entry : null}
         onClose={closeEditor}
         onSaved={() => {}}
         onDeleted={() => {}}
       />
       <CaloriesLog
-        visible={editing?.type === 'meal'}
+        visible={open('meal')}
+        logDate={addDate('meal')}
         editEntry={editing?.type === 'meal' ? editing.entry : null}
         onClose={closeEditor}
         onSaved={() => {}}
         onDeleted={() => {}}
       />
       <WaterLog
-        visible={editing?.type === 'water'}
+        visible={open('water')}
+        logDate={addDate('water')}
         editEntry={editing?.type === 'water' ? editing.entry : null}
         onClose={closeEditor}
         onSaved={() => {}}
       />
       <WeightLog
-        visible={editing?.type === 'weight'}
+        visible={open('weight')}
+        logDate={addDate('weight')}
         editEntry={editing?.type === 'weight' ? editing.entry : null}
         onClose={closeEditor}
         onSaved={() => {}}
+      />
+
+      <QuickLogMenu
+        visible={addMenuOpen}
+        onClose={() => setAddMenuOpen(false)}
+        onSelect={(key) => { setAddMenuOpen(false); setAdding(ORB_TO_TYPE[key] ?? null); }}
       />
 
       {/* Photo viewer — dark backdrop closes, tapping the photo advances to the next one */}
@@ -586,6 +622,11 @@ function makeStyles(theme: Theme) {
   dot: { width: 5, height: 5, borderRadius: RADIUS.full },
 
   sectionTitle: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: colors.textMuted, letterSpacing: 0.5, marginBottom: SPACING.md },
+  dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.md },
+  dayHeaderTitle: { marginBottom: 0, flexShrink: 1 },
+  addLogButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: RADIUS.full, borderWidth: 1, borderColor: colors.primary },
+  addLogText: { fontSize: FONT_SIZES.xs, fontWeight: FONT_WEIGHTS.bold, color: colors.primary },
+  addLogHint: { fontSize: FONT_SIZES.xs, color: colors.textMuted, flexShrink: 1, textAlign: 'right', marginLeft: SPACING.sm },
 
   detailCard: { marginBottom: SPACING.md },
   detailHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },

@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
+import { logDay, logTimestamp } from '@/utils/logDay';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
@@ -29,9 +30,11 @@ interface Props {
   onSaved: (log: any) => void;
   /** When set, the sheet opens editing this entry (any day, e.g. from the Calendar) instead of logging a new one. */
   editEntry?: WeightEntry | null;
+  /** From the Calendar: a new log is saved on this day (up to 7 days back) instead of now. */
+  logDate?: Date | null;
 }
 
-export default function WeightLog({ visible, onClose, onSaved, editEntry }: Props) {
+export default function WeightLog({ visible, onClose, onSaved, editEntry, logDate }: Props) {
   const { user } = useAuth();
   const { profile, isImperial, refreshProfile } = useProfile();
   const { theme } = useTheme();
@@ -224,7 +227,7 @@ export default function WeightLog({ visible, onClose, onSaved, editEntry }: Prop
 
       const { data, error } = await supabase
         .from('weight_logs')
-        .insert({ user_id: user.id, weight_kg: weightKg, notes })
+        .insert({ user_id: user.id, weight_kg: weightKg, notes, created_at: logTimestamp(logDate) })
         .select()
         .single();
 
@@ -276,7 +279,7 @@ export default function WeightLog({ visible, onClose, onSaved, editEntry }: Prop
               <View style={styles.handleBar} />
             </View>
             <View style={styles.titleRow}>
-              <Text style={styles.title}>{editingEntry ? 'Edit Weight' : 'Log Weight'}</Text>
+              <Text style={styles.title}>{editingEntry ? 'Edit Weight' : logDate ? `Log Weight · ${logDay(logTimestamp(logDate)).label}` : 'Log Weight'}</Text>
               {editingEntry && (
                 <View style={styles.editActions}>
                   <TouchableOpacity

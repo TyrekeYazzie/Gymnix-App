@@ -7,7 +7,7 @@ import {
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
-import { logDay } from '@/utils/logDay';
+import { logDay, logTimestamp } from '@/utils/logDay';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
@@ -54,9 +54,11 @@ interface Props {
   onSaved: (log: any) => void;
   /** When set, the sheet opens editing this entry (any day, e.g. from the Calendar) instead of logging a new one. */
   editEntry?: WaterEntry | null;
+  /** From the Calendar: a new log is saved on this day (up to 7 days back) instead of now. */
+  logDate?: Date | null;
 }
 
-export default function WaterLog({ visible, onClose, onSaved, editEntry }: Props) {
+export default function WaterLog({ visible, onClose, onSaved, editEntry, logDate }: Props) {
   const { user } = useAuth();
   const { isImperial, refreshProfile } = useProfile();
   const { theme } = useTheme();
@@ -149,7 +151,7 @@ export default function WaterLog({ visible, onClose, onSaved, editEntry }: Props
     }
   }, [visible]);
 
-  const day = logDay(editEntry?.created_at);
+  const day = logDay(editEntry?.created_at ?? logTimestamp(logDate));
 
   const loadTodayTotal = async () => {
     if (!user) return;
@@ -253,7 +255,7 @@ export default function WaterLog({ visible, onClose, onSaved, editEntry }: Props
 
       const { data, error } = await supabase
         .from('water_logs')
-        .insert({ user_id: user.id, amount_ml: amountMl })
+        .insert({ user_id: user.id, amount_ml: amountMl, created_at: logTimestamp(logDate) })
         .select()
         .single();
 
@@ -310,7 +312,7 @@ export default function WaterLog({ visible, onClose, onSaved, editEntry }: Props
               <View style={styles.handleBar} />
             </View>
             <View style={styles.titleRow}>
-              <Text style={styles.title}>{editingEntry ? 'Edit Water' : 'Log Water'}</Text>
+              <Text style={styles.title}>{editingEntry ? 'Edit Water' : logDate ? `Log Water · ${day.label}` : 'Log Water'}</Text>
               {editingEntry && (
                 <View style={styles.editActions}>
                   <TouchableOpacity

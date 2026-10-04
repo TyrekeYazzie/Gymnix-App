@@ -7,6 +7,7 @@ import {
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
+import { logDay, logTimestamp } from '@/utils/logDay';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
@@ -43,9 +44,11 @@ interface Props {
    * sequence (see the startTemplateId handling in (tabs)/workouts.tsx). Mutually
    * exclusive with editEntry — editing always wins if both are somehow set. */
   templateStep?: { exercise: TemplateExercise; index: number; total: number; templateName: string } | null;
+  /** From the Calendar: a new log is saved on this day (up to 7 days back) instead of now. */
+  logDate?: Date | null;
 }
 
-export default function WorkoutLog({ visible, onClose, onSaved, initialCategory, editEntry, onDeleted, templateStep }: Props) {
+export default function WorkoutLog({ visible, onClose, onSaved, initialCategory, editEntry, onDeleted, templateStep, logDate }: Props) {
   const { user } = useAuth();
   const { profile, isImperial, refreshProfile } = useProfile();
   const { theme } = useTheme();
@@ -312,7 +315,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
 
       const { data, error } = await supabase
         .from('workouts')
-        .insert({ user_id: user.id, name: finalName.trim(), category, duration: `${duration} min`, calories: 0, sets: cleanSets })
+        .insert({ user_id: user.id, name: finalName.trim(), category, duration: `${duration} min`, calories: 0, sets: cleanSets, created_at: logTimestamp(logDate) })
         .select()
         .single();
 
@@ -430,7 +433,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
             {/* Title row — same layout as the other log sheets */}
             <View style={styles.titleRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.title}>{isEditing ? 'Edit Workout' : 'Log Workout'}</Text>
+                <Text style={styles.title}>{isEditing ? 'Edit Workout' : logDate ? `Log Workout · ${logDay(logTimestamp(logDate)).label}` : 'Log Workout'}</Text>
                 {templateStep && (
                   <Text style={styles.templateStepText}>
                     {templateStep.templateName} · Exercise {templateStep.index + 1} of {templateStep.total}

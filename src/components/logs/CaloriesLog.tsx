@@ -8,7 +8,7 @@ import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { logDay } from '@/utils/logDay';
+import { logDay, logTimestamp } from '@/utils/logDay';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
@@ -53,9 +53,11 @@ interface Props {
   /** When set, the sheet edits this meal in place instead of logging a new one. */
   editEntry?: Meal | null;
   onDeleted?: (id: string) => void;
+  /** From the Calendar: a new log is saved on this day (up to 7 days back) instead of now. */
+  logDate?: Date | null;
 }
 
-export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDeleted }: Props) {
+export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDeleted, logDate }: Props) {
   const router = useRouter();
   const { user } = useAuth();
   const { profile, refreshProfile } = useProfile();
@@ -161,7 +163,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
     }
   }, [visible]);
 
-  const day = logDay(editEntry?.created_at);
+  const day = logDay(editEntry?.created_at ?? logTimestamp(logDate));
 
   const loadTodayCalories = async () => {
     if (!user) return;
@@ -300,6 +302,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
           protein_g: protein,
           carbs_g: carbs,
           fat_g: fat,
+          created_at: logTimestamp(logDate),
         })
         .select()
         .single();
@@ -379,7 +382,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
               <View style={styles.handleBar} />
             </View>
             <View style={styles.titleRow}>
-              <Text style={styles.title}>{isEditing ? 'Edit Meal' : 'Log Meal'}</Text>
+              <Text style={styles.title}>{isEditing ? 'Edit Meal' : logDate ? `Log Meal · ${day.label}` : 'Log Meal'}</Text>
               {isEditing && (
                 <TouchableOpacity
                   onPress={handleDelete}
