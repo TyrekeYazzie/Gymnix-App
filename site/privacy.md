@@ -3,14 +3,11 @@ layout: default
 title: Privacy Policy
 ---
 
-<!-- FitnessApp is a working title: if the app is renamed before release,
-     replace every "FitnessApp" below with the final name. -->
-
 # Privacy Policy
 
-**Last updated: October 3, 2026**
+**Last updated: October 4, 2026**
 
-This Privacy Policy explains how FitnessApp ("the App," "we," "us") collects,
+This Privacy Policy explains how Gymnix ("the App," "we," "us") collects,
 uses, and protects your information.
 
 ## Information We Collect

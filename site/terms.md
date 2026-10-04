@@ -3,14 +3,11 @@ layout: default
 title: Terms of Service
 ---
 
-<!-- FitnessApp is a working title: if the app is renamed before release,
-     replace every "FitnessApp" below with the final name. -->
-
 # Terms of Service
 
-**Last updated: October 3, 2026**
+**Last updated: October 4, 2026**
 
-These Terms of Service ("Terms") govern your use of FitnessApp ("the App,"
+These Terms of Service ("Terms") govern your use of Gymnix ("the App,"
 "we," "us").
 By creating an account or using the App, you agree to these Terms.
 

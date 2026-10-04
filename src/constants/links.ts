@@ -1,5 +1,5 @@
 // Public pages served from site/ (see site/README.md for how they're published).
-export const SITE_URL = 'https://tyrekeyazzie.github.io/fitnessapp-site';
+export const SITE_URL = 'https://tyrekeyazzie.github.io/gymnix-site';
 export const PRIVACY_URL = `${SITE_URL}/privacy.html`;
 export const TERMS_URL = `${SITE_URL}/terms.html`;
 // Reset emails link here (https, so mail apps open it); the page hands the
