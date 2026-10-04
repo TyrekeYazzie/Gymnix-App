@@ -13,8 +13,8 @@ Supabase backend (Postgres with row-level security, Auth, Storage).
    (Supabase dashboard → Project Settings → API). Never commit `.env`.
 3. `npx expo start`, then scan the QR code with Expo Go on your phone.
 
-Check types with `npx tsc --noEmit` and project health with
-`npx expo-doctor`.
+Run the unit tests with `npm test`, check types with `npx tsc --noEmit`,
+and check project health with `npx expo-doctor`.
 
 ## Where things live
 
