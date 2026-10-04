@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useFonts } from 'expo-font';
+import { StatusBar } from 'expo-status-bar';
 import { CormorantGaramond_500Medium_Italic } from '@expo-google-fonts/cormorant-garamond';
 import { Cinzel_600SemiBold } from '@expo-google-fonts/cinzel';
 import { SPACING, RADIUS, FONT_SIZES, FONT_WEIGHTS } from '@/constants/theme';
@@ -21,7 +22,7 @@ function Layout() {
   // ProfileProvider was rendered from inside Layout's own return, since that
   // put Layout's hooks outside the provider's subtree.
   const { profile, loading: profileLoading, loadFailed, refreshProfile } = useProfile();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [fontsLoaded] = useFonts({ CormorantGaramond_500Medium_Italic, Cinzel_600SemiBold });
   const [retrying, setRetrying] = useState(false);
   // Only wait on the profile fetch once there's a session to fetch one for —
@@ -105,6 +106,9 @@ function Layout() {
   // including the loading screen
   return (
     <SafeAreaProvider>
+      {/* Follow the app's night mode, not the phone's, or the clock and
+          battery turn dark-on-dark when they differ. */}
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       {!booted && loading ? loadingScreen : (
         <>
           {/* A real Stack (rather than a bare Slot) keeps (tabs) — and whichever
