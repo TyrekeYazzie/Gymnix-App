@@ -15,6 +15,22 @@ type ProfileContextType = {
 
 export const ProfileContext = createContext<ProfileContextType | null>(null)
 
+// Streaks count days in the user's own time zone
+// (supabase/migrations/20261004000000_local_time_streaks.sql), so keep the
+// stored zone in step with the device, including after travelling.
+function deviceTimeZone(): string | null {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null } catch { return null }
+}
+
+async function syncTimeZone(profile: Profile | null) {
+  // No time_zone key means the migration hasn't run yet: nothing to write to.
+  if (!profile || !('time_zone' in profile)) return
+  const tz = deviceTimeZone()
+  if (!tz || tz === profile.time_zone) return
+  const { error } = await supabase.from('profiles').update({ time_zone: tz }).eq('id', profile.id)
+  if (error) console.warn('Failed to save time zone:', error.message)
+}
+
 export const ProfileProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, loading: authLoading } = useAuth()
   // Keyed on the id, not the user object — onAuthStateChange hands back a new
@@ -46,6 +62,7 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
     setLoadFailed(false)
     setProfile(data)
     setLoading(false)
+    syncTimeZone(data)
   }
 
   useEffect(() => {

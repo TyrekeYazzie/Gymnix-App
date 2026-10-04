@@ -40,6 +40,7 @@ export interface Profile {
   weekly_routine: WeeklyRoutine;
   created_at: string;
   onboarding_completed_at: string | null;
+  time_zone?: string | null;       // device IANA zone, for streak days; absent until the 2026-10-04 migration
 }
 
 /** One set in workouts.sets. `unit: 'kg'` means weight is in kg; untagged legacy sets are in the account's units (see setWeightKg). weight 0 = bodyweight. */
