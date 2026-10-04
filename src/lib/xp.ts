@@ -1,12 +1,20 @@
+// total_xp can dip below 0: deleting a log made before XP moved to the
+// server subtracts XP it may never have awarded. Treat that as 0 rather
+// than showing "Level NaN" (the leaderboards already clamp the same way).
+function clampXP(totalXP: number): number {
+  return Number.isFinite(totalXP) ? Math.max(0, totalXP) : 0;
+}
+
 export function calcLevel(totalXP: number): number {
-  return Math.floor(Math.sqrt(totalXP / 100));
+  return Math.floor(Math.sqrt(clampXP(totalXP) / 100));
 }
 
 export function xpForLevel(level: number): number {
   return level * level * 100;
 }
 
-export function xpProgress(totalXP: number) {
+export function xpProgress(rawXP: number) {
+  const totalXP = clampXP(rawXP);
   const level = calcLevel(totalXP);
   const currentLevelXP = xpForLevel(level);
   const nextLevelXP = xpForLevel(level + 1);
