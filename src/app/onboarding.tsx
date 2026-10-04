@@ -111,14 +111,20 @@ export default function OnboardingScreen() {
     setSaving(true);
 
     const ageNum = Number(age);
+    // The height inputs start prefilled (170 cm) and weight falls back to
+    // 70 kg; only save them once they're real. Skipping from the welcome
+    // step never showed the height, and an empty weight box means unknown.
+    // Fake stats would otherwise drive nutrition targets and cardio calories.
+    const sawBodyStats = step >= 1;
+    const enteredWeight = parseFloat(weightDisplay) > 0;
     const { data, error } = await supabase
       .from('profiles')
       .upsert({
         id: user.id,
         full_name: cleanName || profile?.full_name || null,
         age: age && !isNaN(ageNum) && ageNum > 0 && ageNum <= 120 ? Math.round(ageNum) : null,
-        height_cm: Math.round(heightCm),
-        weight_kg: weightKg,
+        height_cm: sawBodyStats && heightCm > 0 ? Math.round(heightCm) : profile?.height_cm ?? null,
+        weight_kg: enteredWeight ? weightKg : profile?.weight_kg ?? null,
         goal: goal.trim() || null,
         units,
         onboarding_completed_at: new Date().toISOString(),
