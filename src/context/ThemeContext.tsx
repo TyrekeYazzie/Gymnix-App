@@ -11,7 +11,7 @@ const ThemeContext = createContext<ThemeContextType | null>(null)
 
 // Derives the active theme from profile.dark_mode_enabled — see Settings
 // for where that flag actually gets written (handleDarkModeToggle), the
-// same update-then-setProfile pattern as units/reminders_enabled. Defaults
+// same update-then-setProfile pattern as units. Defaults
 // to light whenever there's no profile yet (logged out, or still loading),
 // which matches profiles.dark_mode_enabled's own db default.
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {

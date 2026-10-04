@@ -75,7 +75,6 @@ export default function Settings() {
   const { colors } = theme;
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [savingUnits, setSavingUnits] = useState(false);
-  const [savingReminders, setSavingReminders] = useState(false);
   const [savingDarkMode, setSavingDarkMode] = useState(false);
   const [savingQuotes, setSavingQuotes] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -94,20 +93,6 @@ export default function Settings() {
       .single();
     setSavingUnits(false);
     if (error) { Alert.alert('Error', 'Could not update units'); return; }
-    if (data) setProfile(data);
-  };
-
-  const handleRemindersToggle = async (value: boolean) => {
-    if (!user || !profile) return;
-    setSavingReminders(true);
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({ reminders_enabled: value })
-      .eq('id', user.id)
-      .select()
-      .single();
-    setSavingReminders(false);
-    if (error) { Alert.alert('Error', 'Could not update reminder settings'); return; }
     if (data) setProfile(data);
   };
 
@@ -277,21 +262,6 @@ export default function Settings() {
                 onValueChange={handleQuotesToggle}
                 disabled={savingQuotes}
                 label="Daily quotes"
-              />
-            }
-          />
-          <View style={styles.rowDivider} />
-          <SettingsRow
-            icon="notifications-outline"
-            iconColor={colors.neonYellow}
-            label="Daily Reminders"
-            subtext="Get nudged to log workouts and water"
-            control={
-              <Toggle
-                value={profile?.reminders_enabled ?? true}
-                onValueChange={handleRemindersToggle}
-                disabled={savingReminders}
-                label="Daily reminders"
               />
             }
           />
