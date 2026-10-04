@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert
+  View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
 import { onLogsChanged } from '@/lib/logEvents';
+import { containsPattern } from '@/lib/workouts';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
@@ -27,6 +28,8 @@ interface ActiveTemplate {
   exercises: TemplateExercise[];
   index: number;
 }
+
+const PAGE_SIZE = 20;
 
 export default function Workouts() {
   const router = useRouter();
@@ -50,10 +53,13 @@ export default function Workouts() {
   // batching — a ref reads back immediately, state wouldn't.
   const pendingAdvanceRef = useRef<{ index: number } | 'done' | null>(null);
 
+  // Search and category filter run on the server (see fetchPage), so a
+  // change reloads from the first page; typing waits for a pause.
   useEffect(() => {
     if (!user) return;
-    loadWorkouts();
-  }, [user]);
+    const t = setTimeout(() => { loadWorkouts(); }, search.trim() ? 300 : 0);
+    return () => clearTimeout(t);
+  }, [user, activeFilter, search]);
   // Through a ref so the subscription doesn't capture a stale loadWorkouts.
   const loadWorkoutsRef = useRef<() => void>(() => {});
   loadWorkoutsRef.current = () => { if (user) loadWorkouts(); };
@@ -88,15 +94,63 @@ export default function Workouts() {
     setModalVisible(true);
   };
 
-  const loadWorkouts = async () => {
-    const { data, error } = await supabase
-      .from('workouts')
-      .select('*')
-      .eq('user_id', user?.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
+  // The list used to load only the latest 20 workouts, ever: older ones were
+  // unreachable, and search, the filters and the summary only covered those
+  // 20. Now it pages through the whole history, 20 at a time.
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [stats, setStats] = useState({ total: 0, thisWeek: 0, sets: 0 });
+  // Only the latest first-page load may write the list (a slow earlier
+  // search must not overwrite a newer one), and "load more" is dropped if a
+  // reload started meanwhile.
+  const loadSeqRef = useRef(0);
 
-    if (!error && data) setWorkouts(data);
+  const fetchPage = (offset: number) => {
+    let query = supabase.from('workouts').select('*').eq('user_id', user?.id);
+    if (activeFilter !== 'ALL') query = query.eq('category', activeFilter);
+    const term = search.trim();
+    if (term) query = query.ilike('name', containsPattern(term));
+    return query.order('created_at', { ascending: false }).range(offset, offset + PAGE_SIZE - 1);
+  };
+
+  // Summary numbers cover the whole history, not just the loaded pages.
+  const loadStats = async () => {
+    if (!user) return;
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const [all, week] = await Promise.all([
+      supabase.from('workouts').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+      supabase.from('workouts').select('id', { count: 'exact', head: true }).eq('user_id', user.id).gte('created_at', weekAgo),
+    ]);
+    // Supabase returns at most 1000 rows per request, so add sets up in chunks.
+    let sets = 0;
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase
+        .from('workouts').select('sets').eq('user_id', user.id).order('id').range(from, from + 999);
+      if (error || !data) break;
+      sets += data.reduce((sum, w) => sum + (Array.isArray(w.sets) ? w.sets.length : 0), 0);
+      if (data.length < 1000) break;
+    }
+    if (!all.error && !week.error) setStats({ total: all.count ?? 0, thisWeek: week.count ?? 0, sets });
+  };
+
+  const loadWorkouts = async () => {
+    if (!user) return;
+    const seq = ++loadSeqRef.current;
+    const [{ data, error }] = await Promise.all([fetchPage(0), loadStats()]);
+    if (seq !== loadSeqRef.current || error || !data) return;
+    setWorkouts(data);
+    setHasMore(data.length === PAGE_SIZE);
+  };
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    const seq = loadSeqRef.current;
+    setLoadingMore(true);
+    const { data, error } = await fetchPage(workouts.length);
+    setLoadingMore(false);
+    if (seq !== loadSeqRef.current || error || !data) return;
+    setWorkouts(prev => [...prev, ...data.filter(d => !prev.some(p => p.id === d.id))]);
+    setHasMore(data.length === PAGE_SIZE);
   };
 
   const handleSaved = (workout: Workout) => {
@@ -104,6 +158,7 @@ export default function Workouts() {
       const exists = prev.some(w => w.id === workout.id);
       return exists ? prev.map(w => (w.id === workout.id ? workout : w)) : [workout, ...prev];
     });
+    loadStats();
     if (activeTemplate) {
       const nextIndex = activeTemplate.index + 1;
       pendingAdvanceRef.current = nextIndex < activeTemplate.exercises.length ? { index: nextIndex } : 'done';
@@ -133,6 +188,7 @@ export default function Workouts() {
 
   const handleDeleted = (id: string) => {
     setWorkouts(prev => prev.filter(w => w.id !== id));
+    loadStats();
   };
 
   const getCategory = (cat: string | null) => categories.find(c => c.name === cat);
@@ -147,11 +203,7 @@ export default function Workouts() {
     return `${diff} days ago`;
   };
 
-  const totalThisWeek = workouts.filter(w => {
-    if (!w.created_at) return false;
-    const diff = (new Date().getTime() - new Date(w.created_at).getTime()) / (1000 * 60 * 60 * 24);
-    return diff <= 7;
-  }).length;
+  const totalThisWeek = stats.thisWeek;
 
   const filteredWorkouts = workouts.filter(w => {
     const matchesFilter = activeFilter === 'ALL' || w.category === activeFilter;
@@ -196,7 +248,7 @@ export default function Workouts() {
         {/* Summary */}
         <View style={styles.summaryRow}>
           <View style={styles.summaryBox}>
-            <Text style={styles.summaryNumber}>{workouts.length}</Text>
+            <Text style={styles.summaryNumber}>{stats.total}</Text>
             <Text style={styles.summaryLabel}>Total</Text>
           </View>
           <View style={styles.summaryDivider} />
@@ -206,9 +258,7 @@ export default function Workouts() {
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryBox}>
-            <Text style={styles.summaryNumber}>
-              {workouts.reduce((s, w) => s + (w.sets?.length ?? 0), 0)}
-            </Text>
+            <Text style={styles.summaryNumber}>{stats.sets}</Text>
             <Text style={styles.summaryLabel}>Total sets</Text>
           </View>
         </View>
@@ -307,6 +357,20 @@ export default function Workouts() {
               </TouchableOpacity>
             );
           })
+        )}
+        {hasMore && filteredWorkouts.length > 0 && (
+          <TouchableOpacity
+            style={styles.loadMoreButton}
+            onPress={loadMore}
+            disabled={loadingMore}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Load older workouts"
+          >
+            {loadingMore
+              ? <ActivityIndicator color={colors.primary} />
+              : <Text style={styles.loadMoreText}>Load older workouts</Text>}
+          </TouchableOpacity>
         )}
       </ScrollView>
 
@@ -517,6 +581,16 @@ function makeStyles(theme: Theme) {
   emptySubText: {
     color: colors.textMuted,
     fontSize: FONT_SIZES.xs,
+  },
+  loadMoreButton: {
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    marginTop: SPACING.sm,
+  },
+  loadMoreText: {
+    color: colors.primary,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.bold,
   },
   });
 }

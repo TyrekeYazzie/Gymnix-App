@@ -1,4 +1,13 @@
-import { parseSetRows, parseDecimalInput, setDisplayWeight, topSetWeight, KG_PER_LB } from '@/lib/workouts';
+import { parseSetRows, parseDecimalInput, setDisplayWeight, topSetWeight, KG_PER_LB, containsPattern } from '@/lib/workouts';
+
+describe('containsPattern', () => {
+  it('wraps the search in wildcards and escapes LIKE characters', () => {
+    expect(containsPattern('bench')).toBe('%bench%');
+    expect(containsPattern('50%')).toBe('%50\\%%');
+    expect(containsPattern('leg_day')).toBe('%leg\\_day%');
+    expect(containsPattern('a\\b')).toBe('%a\\\\b%');
+  });
+});
 
 describe('parseDecimalInput', () => {
   it('accepts dots and commas as the decimal separator', () => {

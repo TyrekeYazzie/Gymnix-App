@@ -98,3 +98,8 @@ export function mostLoggedExercise(workouts: Pick<Workout, 'name'>[]): string | 
   }
   return best;
 }
+
+/** An ILIKE pattern for names containing `term`, with % _ and \ in it matched literally. */
+export function containsPattern(term: string): string {
+  return `%${term.replace(/[\\%_]/g, c => `\\${c}`)}%`;
+}
