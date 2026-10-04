@@ -132,6 +132,10 @@ export default function WaterLog({ visible, onClose, onSaved, editEntry }: Props
 
   useEffect(() => {
     if (visible) {
+      // Clear the last opening's day first, so a different day's total
+      // never shows while this one loads (or if the load fails).
+      setTodayTotalMl(0);
+      setTodayEntries([]);
       loadTodayTotal();
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }),

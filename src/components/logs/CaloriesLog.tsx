@@ -135,6 +135,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
 
   useEffect(() => {
     if (visible) {
+      setTodayCalories(0); // don't show the last opening's day while this one loads
       loadTodayCalories();
       loadCustomMeals();
       if (editEntry) {
