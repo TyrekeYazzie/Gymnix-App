@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -14,6 +14,7 @@ import { xpProgress } from '@/lib/xp';
 import { getRank } from '@/constants/ranks';
 import { getMyLevelRank, MyLevelRank } from '@/lib/leaderboard';
 import { getMyWorkoutStreak } from '@/lib/streaks';
+import { onLogsChanged } from '@/lib/logEvents';
 import ProgressPreviewCard from '@/components/ProgressPreviewCard';
 import DailyQuote from '@/components/DailyQuote';
 import RankMedallion from '@/components/RankMedallion';
@@ -179,6 +180,7 @@ export default function DashboardScreen() {
       loadDashboard();
     }, [loadDashboard])
   );
+  useEffect(() => onLogsChanged(loadDashboard), [loadDashboard]);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',

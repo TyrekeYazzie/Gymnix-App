@@ -8,6 +8,7 @@ import CardioLog from '@/components/logs/CardioLog';
 import WaterLog from '@/components/logs/WaterLog';
 import WeightLog from '@/components/logs/WeightLog';
 import CaloriesLog from '@/components/logs/CaloriesLog';
+import { emitLogsChanged } from '@/lib/logEvents';
 
 export default function TabLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -94,27 +95,27 @@ export default function TabLayout() {
       <WorkoutLog
         visible={workoutLogOpen}
         onClose={() => setWorkoutLogOpen(false)}
-        onSaved={() => {}}   // orb doesn't need to update a list
+        onSaved={emitLogsChanged}
       />
       <CardioLog
       visible={cardioLogOpen}
       onClose={() => setCardioLogOpen(false)}
-      onSaved={() => {}}
+      onSaved={emitLogsChanged}
       />
       <WaterLog
       visible={waterLogOpen}
       onClose={() => setWaterLogOpen(false)}
-      onSaved={() => {}}
+      onSaved={emitLogsChanged}
       />
       <WeightLog
       visible={weightLogOpen}
       onClose={() => setWeightLogOpen(false)}
-      onSaved={() => {}}
+      onSaved={emitLogsChanged}
       />
       <CaloriesLog
       visible={caloriesLogOpen}
       onClose={() => setCaloriesLogOpen(false)}
-      onSaved={() => {}}
+      onSaved={emitLogsChanged}
       />
     </>
   );

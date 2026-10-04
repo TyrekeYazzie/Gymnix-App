@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet
 } from 'react-native';
@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
+import { onLogsChanged } from '@/lib/logEvents';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -98,6 +99,7 @@ export default function Calories() {
       loadMeals();
     }, [loadMeals])
   );
+  useEffect(() => onLogsChanged(loadMeals), [loadMeals]);
 
   const getProgressColor = () => {
     if (percentage >= 100) return colors.accent;

@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Modal, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
+import { emitLogsChanged, onLogsChanged } from '@/lib/logEvents';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -108,12 +109,13 @@ export default function CalendarScreen() {
   }, [user, monthDate]);
 
   useFocusEffect(useCallback(() => { loadMonth(); }, [loadMonth]));
+  useEffect(() => onLogsChanged(loadMonth), [loadMonth]);
 
   // Tapping an entry in the day list opens its log sheet in edit mode. Every
   // close reloads the month, which covers saves, deletes and cancels alike
   // (water/weight deletes happen inside their sheets with no callback).
   const [editing, setEditing] = useState<EditTarget | null>(null);
-  const closeEditor = () => { setEditing(null); loadMonth(); };
+  const closeEditor = () => { setEditing(null); emitLogsChanged(); };
   const formatTime = (dateStr: string) =>
     new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
+import { onLogsChanged } from '@/lib/logEvents';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
@@ -51,6 +52,10 @@ export default function Workouts() {
     if (!user) return;
     loadWorkouts();
   }, [user]);
+  // Through a ref so the subscription doesn't capture a stale loadWorkouts.
+  const loadWorkoutsRef = useRef<() => void>(() => {});
+  loadWorkoutsRef.current = () => { if (user) loadWorkouts(); };
+  useEffect(() => onLogsChanged(() => loadWorkoutsRef.current()), []);
 
   // Deep-linked in from src/app/templates.tsx's Start button. Loads the
   // template and opens WorkoutLog on its first exercise; startedIdRef guards
