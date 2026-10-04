@@ -19,6 +19,7 @@ import {
   PACE_TYPES, pickPaceType, paceTrend, formatPace,
 } from '@/lib/cardioTrends';
 import { useTheme } from '@/context/ThemeContext';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme,
@@ -72,6 +73,7 @@ export default function Progress() {
   const { theme } = useTheme();
   const { colors, CARD } = theme;
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const refreshControl = usePullToRefresh(() => loadAll());
   const CARDIO_TYPES = useMemo(() => getCardioTypes(colors), [colors]);
   const [tab, setTab] = useState<Tab>('Weight');
   const [loading, setLoading] = useState(true);
@@ -230,7 +232,7 @@ export default function Progress() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
 
         {/* Header */}
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backRow}>

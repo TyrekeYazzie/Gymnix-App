@@ -23,6 +23,7 @@ import CardioLog from '@/components/logs/CardioLog';
 import WaterLog from '@/components/logs/WaterLog';
 import CaloriesLog from '@/components/logs/CaloriesLog';
 import { nutritionTargetsOrDefault } from '@/lib/nutrition';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme, Colors
@@ -103,6 +104,7 @@ export default function DashboardScreen() {
   const { theme, isDark } = useTheme();
   const { colors } = theme;
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const refreshControl = usePullToRefresh(() => loadDashboard());
   const TASKS = useMemo(() => getTasks(colors), [colors]);
   const CALORIE_GOAL = useMemo(() => nutritionTargetsOrDefault(profile).calorieGoal, [profile]);
 
@@ -196,6 +198,7 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']} {...swipeHandlers}>
       <ScrollView
+        refreshControl={refreshControl}
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

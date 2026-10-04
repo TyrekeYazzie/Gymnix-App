@@ -13,6 +13,7 @@ import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import WorkoutLog from '@/components/logs/WorkoutLog';
 import { getWorkoutCategories } from '@/constants/workoutCategories';
 import { Workout, TemplateExercise } from '@/types';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme
@@ -35,6 +36,7 @@ export default function Workouts() {
   const { colors } = theme;
   const categories = useMemo(() => getWorkoutCategories(colors), [colors]);
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const refreshControl = usePullToRefresh(() => loadWorkouts());
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
@@ -271,7 +273,7 @@ export default function Workouts() {
         </Text>
       </View>
 
-      <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
         {filteredWorkouts.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No workouts found</Text>

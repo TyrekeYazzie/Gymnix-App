@@ -9,6 +9,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { getMyAchievements } from '@/lib/achievements';
 import { MyAchievement } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme, Colors
@@ -38,6 +39,7 @@ export default function AchievementsScreen() {
   const { theme } = useTheme();
   const { colors } = theme;
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const refreshControl = usePullToRefresh(() => load());
   const CATEGORY_META = useMemo(() => getCategoryMeta(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [achievements, setAchievements] = useState<MyAchievement[]>([]);
@@ -57,7 +59,7 @@ export default function AchievementsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
 
         {/* Header */}
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backRow}>

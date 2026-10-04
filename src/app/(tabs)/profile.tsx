@@ -25,6 +25,7 @@ import { xpProgress } from '@/lib/xp'
 import { getRank } from '@/constants/ranks'
 import RankMedallion from '@/components/RankMedallion'
 import { ACTIVITY_LEVELS } from '@/constants/nutrition'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 
 function DataRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   const { theme } = useTheme()
@@ -40,11 +41,12 @@ function DataRow({ label, value, valueColor }: { label: string; value: string; v
 
 export default function Profile() {
   const router = useRouter()
-  const { profile, setProfile, isImperial } = useProfile()
+  const { profile, setProfile, refreshProfile, isImperial } = useProfile()
   const { user } = useAuth()
   const { theme } = useTheme()
   const { colors } = theme
   const styles = useMemo(() => makeStyles(theme), [theme])
+  const refreshControl = usePullToRefresh(() => Promise.all([refreshProfile(), getMyFriends().then(rows => setIncomingRequests(rows.filter(r => r.relation === 'incoming').length))]))
   const [editing, setEditing] = useState(false)
   const [savingAvatar, setSavingAvatar] = useState(false)
   const swipeHandlers = useSwipeTabs()
@@ -124,7 +126,7 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']} {...swipeHandlers}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
 
         {/* Header */}
         <View style={styles.headerRow}>

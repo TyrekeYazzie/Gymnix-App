@@ -17,6 +17,7 @@ import {
   PeriodStats, Insight,
 } from '@/lib/insights';
 import { useTheme } from '@/context/ThemeContext';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme, Colors
@@ -93,6 +94,7 @@ export default function InsightsScreen() {
   const { theme } = useTheme();
   const { colors, CARD, SHADOWS } = theme;
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const refreshControl = usePullToRefresh(() => load());
   const TONE_COLOR = useMemo(() => getToneColor(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [thisWeek, setThisWeek] = useState<PeriodStats | null>(null);
@@ -146,7 +148,7 @@ export default function InsightsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
 
         {/* Header */}
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backRow}>

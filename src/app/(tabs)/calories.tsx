@@ -14,6 +14,7 @@ import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import CaloriesLog from '@/components/logs/CaloriesLog';
 import { nutritionTargetsOrDefault } from '@/lib/nutrition';
 import { WEIGHT_GOAL_LABELS } from '@/constants/nutrition';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme, Colors
@@ -53,6 +54,7 @@ export default function Calories() {
   const { theme } = useTheme();
   const { colors } = theme;
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const refreshControl = usePullToRefresh(() => loadMeals());
   const MEAL_TYPES = useMemo(() => getMealTypes(colors), [colors]);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -299,7 +301,7 @@ export default function Calories() {
         </Text>
       </View>
 
-      <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
         {filteredMeals.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No meals found</Text>

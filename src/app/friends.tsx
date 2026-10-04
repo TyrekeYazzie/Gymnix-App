@@ -14,6 +14,7 @@ import {
   getMyFriends, searchUsers, sendFriendRequest, respondToFriendRequest, removeFriend, displayName,
 } from '@/lib/friends';
 import { FONT_SIZES, FONT_WEIGHTS, SPACING, RADIUS, Theme } from '@/constants/theme';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 
 // Profile > Friends — find people by username, handle requests, and open a
 // friend's profile. Leaderboard rows offer the same add/accept actions.
@@ -23,6 +24,7 @@ export default function FriendsScreen() {
   const { theme } = useTheme();
   const { colors } = theme;
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const refreshControl = usePullToRefresh(() => load());
 
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<FriendEntry[]>([]);
@@ -114,7 +116,7 @@ export default function FriendsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backButtonRow}>
             <Ionicons name="chevron-back" size={18} color={colors.primary} />

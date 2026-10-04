@@ -17,6 +17,7 @@ import WaterLog from '@/components/logs/WaterLog';
 import WeightLog from '@/components/logs/WeightLog';
 import { getSignedPhotoUrls } from '@/utils/workoutPhotos';
 import { Workout, CardioLogEntry, WaterLogEntry, WeightLogEntry, Meal } from '@/types';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme, Colors
@@ -70,6 +71,7 @@ export default function CalendarScreen() {
   const { colors, CARD } = theme;
   const WORKOUT_CATEGORIES = useMemo(() => getWorkoutCategories(colors), [colors]);
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const refreshControl = usePullToRefresh(() => loadMonth());
   const LOG_TYPE_COLORS = useMemo(() => getLogTypeColors(colors), [colors]);
   const CARDIO_TYPES = useMemo(() => getCardioTypes(colors), [colors]);
   const swipeHandlers = useSwipeTabs();
@@ -296,7 +298,7 @@ export default function CalendarScreen() {
         </Text>
       </View>
 
-      <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
         {!hasAnyLogs ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No logs for this day</Text>

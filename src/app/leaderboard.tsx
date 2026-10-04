@@ -20,6 +20,7 @@ import { useTheme } from '@/context/ThemeContext';
 import Avatar from '@/components/Avatar';
 import { REPORT_REASONS, ReportReason, reportUser, blockUser } from '@/lib/moderation';
 import { Relation, getMyFriends, sendFriendRequest, respondToFriendRequest, removeFriend, displayName } from '@/lib/friends';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme, Colors
@@ -53,6 +54,7 @@ export default function LeaderboardScreen() {
   const { theme } = useTheme();
   const { colors } = theme;
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const refreshControl = usePullToRefresh(() => load(tab, scope));
   const TABS = useMemo(() => getTabs(colors), [colors]);
 
   const [tab, setTab] = useState<TabKey>('level');
@@ -238,7 +240,7 @@ export default function LeaderboardScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
 
         {/* Header */}
         <View style={styles.header}>
