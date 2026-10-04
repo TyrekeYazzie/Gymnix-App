@@ -28,7 +28,34 @@ build a CAPTCHA integration (hCaptcha/Turnstile are available on all plans
 but need a custom WebView in React Native). Revisit if login abuse shows up,
 or if the plan is upgraded (the hook then just needs wiring in the dashboard).
 
-## Dependency vulnerabilities in build tooling (tracked 2026-08-14, upgraded 2026-09-11)
+## Achievements stay unlocked after the log that earned them is deleted (by design, 2026-10-04)
+
+Achievements are unlocked once, server-side, by `check_and_unlock_achievements()`
+and are never revoked. Deleting the workout that completed a 7-day streak,
+for example, keeps "Week One". Revoking would mean re-evaluating every
+achievement on every delete, and taking a badge away for tidying up a
+mistaken log feels punitive; most fitness apps keep earned awards too.
+
+**Abuse:** someone could log fake workouts, unlock badges, then delete the
+logs. Achievements only show on your own profile and to accepted friends,
+they award no XP, and the 7-day log window
+(`20261004010000_log_date_window.sql`) stops backfilling a long streak, so
+the gain is small. Revisit if achievements ever feed a public ranking.
+
+## Dependency vulnerabilities in build tooling (tracked 2026-08-14, rechecked 2026-10-04)
+
+**2026-10-04:** `npm audit` reports 63 (40 excluding dev-only test tooling),
+but they all come from five packages: `brace-expansion`, `braces` and
+`node-forge` (Expo CLI / Metro / Babel tooling), `uuid` (via
+`@expo/config-plugins` → `xcode`) and `decode-uri-component` (via
+`expo-router` → `query-string`). Only the last ships in the app; it's a
+denial-of-service on a malformed link, which at worst freezes the app on the
+phone that opened it. The counts are high because every package depending
+on those five is listed too. The fixes arrive with Expo SDK 58
+(`expo-router` 58 drops the vulnerable `decode-uri-component`); until then the
+note below about never running `npm audit fix --force` still applies.
+
+**History:**
 
 Was **24 vulnerabilities (12 high, 12 moderate)** on Expo SDK 54. The 54→57
 upgrade (see below) plus a non-forced `npm audit fix` brought this down to
