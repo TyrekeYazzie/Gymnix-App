@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.tyrekeyazzie.fitnessapp"
+      "bundleIdentifier": "com.tyrekeyazzie.fitnessapp",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.tyrekeyazzie.fitnessapp",
