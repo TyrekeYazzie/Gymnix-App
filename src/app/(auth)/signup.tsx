@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, ScrollView
@@ -8,7 +8,8 @@ import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import type { AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { COLORS } from '@/constants/theme';
+import { Theme } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 import { PRIVACY_URL, TERMS_URL } from '@/constants/links';
 import { validateName, validateEmail, validatePassword, sanitizeInput } from '@/utils/validation';
 
@@ -29,6 +30,9 @@ function signupErrorMessage(error: AuthError): string {
 }
 
 export default function Signup() {
+  const { theme } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -114,14 +118,14 @@ export default function Signup() {
         <TextInput
           style={styles.input}
           placeholder="Full Name"
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={colors.textMuted}
           value={fullName}
           onChangeText={setFullName}
         />
         <TextInput
           style={styles.input}
           placeholder="Email Address"
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={colors.textMuted}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -130,7 +134,7 @@ export default function Signup() {
         <TextInput
           style={styles.input}
           placeholder="Password"
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={colors.textMuted}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -145,7 +149,7 @@ export default function Signup() {
           disabled={loading}
         >
           {loading
-            ? <ActivityIndicator color={COLORS.textInverse} />
+            ? <ActivityIndicator color={colors.textInverse} />
             : <Text style={styles.buttonText}>Sign Up</Text>
           }
         </TouchableOpacity>
@@ -169,24 +173,27 @@ export default function Signup() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
-  content: { padding: 24, paddingTop: 60 },
-  title: { fontSize: 32, fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: 8 },
-  subtitle: { fontSize: 16, color: COLORS.textSecondary, marginBottom: 40 },
-  input: {
-    backgroundColor: COLORS.bgTertiary, color: COLORS.textPrimary,
-    borderColor: COLORS.borderDefault, borderWidth: 1,
-    borderRadius: 12, padding: 16, marginBottom: 16
-  },
-  button: {
-    backgroundColor: COLORS.primary, borderRadius: 12,
-    padding: 16, alignItems: 'center', marginTop: 8
-  },
-  buttonText: { color: COLORS.textInverse, fontWeight: 'bold', fontSize: 16 },
-  error: { color: COLORS.error, marginBottom: 16 },
-  hint: { color: COLORS.textMuted, fontSize: 12, marginTop: -8, marginBottom: 16 },
-  link: { color: COLORS.primary, textAlign: 'center', marginTop: 24 },
-  legal: { color: COLORS.textMuted, fontSize: 12, textAlign: 'center', marginTop: 16, lineHeight: 18 },
-  legalLink: { color: COLORS.primary }
-});
+function makeStyles(theme: Theme) {
+  const { colors } = theme;
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.bgPrimary },
+    content: { padding: 24, paddingTop: 60 },
+    title: { fontSize: 32, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 8 },
+    subtitle: { fontSize: 16, color: colors.textSecondary, marginBottom: 40 },
+    input: {
+      backgroundColor: colors.bgTertiary, color: colors.textPrimary,
+      borderColor: colors.borderDefault, borderWidth: 1,
+      borderRadius: 12, padding: 16, marginBottom: 16
+    },
+    button: {
+      backgroundColor: colors.primary, borderRadius: 12,
+      padding: 16, alignItems: 'center', marginTop: 8
+    },
+    buttonText: { color: colors.textInverse, fontWeight: 'bold', fontSize: 16 },
+    error: { color: colors.error, marginBottom: 16 },
+    hint: { color: colors.textMuted, fontSize: 12, marginTop: -8, marginBottom: 16 },
+    link: { color: colors.primary, textAlign: 'center', marginTop: 24 },
+    legal: { color: colors.textMuted, fontSize: 12, textAlign: 'center', marginTop: 16, lineHeight: 18 },
+    legalLink: { color: colors.primary }
+  });
+}

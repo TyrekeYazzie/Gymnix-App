@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, ScrollView
@@ -9,9 +9,13 @@ import * as Linking from 'expo-linking';
 import { supabase } from '@/lib/supabase';
 import { PASSWORD_RESET_URL } from '@/constants/links';
 import { validateEmail } from '@/utils/validation';
-import { COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING, RADIUS, INPUT } from '@/constants/theme';
+import { FONT_SIZES, FONT_WEIGHTS, SPACING, RADIUS, Theme } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function ForgotPassword() {
+  const { theme } = useTheme();
+  const { colors, INPUT } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -70,7 +74,7 @@ export default function ForgotPassword() {
         <TextInput
           style={INPUT.default}
           placeholder="you@example.com"
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={colors.textMuted}
           value={email}
           onChangeText={(text) => { setEmail(text); setError(''); }}
           autoCapitalize="none"
@@ -85,7 +89,7 @@ export default function ForgotPassword() {
           disabled={loading}
         >
           {loading
-            ? <ActivityIndicator color={COLORS.textInverse} />
+            ? <ActivityIndicator color={colors.textInverse} />
             : <Text style={styles.buttonText}>Send Reset Link</Text>
           }
         </TouchableOpacity>
@@ -98,16 +102,19 @@ export default function ForgotPassword() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
-  content: { padding: 24, paddingTop: 60 },
-  title: { fontSize: 32, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary, marginBottom: 8 },
-  subtitle: { fontSize: 16, color: COLORS.textSecondary, marginBottom: 40 },
-  button: {
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.md,
-    padding: 16, alignItems: 'center', marginTop: 16
-  },
-  buttonText: { color: COLORS.textInverse, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.md },
-  error: { color: COLORS.error, marginBottom: 16 },
-  link: { color: COLORS.primary, textAlign: 'center', marginTop: 24, fontSize: FONT_SIZES.sm },
-});
+function makeStyles(theme: Theme) {
+  const { colors } = theme;
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.bgPrimary },
+    content: { padding: 24, paddingTop: 60 },
+    title: { fontSize: 32, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary, marginBottom: 8 },
+    subtitle: { fontSize: 16, color: colors.textSecondary, marginBottom: 40 },
+    button: {
+      backgroundColor: colors.primary, borderRadius: RADIUS.md,
+      padding: 16, alignItems: 'center', marginTop: 16
+    },
+    buttonText: { color: colors.textInverse, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.md },
+    error: { color: colors.error, marginBottom: 16 },
+    link: { color: colors.primary, textAlign: 'center', marginTop: 24, fontSize: FONT_SIZES.sm },
+  });
+}

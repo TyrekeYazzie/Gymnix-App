@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING, RADIUS, BUTTON, INPUT } from '@/constants/theme';
+import { FONT_SIZES, FONT_WEIGHTS, SPACING, RADIUS, Theme } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 import { recordFailedAttempt, isLockedOut, getRemainingLockoutTime, resetAttempts } from '@/utils/rateLimiter';
 
 function formatLockoutTime(seconds: number): string {
@@ -13,6 +14,9 @@ function formatLockoutTime(seconds: number): string {
 }
 
 export default function Login() {
+  const { theme } = useTheme();
+  const { colors, INPUT } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -74,7 +78,7 @@ export default function Login() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bgPrimary }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
       <ScrollView
         contentContainerStyle={{ padding: SPACING.lg, paddingTop: SPACING.xxl }}
         keyboardShouldPersistTaps="handled"
@@ -89,9 +93,9 @@ export default function Login() {
         ) : null}
 
         <TextInput
-          style={[INPUT.default, { borderColor: COLORS.borderDefault, marginBottom: SPACING.md }]}
+          style={[INPUT.default, { borderColor: colors.borderDefault, marginBottom: SPACING.md }]}
           placeholder="you@example.com"
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={colors.textMuted}
           value={email}
           onChangeText={(text) => { setEmail(text); setError(''); }}
           autoCapitalize="none"
@@ -101,9 +105,9 @@ export default function Login() {
         />
 
         <TextInput
-          style={[INPUT.default, { borderColor: COLORS.borderDefault, marginBottom: SPACING.lg }]}
+          style={[INPUT.default, { borderColor: colors.borderDefault, marginBottom: SPACING.lg }]}
           placeholder="Enter your password"
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={colors.textMuted}
           value={password}
           onChangeText={(text) => { setPassword(text); setError(''); }}
           secureTextEntry
@@ -116,7 +120,7 @@ export default function Login() {
           activeOpacity={0.7}
           style={{ alignSelf: 'flex-end', marginBottom: SPACING.lg }}
         >
-          <Text style={[styles.linkText, { color: COLORS.primary }]}>Forgot password?</Text>
+          <Text style={[styles.linkText, { color: colors.primary }]}>Forgot password?</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -126,7 +130,7 @@ export default function Login() {
           activeOpacity={0.8}
         >
           {loading ? (
-            <ActivityIndicator color={COLORS.textInverse} />
+            <ActivityIndicator color={colors.textInverse} />
           ) : (
             <Text style={styles.buttonText}>Log In</Text>
           )}
@@ -138,7 +142,7 @@ export default function Login() {
           disabled={loading}
           activeOpacity={0.7}
         >
-          <Text style={styles.linkText}>Don't have an account? <Text style={{ color: COLORS.primary }}>Sign Up</Text></Text>
+          <Text style={styles.linkText}>Don't have an account? <Text style={{ color: colors.primary }}>Sign Up</Text></Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -146,48 +150,51 @@ export default function Login() {
   );
 }
 
-const styles = StyleSheet.create({
-  title: {
-    fontSize: FONT_SIZES.xxxl,
-    fontWeight: FONT_WEIGHTS.black,
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
-  },
-  subtitle: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xl,
-  },
-  errorBox: {
-    backgroundColor: COLORS.bgElevated,
-    borderColor: COLORS.borderAccent,
-    borderWidth: 1,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  errorText: {
-    color: COLORS.error,
-    fontSize: FONT_SIZES.sm,
-  },
-  button: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-  },
-  buttonText: {
-    color: COLORS.textInverse,
-    fontWeight: FONT_WEIGHTS.bold,
-    fontSize: FONT_SIZES.md,
-  },
-  linkRow: {
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-  },
-  linkText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZES.sm,
-  },
-});
+function makeStyles(theme: Theme) {
+  const { colors } = theme;
+  return StyleSheet.create({
+    title: {
+      fontSize: FONT_SIZES.xxxl,
+      fontWeight: FONT_WEIGHTS.black,
+      color: colors.textPrimary,
+      marginBottom: SPACING.xs,
+    },
+    subtitle: {
+      fontSize: FONT_SIZES.sm,
+      color: colors.textSecondary,
+      marginBottom: SPACING.xl,
+    },
+    errorBox: {
+      backgroundColor: colors.bgElevated,
+      borderColor: colors.borderAccent,
+      borderWidth: 1,
+      borderRadius: RADIUS.md,
+      padding: SPACING.md,
+      marginBottom: SPACING.md,
+    },
+    errorText: {
+      color: colors.error,
+      fontSize: FONT_SIZES.sm,
+    },
+    button: {
+      backgroundColor: colors.primary,
+      borderRadius: RADIUS.md,
+      paddingVertical: 14,
+      alignItems: 'center',
+      marginBottom: SPACING.lg,
+    },
+    buttonText: {
+      color: colors.textInverse,
+      fontWeight: FONT_WEIGHTS.bold,
+      fontSize: FONT_SIZES.md,
+    },
+    linkRow: {
+      alignItems: 'center',
+      paddingVertical: SPACING.md,
+    },
+    linkText: {
+      color: colors.textSecondary,
+      fontSize: FONT_SIZES.sm,
+    },
+  });
+}

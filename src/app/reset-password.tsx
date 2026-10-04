@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, ScrollView, Alert
@@ -8,12 +8,16 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { signOut } from '@/lib/auth';
 import { validatePassword } from '@/utils/validation';
-import { COLORS, FONT_SIZES, FONT_WEIGHTS, RADIUS, INPUT } from '@/constants/theme';
+import { FONT_SIZES, FONT_WEIGHTS, RADIUS, Theme } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 
 // Module-level so it survives this screen unmounting and remounting.
 let exchangedCode: string | null = null;
 
 export default function ResetPassword() {
+  const { theme } = useTheme();
+  const { colors, INPUT } = theme;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const router = useRouter();
   const { code } = useLocalSearchParams<{ code?: string }>();
 
@@ -79,7 +83,7 @@ export default function ResetPassword() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContent}>
-          <ActivityIndicator color={COLORS.primary} />
+          <ActivityIndicator color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -110,7 +114,7 @@ export default function ResetPassword() {
         <TextInput
           style={INPUT.default}
           placeholder="New password"
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={colors.textMuted}
           value={password}
           onChangeText={(text) => { setPassword(text); setFormError(''); }}
           secureTextEntry
@@ -126,7 +130,7 @@ export default function ResetPassword() {
           disabled={saving}
         >
           {saving
-            ? <ActivityIndicator color={COLORS.textInverse} />
+            ? <ActivityIndicator color={colors.textInverse} />
             : <Text style={styles.buttonText}>Save New Password</Text>
           }
         </TouchableOpacity>
@@ -135,17 +139,20 @@ export default function ResetPassword() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgPrimary },
-  content: { padding: 24, paddingTop: 60 },
-  centerContent: { flex: 1, padding: 24, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 32, fontWeight: FONT_WEIGHTS.black, color: COLORS.textPrimary, marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 16, color: COLORS.textSecondary, marginBottom: 24, textAlign: 'center' },
-  hint: { color: COLORS.textMuted, fontSize: 12, marginTop: 8, marginBottom: 8 },
-  button: {
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.md,
-    padding: 16, alignItems: 'center', marginTop: 16
-  },
-  buttonText: { color: COLORS.textInverse, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.md },
-  error: { color: COLORS.error, marginBottom: 16 },
-});
+function makeStyles(theme: Theme) {
+  const { colors } = theme;
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.bgPrimary },
+    content: { padding: 24, paddingTop: 60 },
+    centerContent: { flex: 1, padding: 24, alignItems: 'center', justifyContent: 'center' },
+    title: { fontSize: 32, fontWeight: FONT_WEIGHTS.black, color: colors.textPrimary, marginBottom: 8, textAlign: 'center' },
+    subtitle: { fontSize: 16, color: colors.textSecondary, marginBottom: 24, textAlign: 'center' },
+    hint: { color: colors.textMuted, fontSize: 12, marginTop: 8, marginBottom: 8 },
+    button: {
+      backgroundColor: colors.primary, borderRadius: RADIUS.md,
+      padding: 16, alignItems: 'center', marginTop: 16
+    },
+    buttonText: { color: colors.textInverse, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.md },
+    error: { color: colors.error, marginBottom: 16 },
+  });
+}
