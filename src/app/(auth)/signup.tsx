@@ -111,7 +111,7 @@ export default function Signup() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join FitnessApp today</Text>
+        <Text style={styles.subtitle}>Join Gymnix today</Text>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 

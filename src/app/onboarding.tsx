@@ -170,7 +170,7 @@ export default function OnboardingScreen() {
 
         {step === 0 && (
           <View style={styles.stepBlock}>
-            <Text style={styles.title}>Welcome to FitnessApp</Text>
+            <Text style={styles.title}>Welcome to Gymnix</Text>
             <Text style={styles.subtitle}>
               A quick setup so your dashboard, goals, and gamification start off accurate — takes under a minute.
             </Text>

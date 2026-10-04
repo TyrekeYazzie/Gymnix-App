@@ -1,4 +1,4 @@
-# FitnessApp (working title)
+# Gymnix
 
 An iPhone/Android fitness tracker: log workouts, cardio, meals, water and
 weight; earn XP and ranks; compete with friends on leaderboards.

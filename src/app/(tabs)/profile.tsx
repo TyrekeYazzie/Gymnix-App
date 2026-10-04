@@ -336,7 +336,7 @@ export default function Profile() {
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
-        <Text style={styles.version}>FitnessApp v1.0.0</Text>
+        <Text style={styles.version}>Gymnix v1.0.0</Text>
 
       </ScrollView>
     </SafeAreaView>

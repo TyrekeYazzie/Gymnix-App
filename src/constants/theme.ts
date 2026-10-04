@@ -1,4 +1,4 @@
-// FitnessApp Theme — Journal
+// Gymnix Theme — Journal
 // Inspired by: an open notebook page — warm cream paper, soft ink,
 // a sage-green fountain pen for primary actions, a terracotta red
 // pen for accents and warnings. Flat, quiet, easy to sit with.
