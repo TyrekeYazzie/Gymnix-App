@@ -7,6 +7,7 @@ import {
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '@/lib/supabase';
+import { logDay } from '@/utils/logDay';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
@@ -144,15 +145,16 @@ export default function WaterLog({ visible, onClose, onSaved, editEntry }: Props
     }
   }, [visible]);
 
+  const day = logDay(editEntry?.created_at);
+
   const loadTodayTotal = async () => {
     if (!user) return;
-    const localMidnight = new Date();
-    localMidnight.setHours(0, 0, 0, 0);
     const { data, error } = await supabase
       .from('water_logs')
       .select('id, amount_ml, created_at')
       .eq('user_id', user.id)
-      .gte('created_at', localMidnight.toISOString())
+      .gte('created_at', day.start.toISOString())
+      .lt('created_at', day.end.toISOString())
       .order('created_at', { ascending: false });
     if (error) { console.error('Failed to load today water total:', error.message); return; }
     if (data) {
@@ -341,7 +343,7 @@ export default function WaterLog({ visible, onClose, onSaved, editEntry }: Props
             {/* Progress */}
             <View style={styles.progressCard}>
               <View style={styles.progressHeader}>
-                <Text style={styles.progressLabel}>Today</Text>
+                <Text style={styles.progressLabel}>{day.label}</Text>
                 <Text style={[styles.progressValue, { color: progressColor }]}>
                   {formatDisplay(todayTotalMl)} / {isImperial ? `${DAILY_GOAL_FLOZ} fl oz` : `${DAILY_GOAL_ML / 1000}L`}
                 </Text>
@@ -393,7 +395,7 @@ export default function WaterLog({ visible, onClose, onSaved, editEntry }: Props
 
             {todayEntries.length > 0 && (
               <View style={{ marginBottom: SPACING.lg }}>
-                <Text style={[styles.label, { marginTop: SPACING.sm }]}>Today's log — tap to edit</Text>
+                <Text style={[styles.label, { marginTop: SPACING.sm }]}>{day.label === 'Today' ? "Today's log" : `Log for ${day.label}`} — tap to edit</Text>
                 {todayEntries.slice(0, 5).map((entry) => (
                   <TouchableOpacity
                     key={entry.id}

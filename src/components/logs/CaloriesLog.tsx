@@ -8,6 +8,7 @@ import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { logDay } from '@/utils/logDay';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
@@ -159,15 +160,16 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
     }
   }, [visible]);
 
+  const day = logDay(editEntry?.created_at);
+
   const loadTodayCalories = async () => {
     if (!user) return;
-    const localMidnight = new Date();
-    localMidnight.setHours(0, 0, 0, 0);
     const { data, error } = await supabase
       .from('calorie_logs')
       .select('calories')
       .eq('user_id', user.id)
-      .gte('created_at', localMidnight.toISOString());
+      .gte('created_at', day.start.toISOString())
+      .lt('created_at', day.end.toISOString());
     if (error) { console.error('Failed to load today calories:', error.message); return; }
     if (data) setTodayCalories(data.reduce((sum, r) => sum + r.calories, 0));
   };
@@ -405,7 +407,7 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
             {/* Progress */}
             <View style={styles.progressCard}>
               <View style={styles.progressHeader}>
-                <Text style={styles.progressLabel}>Today</Text>
+                <Text style={styles.progressLabel}>{day.label}</Text>
                 <Text style={[styles.progressValue, { color: progressColor }]}>
                   {todayCalories} / {CALORIE_GOAL} kcal
                 </Text>
