@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Modal, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
@@ -84,8 +84,12 @@ export default function CalendarScreen() {
   const [weights, setWeights] = useState<WeightLogEntry[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
 
+  // Paging months quickly starts overlapping loads; only the latest may
+  // write state, or a slow earlier month could overwrite the one on screen.
+  const loadSeqRef = useRef(0);
   const loadMonth = useCallback(async () => {
     if (!user) return;
+    const seq = ++loadSeqRef.current;
     const start = monthDate;
     const end = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1);
 
@@ -96,6 +100,7 @@ export default function CalendarScreen() {
       supabase.from('calorie_logs').select('*').eq('user_id', user.id).gte('created_at', start.toISOString()).lt('created_at', end.toISOString()),
       supabase.from('weight_logs').select('*').eq('user_id', user.id).gte('created_at', start.toISOString()).lt('created_at', end.toISOString()),
     ]);
+    if (seq !== loadSeqRef.current) return;
     if (!w.error) setWorkouts(w.data ?? []);
     if (!c.error) setCardio(c.data ?? []);
     if (!wt.error) setWater(wt.data ?? []);
@@ -105,7 +110,8 @@ export default function CalendarScreen() {
     const photoPaths = (w.data ?? [])
       .map((row: Workout) => row.photo_path)
       .filter((p): p is string => !!p);
-    setPhotoUrls(photoPaths.length > 0 ? await getSignedPhotoUrls(photoPaths) : {});
+    const urls = photoPaths.length > 0 ? await getSignedPhotoUrls(photoPaths) : {};
+    if (seq === loadSeqRef.current) setPhotoUrls(urls);
   }, [user, monthDate]);
 
   useFocusEffect(useCallback(() => { loadMonth(); }, [loadMonth]));
