@@ -408,7 +408,7 @@ export default function Progress() {
                     <Text style={styles.listDate}>{formatDate(entry.created_at)}</Text>
                     {prSessionIds.has(entry.id) && (
                       <View style={styles.prTag}>
-                        <Ionicons name="trophy" size={10} color={colors.neonYellow} />
+                        <GymnixIcon name="leaderboard" size={11} color={colors.neonYellow} />
                         <Text style={styles.prTagText}>PR</Text>
                       </View>
                     )}

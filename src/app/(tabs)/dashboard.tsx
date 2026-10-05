@@ -287,7 +287,7 @@ export default function DashboardScreen() {
 
         {/* Streak card */}
         <View style={styles.tipCard}>
-          <Ionicons name="flame" size={26} color={colors.neonOrange} style={styles.tipIcon} />
+          <GymnixIcon name="streak" size={28} color={colors.neonOrange} style={styles.tipIcon} />
           <View style={{ flex: 1 }}>
             <Text style={styles.tipTitle}>{streak} day streak</Text>
             <Text style={styles.tipBody}>
@@ -340,7 +340,7 @@ export default function DashboardScreen() {
           activeOpacity={0.8}
         >
           <View style={styles.leaderboardIcon}>
-            <Ionicons name="trophy" size={18} color={colors.neonYellow} />
+            <GymnixIcon name="leaderboard" size={20} color={colors.neonYellow} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.leaderboardTitle}>Leaderboard</Text>

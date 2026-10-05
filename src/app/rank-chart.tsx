@@ -83,7 +83,7 @@ export default function RankChartScreen() {
 
           {isMaxRank ? (
             <View style={styles.maxBadge}>
-              <Ionicons name="trophy" size={14} color={colors.neonYellow} />
+              <GymnixIcon name="leaderboard" size={15} color={colors.neonYellow} />
               <Text style={styles.maxBadgeText}>Max rank reached</Text>
             </View>
           ) : (

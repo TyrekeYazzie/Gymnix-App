@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
+import { GymnixIconName } from '@/constants/gymnixIcons';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import { supabase } from '@/lib/supabase';
@@ -19,12 +21,12 @@ const STEP_COUNT = 4;
 
 const GOAL_SUGGESTIONS = ['Build muscle', 'Lose weight', 'Get stronger', 'Improve endurance', 'Stay healthy'];
 
-function getTourItems(colors: Colors): { icon: keyof typeof Ionicons.glyphMap; title: string; body: string; color: string }[] {
+function getTourItems(colors: Colors): { icon: GymnixIconName; title: string; body: string; color: string }[] {
   return [
-    { icon: 'barbell-outline',  title: 'Log everything',        body: 'Workouts, cardio, meals, water, and weight — all in one place.', color: colors.primary },
-    { icon: 'trophy-outline',   title: 'Earn XP & rank up',      body: 'Every log earns XP. Climb through ranks as you build consistency.', color: colors.neonYellow },
-    { icon: 'ribbon-outline',   title: 'Unlock achievements',    body: 'Hit milestones and streaks to unlock badges.', color: colors.neonOrange },
-    { icon: 'podium-outline',   title: 'Compete on leaderboards', body: 'See how your streak, strength, and cardio stack up against others.', color: colors.neonGreen },
+    { icon: 'workouts',    title: 'Log everything',        body: 'Workouts, cardio, meals, water, and weight — all in one place.', color: colors.primary },
+    { icon: 'xp',          title: 'Earn XP & rank up',      body: 'Every log earns XP. Climb through ranks as you build consistency.', color: colors.neonYellow },
+    { icon: 'achievement', title: 'Unlock achievements',    body: 'Hit milestones and streaks to unlock badges.', color: colors.neonOrange },
+    { icon: 'leaderboard', title: 'Compete on leaderboards', body: 'See how your streak, strength, and cardio stack up against others.', color: colors.neonGreen },
   ];
 }
 
@@ -254,7 +256,7 @@ export default function OnboardingScreen() {
                   {i > 0 && <View style={styles.tourDivider} />}
                   <View style={styles.tourRow}>
                     <View style={[styles.tourIcon, { borderColor: t.color }]}>
-                      <Ionicons name={t.icon} size={18} color={t.color} />
+                      <GymnixIcon name={t.icon} size={20} color={t.color} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.tourTitle}>{t.title}</Text>

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
 import { UnlockedAchievement } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
 import { FONT_SIZES, FONT_WEIGHTS, SPACING, RADIUS, Theme } from '@/constants/theme';
@@ -21,7 +21,7 @@ export default function AchievementUnlockBanner({ achievements }: { achievements
     <>
       {achievements.map(a => (
         <View key={a.key} style={styles.banner}>
-          <Ionicons name="ribbon" size={16} color={colors.neonYellow} />
+          <GymnixIcon name="achievement" size={18} color={colors.neonYellow} />
           <Text style={styles.text}>Achievement unlocked: {a.name}!</Text>
         </View>
       ))}

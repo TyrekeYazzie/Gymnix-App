@@ -354,7 +354,7 @@ export default function LeaderboardScreen() {
         {!loading && noFriendsYet && (
           <TouchableOpacity style={styles.card} onPress={() => router.push('/friends')} activeOpacity={0.8}>
             <View style={styles.row}>
-              <Ionicons name="people-outline" size={20} color={activeTabDef.color} />
+              <GymnixIcon name="friends" size={22} color={activeTabDef.color} />
               <Text style={[styles.name, { flex: 1 }]}>Add friends to compete with them here</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </View>

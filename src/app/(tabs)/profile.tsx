@@ -17,6 +17,7 @@ import Avatar from '@/components/Avatar'
 import { useTheme } from '@/context/ThemeContext'
 import EditProfile from '@/components/EditProfile'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import GymnixIcon from '@/components/GymnixIcon'
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme
@@ -165,7 +166,7 @@ export default function Profile() {
                   </View>
                 ) : (
                   <View style={styles.avatarBadge}>
-                    <Ionicons name="camera" size={12} color={colors.textInverse} />
+                    <GymnixIcon name="camera" size={13} color={colors.textInverse} />
                   </View>
                 )}
               </TouchableOpacity>
@@ -247,7 +248,7 @@ export default function Profile() {
             activeOpacity={0.7}
           >
             <View style={[styles.sysIcon, { borderColor: colors.neonGreen }]}>
-              <Ionicons name="trending-up-outline" size={14} color={colors.neonGreen} />
+              <GymnixIcon name="progress" size={15} color={colors.neonGreen} />
             </View>
             <Text style={styles.systemLabel}>Progress</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -259,7 +260,7 @@ export default function Profile() {
             activeOpacity={0.7}
           >
             <View style={[styles.sysIcon, { borderColor: colors.neonBlue }]}>
-              <Ionicons name="bar-chart-outline" size={14} color={colors.neonBlue} />
+              <GymnixIcon name="recap" size={15} color={colors.neonBlue} />
             </View>
             <Text style={styles.systemLabel}>Weekly Recap</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -271,7 +272,7 @@ export default function Profile() {
             activeOpacity={0.7}
           >
             <View style={[styles.sysIcon, { borderColor: colors.neonYellow }]}>
-              <Ionicons name="trophy-outline" size={14} color={colors.neonYellow} />
+              <GymnixIcon name="leaderboard" size={15} color={colors.neonYellow} />
             </View>
             <Text style={styles.systemLabel}>Leaderboard</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -284,7 +285,7 @@ export default function Profile() {
             accessibilityLabel={incomingRequests > 0 ? `Friends, ${incomingRequests} new requests` : 'Friends'}
           >
             <View style={[styles.sysIcon, { borderColor: colors.accent }]}>
-              <Ionicons name="people-outline" size={14} color={colors.accent} />
+              <GymnixIcon name="friends" size={15} color={colors.accent} />
             </View>
             <Text style={styles.systemLabel}>Friends</Text>
             {incomingRequests > 0 && (
@@ -301,7 +302,7 @@ export default function Profile() {
             activeOpacity={0.7}
           >
             <View style={[styles.sysIcon, { borderColor: colors.neonOrange }]}>
-              <Ionicons name="ribbon-outline" size={14} color={colors.neonOrange} />
+              <GymnixIcon name="achievement" size={15} color={colors.neonOrange} />
             </View>
             <Text style={styles.systemLabel}>Achievements</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -313,7 +314,7 @@ export default function Profile() {
             activeOpacity={0.7}
           >
             <View style={[styles.sysIcon, { borderColor: colors.primary }]}>
-              <Ionicons name="person-outline" size={14} color={colors.primary} />
+              <GymnixIcon name="profile" size={15} color={colors.primary} />
             </View>
             <Text style={styles.systemLabel}>Edit Profile</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -325,7 +326,7 @@ export default function Profile() {
             activeOpacity={0.7}
           >
             <View style={[styles.sysIcon, { borderColor: colors.accent }]}>
-              <Ionicons name="settings-outline" size={14} color={colors.accent} />
+              <GymnixIcon name="settings" size={15} color={colors.accent} />
             </View>
             <Text style={styles.systemLabel}>App Settings</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />

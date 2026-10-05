@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
 import { getMyAchievements } from '@/lib/achievements';
 import { MyAchievement } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
@@ -78,7 +79,7 @@ export default function AchievementsScreen() {
             {/* Summary */}
             <View style={styles.summaryCard}>
               <View style={styles.summaryHeader}>
-                <Ionicons name="trophy" size={22} color={colors.neonYellow} />
+                <GymnixIcon name="achievement" size={24} color={colors.neonYellow} />
                 <Text style={styles.summaryText}>{unlockedCount} of {achievements.length} unlocked</Text>
               </View>
               <View style={styles.summaryTrack}>

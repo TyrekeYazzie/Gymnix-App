@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
 import { supabase } from '@/lib/supabase';
 import { logDay, logTimestamp } from '@/utils/logDay';
 import { useAuth } from '@/hooks/useAuth';
@@ -466,7 +467,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
                     {photoUri ? (
                       <Image source={{ uri: photoUri }} style={styles.photoThumb} />
                     ) : (
-                      <Ionicons name="camera-outline" size={18} color={colors.textMuted} />
+                      <GymnixIcon name="camera" size={20} color={colors.textMuted} />
                     )}
                   </TouchableOpacity>
                   {photoUri && (
@@ -487,7 +488,7 @@ export default function WorkoutLog({ visible, onClose, onSaved, initialCategory,
 
           {prBanner && (
             <View style={styles.prBanner}>
-              <Ionicons name="trophy" size={16} color={colors.neonYellow} />
+              <GymnixIcon name="leaderboard" size={18} color={colors.neonYellow} />
               <Text style={styles.prBannerText}>New PR! {prBanner.weight} {weightUnit} on {prBanner.name}</Text>
             </View>
           )}

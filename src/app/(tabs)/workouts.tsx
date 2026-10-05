@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
 import { supabase } from '@/lib/supabase';
 import { onLogsChanged } from '@/lib/logEvents';
 import { containsPattern } from '@/lib/workouts';
@@ -235,7 +236,7 @@ export default function Workouts() {
               accessibilityRole="button"
               accessibilityLabel="Workout templates"
             >
-              <Ionicons name="list-outline" size={16} color={colors.primary} />
+              <GymnixIcon name="templates" size={18} color={colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.addButton}
