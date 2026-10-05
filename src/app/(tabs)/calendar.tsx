@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Modal, Dim
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
 import { supabase } from '@/lib/supabase';
 import { emitLogsChanged, onLogsChanged } from '@/lib/logEvents';
 import { useAuth } from '@/hooks/useAuth';
@@ -379,9 +380,10 @@ export default function CalendarScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={`Edit ${c.type} session`}
                     >
-                      <Text style={styles.detailRowText}>
-                        <Ionicons name={t?.icon ?? 'heart-outline'} size={13} color={t?.color ?? colors.neonGreen} /> {c.type}
-                      </Text>
+                      <View style={styles.detailRowLabel}>
+                        <GymnixIcon name={t?.icon ?? 'cardio'} size={14} color={t?.color ?? colors.neonGreen} />
+                        <Text style={styles.detailRowText}>{c.type}</Text>
+                      </View>
                       <View style={styles.detailRowRight}>
                         <Text style={styles.detailRowMeta}>{c.duration ?? ''}</Text>
                         <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
@@ -638,6 +640,7 @@ function makeStyles(theme: Theme) {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: SPACING.xs,
   },
+  detailRowLabel: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, flexShrink: 1 },
   detailRowText: { fontSize: FONT_SIZES.sm, color: colors.textSecondary },
   detailRowMeta: { fontSize: FONT_SIZES.xs, color: colors.textMuted },
   detailRowRight: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },

@@ -5,6 +5,8 @@ import {
   KeyboardAvoidingView, Platform, Animated, PanResponder
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
+import { GymnixIconName } from '@/constants/gymnixIcons';
 import { supabase } from '@/lib/supabase';
 import { logDay, logTimestamp } from '@/utils/logDay';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,14 +26,14 @@ import {
 // cardio type icon/color for its day-detail rows — can build the same
 // theme-aware list from its own useTheme() colors instead of importing a
 // palette baked to one theme.
-export function getCardioTypes(colors: Colors): { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
+export function getCardioTypes(colors: Colors): { name: string; icon: GymnixIconName; color: string }[] {
   return [
-    { name: 'Run',   icon: 'speedometer-outline', color: colors.neonGreen },
-    { name: 'Bike',  icon: 'bicycle-outline',     color: colors.neonBlue },
-    { name: 'Swim',  icon: 'water-outline',       color: colors.primary },
-    { name: 'Walk',  icon: 'walk-outline',        color: colors.neonYellow },
-    { name: 'HIIT',  icon: 'flash-outline',       color: colors.accent },
-    { name: 'Row',   icon: 'boat-outline',        color: colors.neonOrange },
+    { name: 'Run',   icon: 'run',  color: colors.neonGreen },
+    { name: 'Bike',  icon: 'bike', color: colors.neonBlue },
+    { name: 'Swim',  icon: 'swim', color: colors.primary },
+    { name: 'Walk',  icon: 'walk', color: colors.neonYellow },
+    { name: 'HIIT',  icon: 'hiit', color: colors.accent },
+    { name: 'Row',   icon: 'row',  color: colors.neonOrange },
   ];
 }
 
@@ -376,9 +378,9 @@ export default function CardioLog({ visible, onClose, onSaved, editEntry, onDele
                   onPress={() => setType(t.name)}
                   activeOpacity={0.7}
                 >
-                  <Ionicons
+                  <GymnixIcon
                     name={t.icon}
-                    size={22}
+                    size={24}
                     color={type === t.name ? t.color : colors.textSecondary}
                     style={styles.typeIcon}
                   />

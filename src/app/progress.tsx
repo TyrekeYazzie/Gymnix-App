@@ -539,9 +539,9 @@ export default function Progress() {
                     accessibilityRole="tab"
                     accessibilityState={{ selected: cardioFilter === t.name }}
                   >
-                    <Ionicons
+                    <GymnixIcon
                       name={t.icon}
-                      size={14}
+                      size={15}
                       color={cardioFilter === t.name ? colors.textInverse : t.color}
                     />
                     <Text style={[styles.filterPillText, cardioFilter === t.name && styles.filterPillTextActive]}>{t.name}</Text>
@@ -645,7 +645,7 @@ export default function Progress() {
                     activeOpacity={0.7}
                   >
                     <View style={[styles.listIcon, { borderColor: t?.color ?? colors.neonGreen }]}>
-                      <Ionicons name={t?.icon ?? 'heart-outline'} size={16} color={t?.color ?? colors.neonGreen} />
+                      <GymnixIcon name={t?.icon ?? 'cardio'} size={18} color={t?.color ?? colors.neonGreen} />
                     </View>
                     <View style={styles.listLeft}>
                       <Text style={styles.listName}>{entry.type}</Text>
