@@ -15,6 +15,7 @@ import WorkoutLog from '@/components/logs/WorkoutLog';
 import { getWorkoutCategories } from '@/constants/workoutCategories';
 import { Workout, TemplateExercise } from '@/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useTabBarInset } from '@/hooks/useTabBarInset';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme
@@ -40,6 +41,7 @@ export default function Workouts() {
   const categories = useMemo(() => getWorkoutCategories(colors), [colors]);
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const refreshControl = usePullToRefresh(() => loadWorkouts());
+  const tabBarInset = useTabBarInset();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
@@ -323,7 +325,7 @@ export default function Workouts() {
         </Text>
       </View>
 
-      <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
+      <ScrollView style={styles.listScroll} contentContainerStyle={[styles.listContent, { paddingBottom: tabBarInset }]} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
         {filteredWorkouts.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No workouts found</Text>

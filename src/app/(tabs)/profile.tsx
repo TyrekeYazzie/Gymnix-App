@@ -26,6 +26,7 @@ import { getRank } from '@/constants/ranks'
 import RankMedallion from '@/components/RankMedallion'
 import { ACTIVITY_LEVELS } from '@/constants/nutrition'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import { useTabBarInset } from '@/hooks/useTabBarInset'
 
 function DataRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   const { theme } = useTheme()
@@ -47,6 +48,7 @@ export default function Profile() {
   const { colors } = theme
   const styles = useMemo(() => makeStyles(theme), [theme])
   const refreshControl = usePullToRefresh(() => Promise.all([refreshProfile(), getMyFriends().then(rows => setIncomingRequests(rows.filter(r => r.relation === 'incoming').length))]))
+  const tabBarInset = useTabBarInset()
   const [editing, setEditing] = useState(false)
   const [savingAvatar, setSavingAvatar] = useState(false)
   const swipeHandlers = useSwipeTabs()
@@ -109,7 +111,7 @@ export default function Profile() {
   if (editing) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarInset }]} showsVerticalScrollIndicator={false}>
           <View style={styles.editHeader}>
             <TouchableOpacity onPress={() => setEditing(false)} style={styles.backRow} activeOpacity={0.7}>
               <Ionicons name="chevron-back" size={16} color={colors.primary} />
@@ -126,7 +128,7 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']} {...swipeHandlers}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarInset }]} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
 
         {/* Header */}
         <View style={styles.headerRow}>

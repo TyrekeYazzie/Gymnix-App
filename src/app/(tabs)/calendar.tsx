@@ -20,6 +20,7 @@ import { canLogOnDay, MAX_BACKDATE_DAYS } from '@/utils/logDay';
 import { getSignedPhotoUrls } from '@/utils/workoutPhotos';
 import { Workout, CardioLogEntry, WaterLogEntry, WeightLogEntry, Meal } from '@/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useTabBarInset } from '@/hooks/useTabBarInset';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme, Colors
@@ -74,6 +75,7 @@ export default function CalendarScreen() {
   const WORKOUT_CATEGORIES = useMemo(() => getWorkoutCategories(colors), [colors]);
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const refreshControl = usePullToRefresh(() => loadMonth());
+  const tabBarInset = useTabBarInset();
   const LOG_TYPE_COLORS = useMemo(() => getLogTypeColors(colors), [colors]);
   const CARDIO_TYPES = useMemo(() => getCardioTypes(colors), [colors]);
   const swipeHandlers = useSwipeTabs();
@@ -323,7 +325,7 @@ export default function CalendarScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
+      <ScrollView style={styles.listScroll} contentContainerStyle={[styles.listContent, { paddingBottom: tabBarInset }]} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
         {!hasAnyLogs ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No logs for this day</Text>

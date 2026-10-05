@@ -14,6 +14,11 @@ interface Props extends BottomTabBarProps {
   onPressCenter: () => void;
 }
 
+// Shared with useTabBarInset(): the bar floats over the screens, so their
+// scroll content needs this much room at the bottom to clear it.
+export const TAB_BAR_HEIGHT = 70;
+export const CENTER_BUTTON_RISE = 32;
+
 export default function TabBar({ state, descriptors, navigation, onPressCenter }: Props) {
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
@@ -176,7 +181,7 @@ function makeStyles(theme: Theme) {
       overflow: 'hidden',
       paddingTop: SPACING.sm,
       alignItems: 'center',
-      height: 70,
+      height: TAB_BAR_HEIGHT,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.35,
@@ -216,7 +221,7 @@ function makeStyles(theme: Theme) {
     // Floats above the pill bar, centered, independent of tab count/spacing
     centerFloating: {
       position: 'absolute',
-      top: -32,
+      top: -CENTER_BUTTON_RISE,
       left: 0,
       right: 0,
       alignItems: 'center',

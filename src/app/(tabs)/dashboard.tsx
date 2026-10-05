@@ -24,6 +24,7 @@ import WaterLog from '@/components/logs/WaterLog';
 import CaloriesLog from '@/components/logs/CaloriesLog';
 import { nutritionTargetsOrDefault } from '@/lib/nutrition';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useTabBarInset } from '@/hooks/useTabBarInset';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme, Colors
@@ -105,6 +106,7 @@ export default function DashboardScreen() {
   const { colors } = theme;
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const refreshControl = usePullToRefresh(() => loadDashboard());
+  const tabBarInset = useTabBarInset();
   const TASKS = useMemo(() => getTasks(colors), [colors]);
   const CALORIE_GOAL = useMemo(() => nutritionTargetsOrDefault(profile).calorieGoal, [profile]);
 
@@ -200,7 +202,7 @@ export default function DashboardScreen() {
       <ScrollView
         refreshControl={refreshControl}
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarInset }]}
         showsVerticalScrollIndicator={false}
       >
 

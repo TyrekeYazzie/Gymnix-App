@@ -15,6 +15,7 @@ import CaloriesLog from '@/components/logs/CaloriesLog';
 import { nutritionTargetsOrDefault } from '@/lib/nutrition';
 import { WEIGHT_GOAL_LABELS } from '@/constants/nutrition';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useTabBarInset } from '@/hooks/useTabBarInset';
 import {
   FONT_SIZES, FONT_WEIGHTS,
   SPACING, RADIUS, Theme, Colors
@@ -55,6 +56,7 @@ export default function Calories() {
   const { colors } = theme;
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const refreshControl = usePullToRefresh(() => loadMeals());
+  const tabBarInset = useTabBarInset();
   const MEAL_TYPES = useMemo(() => getMealTypes(colors), [colors]);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -301,7 +303,7 @@ export default function Calories() {
         </Text>
       </View>
 
-      <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
+      <ScrollView style={styles.listScroll} contentContainerStyle={[styles.listContent, { paddingBottom: tabBarInset }]} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
         {filteredMeals.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No meals found</Text>
