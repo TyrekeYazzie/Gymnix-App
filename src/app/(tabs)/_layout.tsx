@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import React, { useState } from 'react';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
 import TabBar from '@/components/TabBar';
 import QuickLogMenu from '@/components/QuickLogMenu';
 import WorkoutLog from '@/components/logs/WorkoutLog';
@@ -42,7 +42,7 @@ export default function TabLayout() {
           options={{
             title: 'Dashboard',
             tabBarIcon: ({ color }) => (
-              <Ionicons name="grid" size={22} color={color} />
+              <GymnixIcon name="dashboard" size={24} color={color} />
             ),
           }}
         />
@@ -51,7 +51,7 @@ export default function TabLayout() {
           options={{
             title: 'Workouts',
             tabBarIcon: ({ color }) => (
-              <Ionicons name="barbell-outline" size={22} color={color} />
+              <GymnixIcon name="workouts" size={24} color={color} />
             ),
           }}
         />
@@ -60,7 +60,7 @@ export default function TabLayout() {
           options={{
             title: 'Calendar',
             tabBarIcon: ({ color }) => (
-              <Ionicons name="calendar-outline" size={22} color={color} />
+              <GymnixIcon name="calendar" size={24} color={color} />
             ),
           }}
         />
@@ -69,7 +69,7 @@ export default function TabLayout() {
           options={{
             title: 'Calories',
             tabBarIcon: ({ color }) => (
-              <Ionicons name="nutrition-outline" size={22} color={color} />
+              <GymnixIcon name="calories" size={24} color={color} />
             ),
           }}
         />
@@ -78,7 +78,7 @@ export default function TabLayout() {
           options={{
             title: 'Profile',
             tabBarIcon: ({ color }) => (
-              <Ionicons name="person-outline" size={22} color={color} />
+              <GymnixIcon name="profile" size={24} color={color} />
             ),
           }}
         />

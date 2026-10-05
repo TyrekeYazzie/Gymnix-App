@@ -1,12 +1,12 @@
 import React from 'react';
-import { StyleProp, ViewStyle } from 'react-native';
+import { ColorValue, StyleProp, ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { GYMNIX_ICONS, GymnixIconName } from '@/constants/gymnixIcons';
 
 interface Props {
   name: GymnixIconName;
   size?: number;
-  color: string;
+  color: ColorValue;
   strokeWidth?: number;
   style?: StyleProp<ViewStyle>;
 }
