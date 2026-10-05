@@ -5,6 +5,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
+import { GymnixIconName } from '@/constants/gymnixIcons';
 import { supabase } from '@/lib/supabase';
 import { onLogsChanged } from '@/lib/logEvents';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,12 +23,12 @@ import {
   SPACING, RADIUS, Theme, Colors
 } from '@/constants/theme';
 
-function getMealTypes(colors: Colors): { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
+function getMealTypes(colors: Colors): { name: string; icon: GymnixIconName; color: string }[] {
   return [
-    { name: 'Breakfast', icon: 'sunny-outline',      color: colors.neonYellow },
-    { name: 'Lunch',     icon: 'restaurant-outline', color: colors.primary },
-    { name: 'Dinner',    icon: 'moon-outline',       color: colors.neonBlue },
-    { name: 'Snack',     icon: 'fast-food-outline',  color: colors.neonGreen },
+    { name: 'Breakfast', icon: 'breakfast', color: colors.neonYellow },
+    { name: 'Lunch',     icon: 'lunch',     color: colors.primary },
+    { name: 'Dinner',    icon: 'dinner',    color: colors.neonBlue },
+    { name: 'Snack',     icon: 'snack',     color: colors.neonGreen },
   ];
 }
 
@@ -281,9 +283,9 @@ export default function Calories() {
                 accessibilityRole="tab"
                 accessibilityState={{ selected: activeFilter === type.name }}
               >
-                <Ionicons
+                <GymnixIcon
                   name={type.icon}
-                  size={14}
+                  size={15}
                   color={activeFilter === type.name ? colors.textInverse : type.color}
                 />
                 <Text style={[
@@ -320,7 +322,7 @@ export default function Calories() {
                 activeOpacity={0.7}
               >
                 <View style={[styles.mealIcon, { borderColor: type?.color ?? colors.primary }]}>
-                  <Ionicons name={type?.icon ?? 'restaurant-outline'} size={18} color={type?.color ?? colors.primary} />
+                  <GymnixIcon name={type?.icon ?? 'lunch'} size={20} color={type?.color ?? colors.primary} />
                 </View>
                 <View style={styles.mealLeft}>
                   <Text style={styles.mealName}>{meal.meal_name}</Text>

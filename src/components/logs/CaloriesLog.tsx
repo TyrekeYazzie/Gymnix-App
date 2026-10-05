@@ -6,6 +6,8 @@ import {
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
+import { GymnixIconName } from '@/constants/gymnixIcons';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { logDay, logTimestamp } from '@/utils/logDay';
@@ -29,12 +31,12 @@ const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
 const CALORIE_MIN = 50;
 const CALORIE_MAX = 1500;
 
-function getMealTypes(colors: Colors): { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
+function getMealTypes(colors: Colors): { name: string; icon: GymnixIconName; color: string }[] {
   return [
-    { name: 'Breakfast', icon: 'sunny-outline',      color: colors.neonYellow },
-    { name: 'Lunch',     icon: 'restaurant-outline', color: colors.primary },
-    { name: 'Dinner',    icon: 'moon-outline',       color: colors.neonBlue },
-    { name: 'Snack',     icon: 'fast-food-outline',  color: colors.neonGreen },
+    { name: 'Breakfast', icon: 'breakfast', color: colors.neonYellow },
+    { name: 'Lunch',     icon: 'lunch',     color: colors.primary },
+    { name: 'Dinner',    icon: 'dinner',    color: colors.neonBlue },
+    { name: 'Snack',     icon: 'snack',     color: colors.neonGreen },
   ];
 }
 
@@ -465,9 +467,9 @@ export default function CaloriesLog({ visible, onClose, onSaved, editEntry, onDe
                   onPress={() => setMealType(t.name)}
                   activeOpacity={0.7}
                 >
-                  <Ionicons
+                  <GymnixIcon
                     name={t.icon}
-                    size={20}
+                    size={22}
                     color={mealType === t.name ? t.color : colors.textSecondary}
                     style={styles.mealIcon}
                   />
