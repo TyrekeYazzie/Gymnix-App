@@ -133,4 +133,4 @@ noted in the App.
 ## Contact Us
 
 Questions about this policy, or requests regarding your data, can be sent
-to: **ifitsupportcenter@gmail.com**
+to: **gymnixsupport@gmail.com**

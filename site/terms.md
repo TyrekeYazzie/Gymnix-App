@@ -81,4 +81,4 @@ change means you accept the updated Terms.
 
 ## Contact Us
 
-Questions about these Terms can be sent to: **ifitsupportcenter@gmail.com**
+Questions about these Terms can be sent to: **gymnixsupport@gmail.com**
