@@ -6,6 +6,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
+import { GymnixIconName } from '@/constants/gymnixIcons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
@@ -60,7 +62,7 @@ function Delta({ diff, suffix, goodWhenUp }: { diff: number; suffix: string; goo
 function StatTile({
   icon, iconColor, label, value, unit, caption, delta,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: GymnixIconName;
   iconColor: string;
   label: string;
   value: string;
@@ -74,7 +76,7 @@ function StatTile({
     <View style={styles.statTile}>
       <View style={styles.tileHeader}>
         <View style={[styles.tileIcon, { borderColor: iconColor }]}>
-          <Ionicons name={icon} size={13} color={iconColor} />
+          <GymnixIcon name={icon} size={14} color={iconColor} />
         </View>
         <Text style={styles.tileLabel} numberOfLines={1}>{label}</Text>
       </View>
@@ -176,7 +178,7 @@ export default function InsightsScreen() {
                 {insights.map((insight, i) => (
                   <View key={i} style={[styles.insightCard, SHADOWS.subtle]}>
                     <View style={[styles.insightIcon, { borderColor: TONE_COLOR[insight.tone] }]}>
-                      <Ionicons name={insight.icon} size={17} color={TONE_COLOR[insight.tone]} />
+                      <GymnixIcon name={insight.icon} size={19} color={TONE_COLOR[insight.tone]} />
                     </View>
                     <Text style={styles.insightText}>{insight.text}</Text>
                   </View>
@@ -192,12 +194,12 @@ export default function InsightsScreen() {
 
             <View style={styles.statsGrid}>
               <StatTile
-                icon="barbell-outline" iconColor={colors.primary} label="WORKOUTS"
+                icon="workouts" iconColor={colors.primary} label="WORKOUTS"
                 value={`${thisWeek.workoutCount}`}
                 delta={<Delta diff={thisWeek.workoutCount - lastWeek.workoutCount} suffix="" goodWhenUp={true} />}
               />
               <StatTile
-                icon="trending-up-outline" iconColor={colors.primaryLight} label="VOLUME"
+                icon="progress" iconColor={colors.primaryLight} label="VOLUME"
                 value={thisWeek.workoutVolume.toLocaleString()} unit={weightUnit}
                 delta={
                   lastWeek.workoutVolume > 0 && thisWeek.workoutVolume > 0
@@ -206,24 +208,24 @@ export default function InsightsScreen() {
                 }
               />
               <StatTile
-                icon="heart-outline" iconColor={colors.neonGreen} label="CARDIO"
+                icon="cardio" iconColor={colors.neonGreen} label="CARDIO"
                 value={`${thisWeek.cardioMinutes}`} unit="min"
                 caption={thisWeek.cardioDistanceKm > 0 ? `${toDisplayDistance(thisWeek.cardioDistanceKm).toFixed(1)} ${distanceUnit}` : undefined}
                 delta={<Delta diff={thisWeek.cardioMinutes - lastWeek.cardioMinutes} suffix=" min" goodWhenUp={true} />}
               />
               <StatTile
-                icon="water-outline" iconColor={colors.neonBlue} label="WATER GOAL"
+                icon="water" iconColor={colors.neonBlue} label="WATER GOAL"
                 value={`${thisWeek.waterGoalDays}/7`} caption="days met"
                 delta={<Delta diff={thisWeek.waterGoalDays - lastWeek.waterGoalDays} suffix=" days" goodWhenUp={true} />}
               />
               <StatTile
-                icon="nutrition-outline" iconColor={colors.neonYellow} label="CALORIES"
+                icon="calories" iconColor={colors.neonYellow} label="CALORIES"
                 value={thisWeek.caloriesLoggedDays > 0 ? Math.round(thisWeek.caloriesAvgPerLoggedDay).toLocaleString() : '—'}
                 unit={thisWeek.caloriesLoggedDays > 0 ? 'kcal/day' : undefined}
                 caption={thisWeek.caloriesLoggedDays > 0 && targets.calorieGoal > 0 ? `${Math.round((thisWeek.caloriesAvgPerLoggedDay / targets.calorieGoal) * 100)}% of ${targets.calorieGoal.toLocaleString()} goal` : 'No meals logged'}
               />
               <StatTile
-                icon="body-outline" iconColor={colors.neonOrange} label="WEIGHT"
+                icon="weight" iconColor={colors.neonOrange} label="WEIGHT"
                 value={thisWeek.weightLast !== null ? toDisplayWeight(thisWeek.weightLast).toFixed(1) : '—'}
                 unit={thisWeek.weightLast !== null ? weightUnit : undefined}
                 delta={

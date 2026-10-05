@@ -2,6 +2,8 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
+import { GymnixIconName } from '@/constants/gymnixIcons';
 import Svg, { Polyline, Circle } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
 import { topSetWeight, mostLoggedExercise } from '@/lib/workouts';
@@ -32,11 +34,11 @@ import {
 //               Strength. The Progress screen also has weekly minutes.
 type Metric = 'weight' | 'strength' | 'cardio';
 
-function getTabs(colors: Colors): { key: Metric; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
+function getTabs(colors: Colors): { key: Metric; label: string; icon: GymnixIconName; color: string }[] {
   return [
-    { key: 'weight',   label: 'Body Weight', icon: 'body-outline',    color: colors.neonBlue },
-    { key: 'strength', label: 'Strength',    icon: 'barbell-outline', color: colors.primary },
-    { key: 'cardio',   label: 'Cardio',      icon: 'heart-outline',   color: colors.neonGreen },
+    { key: 'weight',   label: 'Body Weight', icon: 'weight',   color: colors.neonBlue },
+    { key: 'strength', label: 'Strength',    icon: 'workouts', color: colors.primary },
+    { key: 'cardio',   label: 'Cardio',      icon: 'cardio',   color: colors.neonGreen },
   ];
 }
 
@@ -177,7 +179,7 @@ export default function ProgressPreviewCard() {
               onPress={() => setMetric(t.key)}
               activeOpacity={0.7}
             >
-              <Ionicons name={t.icon} size={13} color={active ? t.color : colors.textMuted} />
+              <GymnixIcon name={t.icon} size={14} color={active ? t.color : colors.textMuted} />
               <Text style={[styles.tabLabel, active && { color: t.color, fontWeight: FONT_WEIGHTS.bold }]}>
                 {t.label}
               </Text>

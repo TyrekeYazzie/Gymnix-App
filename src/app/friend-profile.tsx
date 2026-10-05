@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/context/ThemeContext';
 import Avatar from '@/components/Avatar';
@@ -141,17 +142,17 @@ export default function FriendProfileScreen() {
             {/* Stats */}
             <View style={styles.statGrid}>
               <View style={styles.statTile}>
-                <Ionicons name="flame-outline" size={18} color={colors.neonOrange} />
+                <GymnixIcon name="streak" size={20} color={colors.neonOrange} />
                 <Text style={styles.statValue}>{friend.current_streak}</Text>
                 <Text style={styles.statLabel}>day streak</Text>
               </View>
               <View style={styles.statTile}>
-                <Ionicons name="barbell-outline" size={18} color={colors.accent} />
+                <GymnixIcon name="workouts" size={20} color={colors.accent} />
                 <Text style={styles.statValue}>{friend.workout_count.toLocaleString()}</Text>
                 <Text style={styles.statLabel}>workouts</Text>
               </View>
               <View style={styles.statTile}>
-                <Ionicons name="heart-outline" size={18} color={colors.neonGreen} />
+                <GymnixIcon name="cardio" size={20} color={colors.neonGreen} />
                 <Text style={styles.statValue}>{friend.cardio_count.toLocaleString()}</Text>
                 <Text style={styles.statLabel}>cardio</Text>
               </View>

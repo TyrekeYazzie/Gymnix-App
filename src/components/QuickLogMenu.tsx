@@ -5,19 +5,20 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
+import { GymnixIconName } from '@/constants/gymnixIcons';
 import { useTheme } from '@/context/ThemeContext';
 import { FONT_SIZES, FONT_WEIGHTS, RADIUS, Theme, Colors } from '@/constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-function getOrbs(colors: Colors): { key: string; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
+function getOrbs(colors: Colors): { key: string; label: string; icon: GymnixIconName; color: string }[] {
   return [
-    { key: 'workout',  label: 'Workout',  icon: 'barbell-outline',   color: colors.primary },
-    { key: 'cardio',   label: 'Cardio',   icon: 'heart-outline',     color: colors.neonGreen },
-    { key: 'water',    label: 'Water',    icon: 'water-outline',     color: colors.neonBlue },
-    { key: 'weight',   label: 'Weight',   icon: 'body-outline',      color: colors.accent },
-    { key: 'calories', label: 'Calories', icon: 'nutrition-outline', color: colors.neonYellow },
+    { key: 'workout',  label: 'Workout',  icon: 'workouts', color: colors.primary },
+    { key: 'cardio',   label: 'Cardio',   icon: 'cardio',   color: colors.neonGreen },
+    { key: 'water',    label: 'Water',    icon: 'water',    color: colors.neonBlue },
+    { key: 'weight',   label: 'Weight',   icon: 'weight',   color: colors.accent },
+    { key: 'calories', label: 'Calories', icon: 'calories', color: colors.neonYellow },
   ];
 }
 
@@ -156,7 +157,7 @@ export default function QuickLogMenu({ visible, onClose, onSelect }: Props) {
                   end={{ x: 0.85, y: 0.9 }}
                   style={StyleSheet.absoluteFill}
                 />
-                <Ionicons name={orb.icon} size={24} color={orb.color} />
+                <GymnixIcon name={orb.icon} size={26} color={orb.color} />
               </TouchableOpacity>
               <Text style={styles.orbLabel}>{orb.label}</Text>
             </Animated.View>

@@ -3,6 +3,8 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
+import { GymnixIconName } from '@/constants/gymnixIcons';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import Svg, { Circle } from 'react-native-svg';
 import { BlurView } from 'expo-blur';
@@ -37,12 +39,12 @@ const HERO_CIRCUMFERENCE = 2 * Math.PI * HERO_RADIUS;
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-function getTasks(colors: Colors): { key: string; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
+function getTasks(colors: Colors): { key: string; label: string; icon: GymnixIconName; color: string }[] {
   return [
-    { key: 'workout',  label: 'Log Workout',  icon: 'barbell-outline',   color: colors.primary },
-    { key: 'cardio',   label: 'Log Cardio',   icon: 'heart-outline',     color: colors.neonGreen },
-    { key: 'water',    label: 'Log Water',    icon: 'water-outline',     color: colors.neonBlue },
-    { key: 'calories', label: 'Log Meal',     icon: 'nutrition-outline', color: colors.neonYellow },
+    { key: 'workout',  label: 'Log Workout',  icon: 'workouts', color: colors.primary },
+    { key: 'cardio',   label: 'Log Cardio',   icon: 'cardio',   color: colors.neonGreen },
+    { key: 'water',    label: 'Log Water',    icon: 'water',    color: colors.neonBlue },
+    { key: 'calories', label: 'Log Meal',     icon: 'calories', color: colors.neonYellow },
   ];
 }
 
@@ -368,7 +370,7 @@ export default function DashboardScreen() {
                   if (task.key === 'calories') setCaloriesOpen(true);
                 }}
               >
-                <Ionicons name={task.icon} size={22} color={task.color} style={styles.taskIcon} />
+                <GymnixIcon name={task.icon} size={24} color={task.color} style={styles.taskIcon} />
                 <Text style={[styles.taskLabel, { color: task.color }]}>{task.label}</Text>
               </TouchableOpacity>
             ))}

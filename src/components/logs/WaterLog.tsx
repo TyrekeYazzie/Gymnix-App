@@ -6,6 +6,8 @@ import {
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
+import { GymnixIconName } from '@/constants/gymnixIcons';
 import { supabase } from '@/lib/supabase';
 import { logDay, logTimestamp } from '@/utils/logDay';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,7 +27,7 @@ const SLIDE_DISTANCE = Dimensions.get('window').height + 100;
 // Same icon across all four quick-amount presets — they're just different
 // volumes of the same action (add water), so the label text carries the
 // distinguishing info, not the icon.
-const WATER_ICON: keyof typeof Ionicons.glyphMap = 'water-outline';
+const WATER_ICON: GymnixIconName = 'water';
 
 // metric quick amounts in ml
 const QUICK_AMOUNTS_METRIC = [
@@ -370,9 +372,9 @@ export default function WaterLog({ visible, onClose, onSaved, editEntry, logDate
                   onPress={() => setAmountMl(q.value)}
                   activeOpacity={0.7}
                 >
-                  <Ionicons
+                  <GymnixIcon
                     name={WATER_ICON}
-                    size={22}
+                    size={24}
                     color={amountMl === q.value ? colors.neonBlue : colors.textSecondary}
                     style={styles.quickIcon}
                   />

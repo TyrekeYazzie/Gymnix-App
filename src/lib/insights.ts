@@ -3,7 +3,7 @@
 // auto-generated, rule-based text callouts. No AI/LLM involved: every
 // insight here is a fixed comparison (this week vs last week) or a fixed
 // threshold, so the same data always produces the same insights.
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { GymnixIconName } from '@/constants/gymnixIcons';
 import { setDisplayWeight } from './workouts';
 import { WorkoutSet } from '@/types';
 
@@ -32,7 +32,7 @@ export interface PeriodStats {
 }
 
 export interface Insight {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: GymnixIconName;
   text: string;
   tone: 'positive' | 'negative' | 'neutral';
 }
@@ -130,7 +130,7 @@ export function generateInsights(thisWeek: PeriodStats, lastWeek: PeriodStats, o
 
   insights.push(
     opts.currentStreak > 0
-      ? { icon: 'flame', text: `${opts.currentStreak}-day workout streak — keep it going.`, tone: 'positive' }
+      ? { icon: 'streak', text: `${opts.currentStreak}-day workout streak — keep it going.`, tone: 'positive' }
       : null
   );
 
@@ -138,12 +138,12 @@ export function generateInsights(thisWeek: PeriodStats, lastWeek: PeriodStats, o
     const diff = thisWeek.workoutCount - lastWeek.workoutCount;
     if (diff !== 0) {
       insights.push({
-        icon: 'barbell-outline',
+        icon: 'workouts',
         text: `${Math.abs(diff)} ${diff > 0 ? 'more' : 'fewer'} workout${Math.abs(diff) === 1 ? '' : 's'} than last week (${thisWeek.workoutCount} vs ${lastWeek.workoutCount}).`,
         tone: diff > 0 ? 'positive' : 'negative',
       });
     } else if (thisWeek.workoutCount > 0) {
-      insights.push({ icon: 'barbell-outline', text: `Matched last week with ${thisWeek.workoutCount} workout${thisWeek.workoutCount === 1 ? '' : 's'}.`, tone: 'neutral' });
+      insights.push({ icon: 'workouts', text: `Matched last week with ${thisWeek.workoutCount} workout${thisWeek.workoutCount === 1 ? '' : 's'}.`, tone: 'neutral' });
     }
   }
 
@@ -151,7 +151,7 @@ export function generateInsights(thisWeek: PeriodStats, lastWeek: PeriodStats, o
     const pct = ((thisWeek.workoutVolume - lastWeek.workoutVolume) / lastWeek.workoutVolume) * 100;
     if (Math.abs(pct) >= 5) {
       insights.push({
-        icon: 'trending-up-outline',
+        icon: 'progress',
         text: `Workout volume is ${pct > 0 ? 'up' : 'down'} ${Math.abs(Math.round(pct))}% vs last week.`,
         tone: pct > 0 ? 'positive' : 'negative',
       });
@@ -162,7 +162,7 @@ export function generateInsights(thisWeek: PeriodStats, lastWeek: PeriodStats, o
     const diff = thisWeek.cardioMinutes - lastWeek.cardioMinutes;
     if (diff !== 0) {
       insights.push({
-        icon: 'heart-outline',
+        icon: 'cardio',
         text: `Cardio time ${diff > 0 ? 'up' : 'down'} ${Math.abs(diff)} min vs last week (${thisWeek.cardioMinutes} vs ${lastWeek.cardioMinutes} min).`,
         tone: diff > 0 ? 'positive' : 'negative',
       });
@@ -171,12 +171,12 @@ export function generateInsights(thisWeek: PeriodStats, lastWeek: PeriodStats, o
 
   if (thisWeek.waterGoalDays !== lastWeek.waterGoalDays) {
     insights.push({
-      icon: 'water-outline',
+      icon: 'water',
       text: `Hit your water goal ${thisWeek.waterGoalDays}/7 days this week, ${thisWeek.waterGoalDays > lastWeek.waterGoalDays ? 'up' : 'down'} from ${lastWeek.waterGoalDays}/7 last week.`,
       tone: thisWeek.waterGoalDays > lastWeek.waterGoalDays ? 'positive' : 'negative',
     });
   } else if (thisWeek.waterGoalDays === 7) {
-    insights.push({ icon: 'water-outline', text: 'Perfect water week — goal hit all 7 days.', tone: 'positive' });
+    insights.push({ icon: 'water', text: 'Perfect water week — goal hit all 7 days.', tone: 'positive' });
   }
 
   // Direction of "good" depends on the user's own goal (cutting vs bulking),
@@ -186,7 +186,7 @@ export function generateInsights(thisWeek: PeriodStats, lastWeek: PeriodStats, o
     const deltaDisplay = opts.toDisplayWeight(thisWeek.weightLast) - opts.toDisplayWeight(lastWeek.weightLast);
     if (Math.abs(deltaDisplay) >= 0.2) {
       insights.push({
-        icon: 'body-outline',
+        icon: 'weight',
         text: `Body weight ${deltaDisplay > 0 ? 'up' : 'down'} ${Math.abs(deltaDisplay).toFixed(1)} ${opts.weightUnit} from last week.`,
         tone: 'neutral',
       });
@@ -196,7 +196,7 @@ export function generateInsights(thisWeek: PeriodStats, lastWeek: PeriodStats, o
   if (thisWeek.caloriesLoggedDays > 0 && opts.calorieGoal > 0) {
     const pct = Math.round((thisWeek.caloriesAvgPerLoggedDay / opts.calorieGoal) * 100);
     insights.push({
-      icon: 'nutrition-outline',
+      icon: 'calories',
       text: `Averaging ${Math.round(thisWeek.caloriesAvgPerLoggedDay).toLocaleString()} kcal/day logged this week — ${pct}% of your ${opts.calorieGoal.toLocaleString()} kcal goal.`,
       tone: pct >= 90 && pct <= 110 ? 'positive' : 'neutral',
     });

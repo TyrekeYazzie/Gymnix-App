@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
 import { useProfile } from '@/context/ProfileContext';
 import { xpProgress } from '@/lib/xp';
 import { XP_MEAL, XP_WATER, XP_WEIGHT } from '@/lib/xp';
@@ -21,11 +22,11 @@ const ITEM_WIDTH = 92;
 
 function getXpSources(colors: Colors) {
   return [
-    { icon: 'barbell-outline' as const, label: 'Workouts', detail: '10 XP per set, plus up to +20 more for heavier sets', color: colors.primary },
-    { icon: 'heart-outline' as const, label: 'Cardio', detail: '15–75 XP based on session duration', color: colors.neonGreen },
-    { icon: 'water-outline' as const, label: 'Water', detail: `${XP_WATER} XP per log`, color: colors.neonBlue },
-    { icon: 'nutrition-outline' as const, label: 'Meals', detail: `${XP_MEAL} XP per log`, color: colors.neonYellow },
-    { icon: 'body-outline' as const, label: 'Weigh-ins', detail: `${XP_WEIGHT} XP per log`, color: colors.accent },
+    { icon: 'workouts' as const, label: 'Workouts', detail: '10 XP per set, plus up to +20 more for heavier sets', color: colors.primary },
+    { icon: 'cardio' as const, label: 'Cardio', detail: '15–75 XP based on session duration', color: colors.neonGreen },
+    { icon: 'water' as const, label: 'Water', detail: `${XP_WATER} XP per log`, color: colors.neonBlue },
+    { icon: 'calories' as const, label: 'Meals', detail: `${XP_MEAL} XP per log`, color: colors.neonYellow },
+    { icon: 'weight' as const, label: 'Weigh-ins', detail: `${XP_WEIGHT} XP per log`, color: colors.accent },
   ];
 }
 
@@ -164,7 +165,7 @@ export default function RankChartScreen() {
               {i > 0 && <View style={styles.rowDivider} />}
               <View style={styles.xpRow}>
                 <View style={[styles.xpIcon, { borderColor: s.color }]}>
-                  <Ionicons name={s.icon} size={16} color={s.color} />
+                  <GymnixIcon name={s.icon} size={18} color={s.color} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.xpLabel}>{s.label}</Text>

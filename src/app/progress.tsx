@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
 import Svg, { Polyline, Circle, Line, Rect } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -313,7 +314,7 @@ export default function Progress() {
               {weightEntries.map((entry) => (
                 <View key={entry.id} style={styles.listCard}>
                   <View style={[styles.listIcon, { borderColor: colors.neonBlue }]}>
-                    <Ionicons name="body-outline" size={16} color={colors.neonBlue} />
+                    <GymnixIcon name="weight" size={18} color={colors.neonBlue} />
                   </View>
                   <View style={styles.listLeft}>
                     <Text style={styles.listName}>{displayWeight(entry.weight_kg).toFixed(1)} {weightUnit}</Text>
@@ -397,7 +398,7 @@ export default function Progress() {
               {exerciseDesc.map((entry) => (
                 <View key={entry.id} style={styles.listCard}>
                   <View style={[styles.listIcon, { borderColor: colors.primary }]}>
-                    <Ionicons name="barbell-outline" size={16} color={colors.primary} />
+                    <GymnixIcon name="workouts" size={18} color={colors.primary} />
                   </View>
                   <View style={styles.listLeft}>
                     <Text style={styles.listName}>{topSetWeight(entry.sets, isImperial)} {weightUnit} top set</Text>
@@ -483,7 +484,7 @@ export default function Progress() {
               waterEntries.slice(0, 15).map((entry, i) => (
                 <View key={i} style={styles.listCard}>
                   <View style={[styles.listIcon, { borderColor: colors.neonBlue }]}>
-                    <Ionicons name="water-outline" size={16} color={colors.neonBlue} />
+                    <GymnixIcon name="water" size={18} color={colors.neonBlue} />
                   </View>
                   <View style={styles.listLeft}>
                     <Text style={styles.listName}>{displayWater(entry.amount_ml).toFixed(0)} {waterUnit}</Text>

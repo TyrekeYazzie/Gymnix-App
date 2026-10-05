@@ -6,6 +6,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import GymnixIcon from '@/components/GymnixIcon';
+import { GymnixIconName } from '@/constants/gymnixIcons';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/context/ProfileContext';
 import {
@@ -30,12 +32,12 @@ type TabKey = 'level' | 'strength' | 'cardio' | 'streak';
 type Scope = 'everyone' | 'friends';
 type Row = LevelLeaderboardEntry | LogCountLeaderboardEntry | StreakLeaderboardEntry;
 
-function getTabs(colors: Colors): { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] {
+function getTabs(colors: Colors): { key: TabKey; label: string; icon: GymnixIconName; color: string }[] {
   return [
-    { key: 'level',    label: 'Level',    icon: 'trophy-outline',  color: colors.primary },
-    { key: 'strength', label: 'Strength', icon: 'barbell-outline', color: colors.accent },
-    { key: 'cardio',   label: 'Cardio',   icon: 'heart-outline',   color: colors.neonGreen },
-    { key: 'streak',   label: 'Streak',   icon: 'flame-outline',   color: colors.neonOrange },
+    { key: 'level',    label: 'Level',    icon: 'xp',       color: colors.primary },
+    { key: 'strength', label: 'Strength', icon: 'workouts', color: colors.accent },
+    { key: 'cardio',   label: 'Cardio',   icon: 'cardio',   color: colors.neonGreen },
+    { key: 'streak',   label: 'Streak',   icon: 'streak',   color: colors.neonOrange },
   ];
 }
 
@@ -263,7 +265,7 @@ export default function LeaderboardScreen() {
                 onPress={() => setTab(t.key)}
                 activeOpacity={0.7}
               >
-                <Ionicons name={t.icon} size={16} color={active ? t.color : colors.textMuted} />
+                <GymnixIcon name={t.icon} size={18} color={active ? t.color : colors.textMuted} />
                 <Text style={[styles.tabLabel, active && { color: t.color, fontWeight: FONT_WEIGHTS.bold }]}>
                   {t.label}
                 </Text>
