@@ -9,11 +9,11 @@
 // active one via useTheme() (see src/context/ThemeContext.tsx) rather than
 // importing a palette directly.
 //
-// COLORS/CARD/BUTTON/INPUT/SHADOWS below stay as plain LIGHT_COLORS-backed
-// exports for the handful of pre-auth screens (login/signup/forgot-password/
-// reset-password) — there's no profile, and therefore no dark-mode
-// preference, to read before a user is signed in, so those always render in
-// the light theme.
+// COLORS/CARD/BUTTON/INPUT/SHADOWS below are plain LIGHT_COLORS-backed
+// exports for code that can't use the hook (e.g. ErrorFallback, which can
+// render outside the providers). Screens, including login/signup, use
+// useTheme(); with no one signed in it falls back to the last setting seen
+// on the device or the phone's own light/dark setting.
 
 export const LIGHT_COLORS = {
   // ── BACKGROUNDS ──────────────────────────────────────────
