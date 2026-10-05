@@ -18,7 +18,8 @@
       "package": "com.tyrekeyazzie.fitnessapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0a0a0a"
+        "monochromeImage": "./assets/adaptive-icon-monochrome.png",
+        "backgroundColor": "#f7f3e9"
       }
     },
     "web": {
@@ -43,8 +44,13 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#0a0a0a"
+          "backgroundColor": "#f7f3e9",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#1b1815"
+          }
         }
       ]
     ],
