@@ -119,7 +119,8 @@ export default function Stepper({
 function makeStyles(theme: Theme) {
   const { colors } = theme;
   return StyleSheet.create({
-  wrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // Centered: a fixed-width control on a full-width sheet looked pushed to the left.
+  wrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', alignSelf: 'center' },
   btn: {
     width: 38, height: 38, borderRadius: RADIUS.full, borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',
