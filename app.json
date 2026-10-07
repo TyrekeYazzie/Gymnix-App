@@ -38,7 +38,14 @@
           "microphonePermission": false
         }
       ],
-      "@sentry/react-native",
+      [
+        "@sentry/react-native",
+        {
+          "url": "https://sentry.io/",
+          "organization": "gymnix",
+          "project": "gymnix"
+        }
+      ],
       "expo-status-bar",
       [
         "expo-splash-screen",
