@@ -67,6 +67,12 @@
         "projectId": "33080e7b-194e-4f5f-bb70-aa407ad9fce1"
       }
     },
-    "owner": "littlechief"
+    "owner": "littlechief",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/33080e7b-194e-4f5f-bb70-aa407ad9fce1"
+    }
   }
 }
