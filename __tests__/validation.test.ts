@@ -15,9 +15,10 @@ describe('validateName', () => {
 });
 
 describe('validatePassword', () => {
-  it('needs 8+ characters, an uppercase letter, a number and a symbol', () => {
+  it('needs 8+ characters, upper and lowercase letters, a number and a symbol', () => {
     expect(validatePassword('Abcdef1!').isValid).toBe(true);
     expect(validatePassword('abcdefgh').errors).toHaveLength(3);
+    expect(validatePassword('GYMNIX123!').errors).toEqual(['Password must contain at least one lowercase letter']);
     expect(validatePassword('Ab1!').errors).toEqual(['Password must be at least 8 characters long']);
   });
 });

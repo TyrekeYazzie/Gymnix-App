@@ -49,9 +49,13 @@ export function validatePassword(password: string): {
     errors.push('Password must be at least 8 characters long')
   }
 
-  // At least one uppercase letter
+  // At least one uppercase and one lowercase letter (Supabase's password
+  // policy requires both, so the server would reject what this let through)
   if (!/[A-Z]/.test(password)) {
     errors.push('Password must contain at least one uppercase letter')
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter')
   }
 
   // At least one number

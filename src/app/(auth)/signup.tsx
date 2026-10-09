@@ -140,7 +140,7 @@ export default function Signup() {
           secureTextEntry
         />
         <Text style={styles.hint}>
-          8+ characters, with an uppercase letter, a number, and a symbol
+          8+ characters, with upper and lowercase letters, a number, and a symbol
         </Text>
 
         <TouchableOpacity
