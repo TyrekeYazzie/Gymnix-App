@@ -19,7 +19,9 @@ export default function ResetPassword() {
   const { colors, INPUT } = theme;
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const router = useRouter();
-  const { code } = useLocalSearchParams<{ code?: string }>();
+  // Supabase sends `error_code` instead of `code` when the email's link was
+  // already used, superseded by a newer reset email, or past its expiry.
+  const { code, error_code: errorCode } = useLocalSearchParams<{ code?: string; error_code?: string }>();
 
   const [exchanging, setExchanging] = useState(true);
   const [linkError, setLinkError] = useState('');
@@ -30,7 +32,9 @@ export default function ResetPassword() {
   useEffect(() => {
     (async () => {
       if (!code) {
-        setLinkError('This reset link is invalid or missing. Request a new one from the login screen.');
+        setLinkError(errorCode === 'otp_expired'
+          ? 'This reset link has expired or was already used. Each link works once, for an hour, and requesting another reset cancels the earlier emails. Request a new one and use the newest email.'
+          : 'This reset link is invalid or missing. Request a new one from the login screen.');
         setExchanging(false);
         return;
       }
@@ -52,7 +56,7 @@ export default function ResetPassword() {
       }
       setExchanging(false);
     })();
-  }, [code]);
+  }, [code, errorCode]);
 
   const handleSave = async () => {
     setFormError('');
