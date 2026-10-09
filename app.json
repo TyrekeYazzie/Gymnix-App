@@ -43,7 +43,7 @@
         {
           "url": "https://sentry.io/",
           "organization": "gymnix",
-          "project": "gymnix"
+          "project": "react-native"
         }
       ],
       "expo-status-bar",
