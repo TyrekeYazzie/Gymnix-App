@@ -2,8 +2,8 @@
   "expo": {
     "name": "Gymnix",
     "slug": "fitnessapp",
-    "version": "1.0.0",
-    "scheme": "fitnessapp",
+    "version": "1.0.1",
+    "scheme": "gymnix",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

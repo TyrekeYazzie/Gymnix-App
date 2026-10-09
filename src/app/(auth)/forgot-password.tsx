@@ -34,7 +34,7 @@ export default function ForgotPassword() {
 
     setLoading(true);
     // The email links to an https hand-off page; `to` tells it where this
-    // copy of the app listens (fitnessapp://… in a build, exp://… in Expo Go).
+    // copy of the app listens (gymnix://… in a build, exp://… in Expo Go).
     const appUrl = Linking.createURL('/reset-password');
     const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
       redirectTo: `${PASSWORD_RESET_URL}?to=${encodeURIComponent(appUrl)}`,
